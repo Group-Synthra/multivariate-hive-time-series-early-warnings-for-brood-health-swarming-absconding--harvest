@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+
 import pandas as pd
 
 from multivari.common.schema import HIVE_COLUMN, SENSOR_COLUMNS, TIMESTAMP_COLUMN

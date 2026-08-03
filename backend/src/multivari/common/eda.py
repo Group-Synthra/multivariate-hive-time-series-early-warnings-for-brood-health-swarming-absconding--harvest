@@ -9,7 +9,6 @@ import pandas as pd
 
 from .schema import HIVE_COLUMN, SENSOR_COLUMNS, TARGET_COLUMNS, TIMESTAMP_COLUMN
 
-
 SENSOR_LABELS = {
     "temperature_c": "Temperature (°C)",
     "humidity_pct": "Humidity (%)",

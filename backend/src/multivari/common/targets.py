@@ -35,7 +35,7 @@ def make_future_event_target(
     for _, group in result.groupby(HIVE_COLUMN, sort=False):
         values = group[event_column].to_numpy(dtype="float32")
         out = np.full(len(values), np.nan, dtype="float32")
-        for position in range(0, max(0, len(values) - horizon_hours)):
+        for position in range(max(0, len(values) - horizon_hours)):
             out[position] = values[position + 1 : position + horizon_hours + 1].max()
         target.loc[group.index] = out
 

@@ -14,7 +14,6 @@ from multivari.common.schema import (
     TIMESTAMP_COLUMN,
 )
 
-
 SENSOR_API_NAMES = {
     "temperature_c": "temperature",
     "humidity_pct": "humidity",
@@ -129,7 +128,7 @@ class EDAService:
             duration_days = round((end - start).total_seconds() / 86400, 2)
 
         return {
-            "total_records": int(len(df)),
+            "total_records": len(df),
             "total_hives": int(df[HIVE_COLUMN].nunique(dropna=True)),
             "analysis_start": start.isoformat() if start is not None else None,
             "analysis_end": end.isoformat() if end is not None else None,
@@ -225,7 +224,7 @@ class EDAService:
                 duration_seconds = max((end - start).total_seconds(), 0)
                 duration_days = round(duration_seconds / 86400, 2)
                 if sampling_seconds:
-                    expected_records = int(round(duration_seconds / sampling_seconds)) + 1
+                    expected_records = round(duration_seconds / sampling_seconds) + 1
                     if expected_records > 0:
                         coverage_percentage = round(
                             min(100.0, (int(row["records"]) / expected_records) * 100), 3
