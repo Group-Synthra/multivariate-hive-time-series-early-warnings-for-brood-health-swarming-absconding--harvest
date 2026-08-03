@@ -1,0 +1,1 @@
+"""MULTIVARI shared analytics package."""

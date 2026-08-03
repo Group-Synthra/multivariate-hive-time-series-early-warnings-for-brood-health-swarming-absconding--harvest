@@ -1,0 +1,124 @@
+# ============================================================
+# Python environments and caches
+# ============================================================
+
+.venv/
+venv/
+env/
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+*.egg-info/
+.eggs/
+build/
+dist/
+
+
+# ============================================================
+# Environment variables and secrets
+# ============================================================
+
+.env
+backend/.env
+frontend/.env
+
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Keep safe templates
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+
+
+# ============================================================
+# Node and Vite
+# ============================================================
+
+node_modules/
+frontend/node_modules/
+
+frontend/dist/
+frontend/.vite/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# ============================================================
+# Raw, interim and processed datasets
+# ============================================================
+
+backend/data/raw/*
+backend/data/interim/*
+backend/data/processed/*
+
+!backend/data/raw/.gitkeep
+!backend/data/interim/.gitkeep
+!backend/data/processed/.gitkeep
+
+
+# ============================================================
+# Shared split manifest
+# Keep only the agreed common split file in Git
+# ============================================================
+
+backend/data/manifests/*
+
+!backend/data/manifests/.gitkeep
+!backend/data/manifests/common_split_manifest.parquet
+
+
+# ============================================================
+# Generated models, metrics and reports
+# ============================================================
+
+backend/artifacts/models/*
+backend/artifacts/metrics/*
+backend/artifacts/reports/*
+
+!backend/artifacts/models/.gitkeep
+!backend/artifacts/metrics/.gitkeep
+!backend/artifacts/reports/.gitkeep
+
+
+# ============================================================
+# Local databases, temporary files and archives
+# ============================================================
+
+*.db
+*.sqlite
+*.sqlite3
+*.tmp
+*.temp
+*.log
+*.zip
+
+temp/
+tmp/
+
+
+# ============================================================
+# IDE and operating-system files
+# ============================================================
+
+.vscode/
+.idea/
+
+.DS_Store
+Thumbs.db
+desktop.ini

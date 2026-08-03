@@ -1,0 +1,13 @@
+# PostgreSQL/Supabase source columns mapped to the canonical model names.
+columns:
+  device_id: hive_id
+  recorded_at: timestamp
+  internal_temp: temperature_c
+  internal_humidity: humidity_pct
+  internal_co2: co2_ppm
+  total_weight: weight_kg
+  external_temp: external_temperature_c
+  external_humidity: external_humidity_pct
+optional_metadata:
+  reading_at: ingestion_timestamp
+  battery_voltage: battery_voltage

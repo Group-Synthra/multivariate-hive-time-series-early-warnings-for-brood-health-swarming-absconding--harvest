@@ -1,0 +1,32 @@
+dataset:
+  sheet_name: Common_Dataset
+  timestamp_column: timestamp
+  hive_column: hive_id
+  sensor_columns:
+    - temperature_c
+    - co2_ppm
+    - humidity_pct
+    - weight_kg
+  target_columns:
+    - brood_health_healthy_1
+    - swarming_happened_1
+    - absconding_happened_1
+    - honey_harvested_1
+  expected_frequency: 1h
+
+cleaning:
+  interpolate_missing_sensors: false
+  interpolation_limit_rows: 3
+  drop_duplicate_hive_timestamps: true
+
+split:
+  train_fraction: 0.70
+  validation_fraction: 0.15
+  test_fraction: 0.15
+  boundary_gap_hours: 72
+
+common_features:
+  lags_hours: [1, 6, 24, 72]
+  change_hours: [1, 6, 24, 72]
+  rolling_windows_hours: [6, 24, 72]
+  rolling_statistics: [mean, std]
