@@ -456,20 +456,86 @@ td small { color: var(--muted); }
   .metric-definition-grid, .confusion-grid { grid-template-columns: 1fr 1fr; }
 }
 .iot-dashboard-shell {
-  --iot-panel: rgba(13, 23, 38, 0.86);
-  --iot-panel-soft: rgba(18, 31, 51, 0.84);
-  --iot-panel-strong: rgba(9, 17, 30, 0.94);
-  --iot-border: rgba(148, 163, 184, 0.16);
-  --iot-border-strong: rgba(148, 163, 184, 0.26);
+  /* Text colours required by the IoT dashboard */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+
+  /* Accent colours required by charts and indicators */
+  --accent-cyan: #38bdf8;
+  --accent-gold: #f59e0b;
+  --accent-crimson: #ef4444;
+  --accent-emerald: #22c55e;
+
+  /* Dashboard panel colours */
+  --iot-panel: rgba(13, 23, 38, 0.96);
+  --iot-panel-soft: rgba(18, 31, 51, 0.94);
+  --iot-panel-strong: rgba(9, 17, 30, 0.98);
+  --iot-border: rgba(148, 163, 184, 0.2);
+  --iot-border-strong: rgba(148, 163, 184, 0.35);
+
   --iot-blue: #0ea5e9;
   --iot-red: #ef4444;
   --iot-green: #22c55e;
   --iot-yellow: #f59e0b;
+
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
   color: var(--text-primary);
+}
+
+/* Ensure all dashboard headings and ordinary content remain readable */
+.iot-dashboard-shell h1,
+.iot-dashboard-shell h2,
+.iot-dashboard-shell h3,
+.iot-dashboard-shell h4,
+.iot-dashboard-shell h5,
+.iot-dashboard-shell h6,
+.iot-dashboard-shell strong,
+.iot-dashboard-shell label {
+  color: var(--text-primary);
+}
+
+.iot-dashboard-shell p,
+.iot-dashboard-shell small {
+  color: var(--text-secondary);
+}
+
+/* Main values */
+.iot-gauge-value strong,
+.iot-risk-level,
+.iot-alert-status-card h4,
+.iot-reading-row strong,
+.iot-factor-card h4,
+.iot-diagnostics-grid strong {
+  color: #ffffff;
+}
+
+/* Top information strip */
+.iot-meta-card strong {
+  color: #ffffff;
+}
+
+.iot-meta-card:first-child strong {
+  color: var(--iot-green);
+}
+
+/* Keep chart axis text visible */
+.iot-dashboard-shell .recharts-cartesian-axis-tick-value {
+  fill: #cbd5e1;
+}
+
+.iot-dashboard-shell .recharts-text {
+  fill: #cbd5e1;
+}
+
+/* Tooltips */
+.iot-tooltip,
+.iot-tooltip strong,
+.iot-tooltip p {
+  color: #f8fafc;
 }
 
 .iot-dashboard-shell * {
