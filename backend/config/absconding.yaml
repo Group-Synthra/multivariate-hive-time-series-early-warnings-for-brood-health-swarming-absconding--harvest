@@ -35,3 +35,10 @@ risk:
   medium_threshold_ratio: 0.60
   arm_change_hours: 24
   arm_escalation_threshold: 0.10
+
+lstm:
+  sequence_length: 72
+  stride: 3
+  epochs: 30
+  batch_size: 256
+  note: "Run python scripts/run_absconding_lstm.py after the classical pipeline."

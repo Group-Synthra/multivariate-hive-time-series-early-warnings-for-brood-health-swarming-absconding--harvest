@@ -298,6 +298,7 @@ def run_absconding_pipeline(
     }
     joblib.dump(model_bundle, paths.model_directory / "absconding_model_bundle.joblib")
 
+    comparison = _merge_existing_lstm_result(comparison, paths, settings)
     legacy_comparison = _legacy_model_comparison(comparison)
     active_metrics = {
         **test_metrics,
@@ -338,8 +339,8 @@ def run_absconding_pipeline(
             "medium_risk_hives": sum(item["risk_level"] == "Medium" for item in latest_risk),
             "low_risk_hives": sum(item["risk_level"] == "Low" for item in latest_risk),
             "methodology_note": (
-                "The raw dataset contains only seven event-marker rows. The 72-hour future-event "
-                "target creates warning windows, but results remain exploratory and are reported with "
+                f"The raw dataset contains only seven event-marker rows. The {settings.prediction_horizon_hours}-hour future-event "
+                "target creates warning windows, but results remain exploratory and is reported with "
                 "event-level detection metrics."
             ),
         },
@@ -367,13 +368,19 @@ def run_absconding_pipeline(
             "best_model_by_defence_score": (
                 best_defence.get("model_name") if best_defence else selected.display_name
             ),
-            "lstm_metrics_available": False,
-            "is_lstm_best": False,
+            "lstm_metrics_available": any(
+                row.get("model_key") == "lstm_sequence"
+                and row.get("status") == "completed"
+                for row in comparison
+            ),
+            "is_lstm_best": bool(
+                best_defence and best_defence.get("model_key") == "lstm_sequence"
+            ),
             "why_lstm_is_defensible": [
                 "Absconding develops through ordered changes rather than one isolated reading.",
                 "The report used 72-observation windows with stride three for the LSTM experiment.",
-                "The current deployment keeps LSTM optional because the new dataset contains only five event episodes.",
-                "A sequence model should be retrained only after enough locally labelled events are collected.",
+                "The LSTM comparison uses real ordered windows and is installed through the optional lstm dependency group.",
+                "The live endpoint remains on the validation-selected tabular model unless LSTM is explicitly promoted after defensible evaluation.",
             ],
         },
         "feature_importance": importances[:25],
@@ -774,6 +781,31 @@ def _build_exploratory_payload(
         ],
     }
 
+
+
+def _merge_existing_lstm_result(
+    comparison: list[dict[str, Any]],
+    paths: AbscondingPaths,
+    settings: AbscondingSettings,
+) -> list[dict[str, Any]]:
+    path = paths.metrics_directory / "lstm_comparison.json"
+    if not path.is_file():
+        return comparison
+    try:
+        result = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return comparison
+    if result.get("status") != "completed":
+        return comparison
+    if result.get("target_column") != settings.target_column:
+        return comparison
+    merged = [
+        row for row in comparison if row.get("model_key") != "lstm_sequence"
+    ]
+    merged.append(result)
+    return sorted(
+        merged, key=lambda row: row.get("selection_score", -1.0), reverse=True
+    )
 
 
 def _legacy_model_comparison(comparison: list[dict[str, Any]]) -> list[dict[str, Any]]:
