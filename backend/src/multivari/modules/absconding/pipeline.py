@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -37,6 +38,8 @@ from .modeling import (
     positive_probability,
     stratified_training_sample,
 )
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -182,6 +185,10 @@ def run_absconding_pipeline(
                 }
             )
         except Exception as error:
+            LOGGER.exception(
+                "Absconding model candidate '%s' failed; continuing with the remaining candidates.",
+                key,
+            )
             comparison.append(
                 {
                     "model_key": key,
