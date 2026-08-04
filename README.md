@@ -38,17 +38,41 @@ Move the existing Vite application into `frontend/`. Never commit `.env`, `node_
 
 ## Absconding module
 
-After the common pipeline has generated the cleaned parquet and split manifest, run:
+Absconding uses a separate labelled historical dataset so the common dataset and workflows
+for Brood Health, Swarming and Harvesting remain unchanged.
+
+Copy the Absconding CSV to:
+
+```text
+backend/data/raw/absconding/hive_data_with_features.csv
+```
+
+Then run:
 
 ```bash
 cd backend
+python scripts/run_absconding_data_pipeline.py
 python scripts/run_absconding_pipeline.py
 ```
 
-Then start the API and frontend normally. The Absconding page reads generated artifacts from `/api/absconding/summary`.
+The generated module-specific files are:
 
-## Absconding: report-aligned UI and live Supabase IoT
+- `data/processed/absconding_clean.parquet`
+- `data/manifests/absconding_split_manifest.parquet`
+- `artifacts/reports/absconding/absconding_data_profile.json`
 
-The Absconding workspace provides **Exploratory Analysis**, **Model Training**, and **Live Prediction (IoT)** views. Live inference reads the configured Supabase PostgreSQL `beehive_readings` history, maps the IoT columns, aggregates ten-minute readings to hourly features, loads the saved Absconding model, calculates ARM, and returns risk, explanations, freshness and recommended actions.
+The Absconding workspace provides **Exploratory Analysis**, **Model Training**, and
+**Live Prediction (IoT)** views. Live inference reads Supabase PostgreSQL history, maps the
+IoT columns, aggregates ten-minute readings to hourly features, loads the saved model,
+calculates ARM, and returns risk, explanations, freshness and recommended actions.
 
-See [`ABSCONDING_IOT_UI_UPDATE_GUIDE.md`](ABSCONDING_IOT_UI_UPDATE_GUIDE.md) for environment configuration, retraining, endpoints and file locations.
+Optional LSTM training uses 72-observation sequences with stride 3:
+
+```bash
+python -m pip install -e ".[dev,lstm]"
+python scripts/run_absconding_lstm.py --epochs 30 --sequence-length 72 --stride 3
+python scripts/run_absconding_pipeline.py
+```
+
+See [`ABSCONDING_SEPARATE_DATASET_UPDATE_GUIDE.md`](ABSCONDING_SEPARATE_DATASET_UPDATE_GUIDE.md)
+and [`ABSCONDING_IOT_UI_UPDATE_GUIDE.md`](ABSCONDING_IOT_UI_UPDATE_GUIDE.md).

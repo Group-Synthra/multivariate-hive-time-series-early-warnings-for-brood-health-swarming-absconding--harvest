@@ -14,13 +14,17 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from multivari.common.io import read_table, write_parquet
-from multivari.common.schema import HIVE_COLUMN, SENSOR_COLUMNS, TIMESTAMP_COLUMN
+from multivari.common.schema import HIVE_COLUMN, TIMESTAMP_COLUMN
 from multivari.common.splitting import join_split_manifest
 from multivari.common.targets import make_future_event_target
 
 from .config import AbscondingSettings
 from .events import attach_episode_splits, build_event_episodes, evaluate_event_warnings
-from .features import build_absconding_features, select_feature_columns
+from .features import (
+    absconding_sensor_columns,
+    build_absconding_features,
+    select_feature_columns,
+)
 from .metrics import (
     choose_alert_threshold,
     classification_metrics,
@@ -41,11 +45,11 @@ class AbscondingPaths:
 
     @property
     def clean_data(self) -> Path:
-        return self.backend_root / "data" / "processed" / "common_clean.parquet"
+        return self.backend_root / "data" / "processed" / "absconding_clean.parquet"
 
     @property
     def split_manifest(self) -> Path:
-        return self.backend_root / "data" / "manifests" / "common_split_manifest.parquet"
+        return self.backend_root / "data" / "manifests" / "absconding_split_manifest.parquet"
 
     @property
     def config(self) -> Path:
@@ -66,6 +70,10 @@ class AbscondingPaths:
     @property
     def prediction_directory(self) -> Path:
         return self.backend_root / "artifacts" / "predictions" / "absconding"
+
+    def resolve(self, value: str | Path) -> Path:
+        path = Path(value)
+        return path if path.is_absolute() else self.backend_root / path
 
     def create_output_directories(self) -> None:
         for directory in (
@@ -93,13 +101,22 @@ def run_absconding_pipeline(
             }
         )
     paths.create_output_directories()
+    clean_path = paths.resolve(settings.data_clean_path)
+    manifest_path = paths.resolve(settings.data_manifest_path)
 
-    _require_file(paths.clean_data, "Run the common pipeline first.")
-    _require_file(paths.split_manifest, "Run the common pipeline first.")
+    _require_file(
+        clean_path,
+        "Run: python scripts/run_absconding_data_pipeline.py --input "
+        "data/raw/absconding/hive_data_with_features.csv",
+    )
+    _require_file(
+        manifest_path,
+        "Run the separate Absconding data pipeline first.",
+    )
 
-    clean = read_table(paths.clean_data)
+    clean = read_table(clean_path)
     clean[TIMESTAMP_COLUMN] = pd.to_datetime(clean[TIMESTAMP_COLUMN], errors="raise")
-    manifest = read_table(paths.split_manifest)
+    manifest = read_table(manifest_path)
     manifest[TIMESTAMP_COLUMN] = pd.to_datetime(manifest[TIMESTAMP_COLUMN], errors="raise")
 
     prepared, feature_names, episodes = prepare_absconding_dataset(clean, manifest, settings)
@@ -203,9 +220,7 @@ def run_absconding_pipeline(
         maximum_rows=settings.final_training_rows,
         random_state=settings.random_state + 1,
     )
-    selected = fit_candidate(
-        build_candidate(selected_key, settings), X_final_train, y_final_train
-    )
+    selected = fit_candidate(build_candidate(selected_key, settings), X_final_train, y_final_train)
     selected_validation_probability = positive_probability(selected.estimator, X_validation)
     selected_threshold = choose_alert_threshold(
         y_validation,
@@ -235,8 +250,8 @@ def run_absconding_pipeline(
             y_validation, selected_validation_probability, alert_threshold
         ),
         "validation_event_metrics": selected_event_metrics,
-        "available_training_records": int(len(X_train)),
-        "final_training_records": int(len(X_final_train)),
+        "available_training_records": len(X_train),
+        "final_training_records": len(X_final_train),
     }
 
     X_test = split_frames["test"][feature_names]
@@ -293,7 +308,8 @@ def run_absconding_pipeline(
         "data_contract": {
             "timestamp": TIMESTAMP_COLUMN,
             "hive": HIVE_COLUMN,
-            "sensors": list(SENSOR_COLUMNS),
+            "sensors": list(absconding_sensor_columns(clean)),
+            "training_dataset": settings.data_clean_path,
         },
     }
     joblib.dump(model_bundle, paths.model_directory / "absconding_model_bundle.joblib")
@@ -318,18 +334,21 @@ def run_absconding_pipeline(
     dashboard = {
         "summary": {
             "module_name": "Absconding Early Warning",
-            "status": "exploratory_due_to_sparse_events",
+            "status": "research_model_separate_absconding_dataset",
             "selected_model_key": selected_key,
             "selected_model_name": selected.display_name,
             "selected_model_family": selected.family,
             "active_backend_model": selected.display_name,
             "prediction_horizon_hours": settings.prediction_horizon_hours,
             "minimum_history_hours": settings.minimum_history_hours,
+            "source_active_event_rows": int(
+                clean.get(settings.active_event_column, pd.Series(dtype="int8")).sum()
+            ),
             "source_event_markers": int(clean[settings.event_column].sum()),
-            "distinct_event_episodes": int(len(episodes)),
+            "distinct_event_episodes": len(episodes),
             "future_positive_rows": int(prepared[settings.target_column].sum()),
             "future_positive_rate": round(float(prepared[settings.target_column].mean()), 8),
-            "total_records_used": int(len(prepared)),
+            "total_records_used": len(prepared),
             "total_hives": int(prepared[HIVE_COLUMN].nunique()),
             "analysis_start": prepared[TIMESTAMP_COLUMN].min().isoformat(),
             "analysis_end": prepared[TIMESTAMP_COLUMN].max().isoformat(),
@@ -339,10 +358,13 @@ def run_absconding_pipeline(
             "medium_risk_hives": sum(item["risk_level"] == "Medium" for item in latest_risk),
             "low_risk_hives": sum(item["risk_level"] == "Low" for item in latest_risk),
             "methodology_note": (
-                f"The raw dataset contains only seven event-marker rows. The {settings.prediction_horizon_hours}-hour future-event "
-                "target creates warning windows, but results remain exploratory and is reported with "
-                "event-level detection metrics."
+                "The Absconding module is trained from its separate labelled historical dataset, "
+                f"using event onsets and a {settings.prediction_horizon_hours}-hour future warning "
+                "target. The shared common dataset used by the other modules is unchanged. "
+                "Results are reported with both row-level and event-level metrics and require "
+                "local Sri Lankan biological validation before production use."
             ),
+            "training_dataset": settings.data_clean_path,
         },
         "exploratory_analysis": exploratory,
         "model_training": {
@@ -369,13 +391,10 @@ def run_absconding_pipeline(
                 best_defence.get("model_name") if best_defence else selected.display_name
             ),
             "lstm_metrics_available": any(
-                row.get("model_key") == "lstm_sequence"
-                and row.get("status") == "completed"
+                row.get("model_key") == "lstm_sequence" and row.get("status") == "completed"
                 for row in comparison
             ),
-            "is_lstm_best": bool(
-                best_defence and best_defence.get("model_key") == "lstm_sequence"
-            ),
+            "is_lstm_best": bool(best_defence and best_defence.get("model_key") == "lstm_sequence"),
             "why_lstm_is_defensible": [
                 "Absconding develops through ordered changes rather than one isolated reading.",
                 "The report used 72-observation windows with stride three for the LSTM experiment.",
@@ -412,7 +431,7 @@ def run_absconding_pipeline(
             "manual_endpoint": "/api/absconding/predict",
             "method": "GET",
             "required_history_hours": settings.minimum_history_hours,
-            "accepted_sensor_columns": list(SENSOR_COLUMNS),
+            "accepted_sensor_columns": list(absconding_sensor_columns(clean)),
             "note": (
                 "The backend polls Supabase/PostgreSQL every 10 minutes. Higher-frequency readings "
                 "are aggregated to hourly means before the exact training feature pipeline is applied."
@@ -527,7 +546,7 @@ def _score_all_rows(
         TIMESTAMP_COLUMN,
         "split",
         settings.target_column,
-        *SENSOR_COLUMNS,
+        *absconding_sensor_columns(prepared),
         *[column for column in explanation_columns if column in prepared.columns],
     ]
     keep_columns = list(dict.fromkeys(keep_columns))
@@ -624,7 +643,7 @@ def _build_hive_outputs(
                     "weight_kg": sensors["weight_kg"],
                     "actual_future_label": int(row[settings.target_column]),
                     "actual_next_24h_label": int(row[settings.target_column]),
-                    "actual_next_72h_label": int(row[settings.target_column]),
+                    "actual_next_72h_label": None,
                 }
             )
         details[str(hive_id)] = {
@@ -649,6 +668,14 @@ def _sensor_payload(row: pd.Series) -> dict[str, Any]:
         "humidity_pct": _round_or_none(row.get("humidity_pct")),
         "co2_ppm": _round_or_none(row.get("co2_ppm")),
         "weight_kg": _round_or_none(row.get("weight_kg")),
+        "external_temperature_c": _round_or_none(row.get("external_temperature_c")),
+        "external_humidity_pct": _round_or_none(row.get("external_humidity_pct")),
+        "internal_external_temperature_difference": _round_or_none(
+            row.get("internal_external_temperature_difference")
+        ),
+        "internal_external_humidity_difference": _round_or_none(
+            row.get("internal_external_humidity_difference")
+        ),
         "environmental_stress_score": _round_or_none(
             row.get("environmental_stress_score"), digits=6
         ),
@@ -670,13 +697,10 @@ def _sensor_payload(row: pd.Series) -> dict[str, Any]:
         ),
         "co2_high_flag": int(_safe_number(row.get("co2_high_flag"))),
         "rapid_weight_loss_flag": int(_safe_number(row.get("rapid_weight_loss_flag"))),
-        "sustained_weight_loss_24h": int(
-            _safe_number(row.get("sustained_weight_loss_24h"))
-        ),
-        "sustained_weight_loss_72h": int(
-            _safe_number(row.get("sustained_weight_loss_72h"))
-        ),
+        "sustained_weight_loss_24h": int(_safe_number(row.get("sustained_weight_loss_24h"))),
+        "sustained_weight_loss_72h": int(_safe_number(row.get("sustained_weight_loss_72h"))),
     }
+
 
 def _signal_explanations(row: pd.Series) -> list[dict[str, Any]]:
     candidates = [
@@ -713,11 +737,11 @@ def _signal_explanations(row: pd.Series) -> list[dict[str, Any]]:
     ]
 
 
-
 def _safe_number(value: Any) -> float:
     if value is None or pd.isna(value):
         return 0.0
     return float(value)
+
 
 def _build_exploratory_payload(
     prepared: pd.DataFrame,
@@ -729,15 +753,17 @@ def _build_exploratory_payload(
         split_summary.append(
             {
                 "split": str(split),
-                "records": int(len(group)),
+                "records": len(group),
                 "positive_rows": int(group[settings.target_column].sum()),
                 "positive_rate": round(float(group[settings.target_column].mean()), 8),
-                "event_episodes": int(episodes["split"].eq(split).sum()) if not episodes.empty else 0,
+                "event_episodes": int(episodes["split"].eq(split).sum())
+                if not episodes.empty
+                else 0,
             }
         )
 
     sensor_effects = []
-    for sensor in SENSOR_COLUMNS:
+    for sensor in absconding_sensor_columns(prepared):
         normal = prepared.loc[prepared[settings.target_column].eq(0), sensor].dropna()
         warning = prepared.loc[prepared[settings.target_column].eq(1), sensor].dropna()
         pooled_std = float(normal.std()) if len(normal) > 1 else 0.0
@@ -774,13 +800,12 @@ def _build_exploratory_payload(
             f"{settings.prediction_horizon_hours} hourly observations; otherwise 0."
         ),
         "leakage_controls": [
-            "Chronological train/validation/test assignments are loaded from the common split manifest.",
+            "Chronological train/validation/test assignments are loaded from the module-specific Absconding split manifest.",
             "Rows around split boundaries are removed before model fitting.",
             "All lag, change and rolling features use current or past sensor observations only.",
             "Threshold selection uses validation data; test data is evaluated once with the frozen threshold.",
         ],
     }
-
 
 
 def _merge_existing_lstm_result(
@@ -799,13 +824,9 @@ def _merge_existing_lstm_result(
         return comparison
     if result.get("target_column") != settings.target_column:
         return comparison
-    merged = [
-        row for row in comparison if row.get("model_key") != "lstm_sequence"
-    ]
+    merged = [row for row in comparison if row.get("model_key") != "lstm_sequence"]
     merged.append(result)
-    return sorted(
-        merged, key=lambda row: row.get("selection_score", -1.0), reverse=True
-    )
+    return sorted(merged, key=lambda row: row.get("selection_score", -1.0), reverse=True)
 
 
 def _legacy_model_comparison(comparison: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -835,6 +856,7 @@ def _legacy_model_comparison(comparison: list[dict[str, Any]]) -> list[dict[str,
             }
         )
     return sorted(rows, key=lambda row: row.get("defence_score") or -1.0, reverse=True)
+
 
 def _save_outputs(
     paths: AbscondingPaths,
@@ -888,7 +910,7 @@ def _save_plots(
 ) -> None:
     counts = prepared.groupby(["split", settings.target_column]).size().unstack(fill_value=0)
     ax = counts.plot(kind="bar", figsize=(8, 5), logy=True)
-    ax.set_title("Absconding 72-hour target balance by split")
+    ax.set_title(f"Absconding {settings.prediction_horizon_hours}-hour target balance by split")
     ax.set_xlabel("Split")
     ax.set_ylabel("Rows (log scale)")
     ax.legend(["Normal", "Future-event window"])

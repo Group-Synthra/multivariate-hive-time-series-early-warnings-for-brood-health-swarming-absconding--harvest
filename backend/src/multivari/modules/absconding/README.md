@@ -1,84 +1,107 @@
 # Absconding early-warning module
 
-This module replaces the previous standalone Absconding implementation with a pipeline that follows the new MULTIVARI shared data contract.
+This module uses a **separate labelled historical Absconding dataset** while the Brood Health,
+Swarming, Harvesting and shared EDA pipelines continue using `common_clean.parquet`.
 
-## What the module does
+## Data isolation and integration
 
-1. Loads `data/processed/common_clean.parquet` and the common chronological split manifest.
-2. Converts `absconding_happened_1` into a leakage-safe **event within the next 72 hours** target.
-3. Builds current/past-only temporal, lag, change, rolling, slope, persistence and multisensor-instability features.
-4. Removes common split-boundary gaps before fitting.
-5. Compares:
-   - prior-probability baseline,
-   - balanced logistic regression,
-   - balanced random forest,
-   - balanced Extra Trees,
-   - Isolation Forest anomaly baseline.
-6. Selects the model using validation PR-AUC, F2, precision and event-level recall.
-7. Freezes the validation-selected threshold before test evaluation.
-8. Saves a complete model bundle, metrics, event detection results, feature importance, plots and per-hive risk timelines.
-9. Exposes summary, hive, image and live-inference API endpoints.
+The supplied `hive_data_with_features.csv` is transformed into the same canonical sensor
+contract used by live IoT inference:
 
-## Important scientific limitation
+- `timestamp`
+- `hive_id`
+- `temperature_c`
+- `humidity_pct`
+- `co2_ppm`
+- `weight_kg`
+- `external_temperature_c`
+- `external_humidity_pct`
 
-The common workbook contains only seven raw Absconding event-marker rows. The 72-hour future target creates additional warning-window rows, but those rows are correlated around a small number of distinct events. Therefore the supervised results are exploratory. The dashboard reports both row-level metrics and event-level detection/lead-time metrics so this limitation is visible.
+The source `absconding_event_label` is treated as an active event interval. The data pipeline
+converts only each `0 -> 1` transition into `absconding_happened_1`, so the model predicts an
+event onset instead of learning to recognise an event that is already in progress.
+
+Generated module-specific data files:
+
+- `data/processed/absconding_clean.parquet`
+- `data/manifests/absconding_split_manifest.parquet`
+- `artifacts/reports/absconding/absconding_data_profile.json`
+
+These files do not replace or modify the shared common files.
+
+## Supplied dataset profile
+
+The uploaded file contains:
+
+- 277,376 hourly records
+- 48 hives
+- 718 active-event rows
+- 89 event-onset markers
+- 58 independent episodes after merging onsets within 24 hours
+- no missing values in the six training/live sensor fields
+
+The model uses a leakage-safe **event within the next 24 hours** target, plus 1, 6, 24, 72
+and 168-hour lag, change, rolling, stability and stress features. LSTM comparison uses
+72-observation windows with stride 3.
 
 ## Run
 
-From `backend/`:
+Copy the source file to:
+
+```text
+data/raw/absconding/hive_data_with_features.csv
+```
+
+Then, from `backend/`:
 
 ```powershell
+python scripts/run_absconding_data_pipeline.py
 python scripts/run_absconding_pipeline.py
 ```
 
-Fast code check with only two candidates:
+The model script can also prepare the data in one command:
 
 ```powershell
-python scripts/run_absconding_pipeline.py --models logistic_balanced isolation_forest
+python scripts/run_absconding_pipeline.py --input "data/raw/absconding/hive_data_with_features.csv"
 ```
 
-Generated outputs:
+Train the optional LSTM after the classical pipeline:
 
-- `artifacts/models/absconding/absconding_model_bundle.joblib`
-- `artifacts/metrics/absconding/model_comparison.json`
-- `artifacts/metrics/absconding/model_comparison.csv`
-- `artifacts/metrics/absconding/feature_importance.csv`
-- `artifacts/metrics/absconding/test_event_detection.csv`
-- `artifacts/reports/absconding/absconding_dashboard.json`
-- `artifacts/reports/absconding/*.png`
-- `artifacts/predictions/absconding/latest_risk_per_hive.csv`
-- `artifacts/predictions/absconding/absconding_risk_timeline.parquet`
-
-## API
-
-After starting `python app.py`:
-
-- `GET /api/absconding/summary`
-- `GET /api/absconding/metrics`
-- `GET /api/absconding/hives`
-- `GET /api/absconding/hives/<hive_id>`
-- `POST /api/absconding/predict`
-- `GET /api/absconding/images/<filename>`
-
-Live prediction accepts:
-
-```json
-{
-  "readings": [
-    {
-      "timestamp": "2026-08-04T10:00:00Z",
-      "hive_id": "hive-live-01",
-      "temperature_c": 34.2,
-      "humidity_pct": 62.1,
-      "co2_ppm": 840,
-      "weight_kg": 31.8
-    }
-  ]
-}
+```powershell
+python scripts/run_absconding_lstm.py --epochs 30 --sequence-length 72 --stride 3
+python scripts/run_absconding_pipeline.py
 ```
 
-At least 168 hourly observations are required for each hive. Ten-minute readings may be supplied; the service aggregates them to hourly means before applying the saved training pipeline.
+The second classical-pipeline run merges the saved LSTM metrics into the Model Training tab.
 
-## Runtime and sampling
+## Models
 
-Candidate models use a capped, reproducible training sample that retains every positive warning row. The selected model is refit on a larger event-preserving sample configured by `final_training_rows`; this avoids treating hundreds of thousands of highly overlapping hourly rows as independent observations while keeping the pipeline practical on a development machine.
+- prior-probability baseline
+- rule-based environmental-stress baseline
+- Gaussian Naive Bayes
+- balanced Logistic Regression
+- Ridge Classifier
+- Decision Tree
+- Random Forest
+- Extra Trees
+- Isolation Forest
+- optional TensorFlow/Keras LSTM sequence model
+
+Model and threshold selection use validation data only. The frozen threshold is then evaluated
+on the chronological test split using row-level and episode-level metrics.
+
+## Live IoT
+
+The saved tabular model is used by the Supabase polling service. Ten-minute IoT readings are
+mapped to the canonical schema, aggregated hourly and passed through the same feature builder.
+External temperature and humidity are used when available. Missing optional external readings
+are handled by the saved model's imputation pipeline.
+
+The live endpoint requires at least 168 hourly observations for a hive and never invents a
+probability before the required history exists.
+
+## Research limitation
+
+The separate historical dataset is much stronger than the original seven-marker common file,
+but live Sri Lankan outputs still require local labels, calibration and biological validation
+before production decisions are made solely from the model.

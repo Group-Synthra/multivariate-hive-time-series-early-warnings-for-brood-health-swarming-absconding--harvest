@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from multivari.common.schema import HIVE_COLUMN, SENSOR_COLUMNS, TIMESTAMP_COLUMN
+from multivari.common.schema import HIVE_COLUMN, TIMESTAMP_COLUMN
 from multivari.common.splitting import assign_chronological_splits
 from multivari.modules.absconding.config import AbscondingSettings
 from multivari.modules.absconding.events import build_event_episodes
@@ -29,6 +29,8 @@ def synthetic_frame(hours: int = 800) -> pd.DataFrame:
                     "co2_ppm": 700 + np.arange(hours) * 0.1 + hive_index,
                     "humidity_pct": 60 + np.cos(np.arange(hours) / 48),
                     "weight_kg": 35 - np.arange(hours) * 0.002,
+                    "external_temperature_c": 27 + np.sin(np.arange(hours) / 24),
+                    "external_humidity_pct": 70 + np.cos(np.arange(hours) / 24),
                     "brood_health_healthy_1": 1,
                     "swarming_happened_1": 0,
                     "absconding_happened_1": event,
@@ -65,6 +67,8 @@ def test_feature_selection_excludes_all_label_columns() -> None:
     assert "honey_harvested_1" not in columns
     assert "weight_kg_change_24h" in columns
     assert "multisensor_instability_index" in columns
+    assert "internal_external_temperature_difference" in columns
+    assert "internal_external_humidity_difference" in columns
 
 
 def test_prepared_dataset_uses_future_target_and_boundary_gaps() -> None:
@@ -87,7 +91,9 @@ def test_prepared_dataset_uses_future_target_and_boundary_gaps() -> None:
     ].min()
     warning_rows = prepared.loc[
         prepared[HIVE_COLUMN].eq("hive-a")
-        & prepared[TIMESTAMP_COLUMN].ge(event_time - pd.Timedelta(hours=settings.prediction_horizon_hours))
+        & prepared[TIMESTAMP_COLUMN].ge(
+            event_time - pd.Timedelta(hours=settings.prediction_horizon_hours)
+        )
         & prepared[TIMESTAMP_COLUMN].lt(event_time)
     ]
     assert warning_rows[settings.target_column].eq(1).all()

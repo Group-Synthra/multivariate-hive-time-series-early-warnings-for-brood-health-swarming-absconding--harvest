@@ -68,6 +68,8 @@ backend/data/interim/*
 backend/data/processed/*
 
 !backend/data/raw/.gitkeep
+!backend/data/raw/absconding/
+!backend/data/raw/absconding/.gitkeep
 !backend/data/interim/.gitkeep
 !backend/data/processed/.gitkeep
 

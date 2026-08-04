@@ -54,11 +54,7 @@ def create_app() -> Flask:
     iot_monitor = AbscondingIotMonitor(
         prediction_factory=absconding_service.build_live_iot_prediction,
         cache_path=(
-            backend_root
-            / "artifacts"
-            / "predictions"
-            / "absconding"
-            / "iot_live_latest.json"
+            backend_root / "artifacts" / "predictions" / "absconding" / "iot_live_latest.json"
         ),
         interval_minutes=max(1, int(os.getenv("IOT_INTERVAL_MINUTES", "10"))),
         enabled=_bool_env("IOT_MONITOR_ENABLED", bool(os.getenv("DATABASE_URL"))),
@@ -80,9 +76,7 @@ def create_app() -> Flask:
                     "common_eda": f"{base_url}/api/eda",
                     "absconding": f"{base_url}/api/absconding/summary",
                     "absconding_iot": f"{base_url}/api/absconding/iot/live",
-                    "absconding_iot_monitor": (
-                        f"{base_url}/api/absconding/iot/monitor/status"
-                    ),
+                    "absconding_iot_monitor": (f"{base_url}/api/absconding/iot/monitor/status"),
                 },
             }
         )

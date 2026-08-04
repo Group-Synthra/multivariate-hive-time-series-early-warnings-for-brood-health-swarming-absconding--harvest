@@ -36,6 +36,8 @@ def test_live_readings_are_mapped_and_hourly_aggregated(tmp_path) -> None:
             "internal_humidity": [60.0, 62.0],
             "internal_co2": [800.0, 1000.0],
             "total_weight": [30.0, 31.0],
+            "external_temp": [28.0, 30.0],
+            "external_humidity": [70.0, 72.0],
         }
     )
     normalised = service._normalise_readings(
@@ -49,6 +51,8 @@ def test_live_readings_are_mapped_and_hourly_aggregated(tmp_path) -> None:
     assert len(hourly) == 1
     assert hourly["temperature_c"].iloc[0] == 35.0
     assert hourly["weight_kg"].iloc[0] == 30.5
+    assert hourly["external_temperature_c"].iloc[0] == 29.0
+    assert hourly["external_humidity_pct"].iloc[0] == 71.0
 
 
 def test_iot_monitor_persists_backend_prediction_cache(tmp_path) -> None:

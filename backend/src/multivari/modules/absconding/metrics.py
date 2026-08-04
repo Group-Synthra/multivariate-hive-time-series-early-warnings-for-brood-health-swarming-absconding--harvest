@@ -93,7 +93,7 @@ def classification_metrics(
     tn, fp, fn, tp = confusion_matrix(y_true, prediction, labels=[0, 1]).ravel()
 
     result: dict[str, Any] = {
-        "records": int(len(y_true)),
+        "records": len(y_true),
         "positive_rows": int(y_true.sum()),
         "positive_rate": round(float(y_true.mean()), 8) if len(y_true) else None,
         "threshold": round(float(threshold), 8),

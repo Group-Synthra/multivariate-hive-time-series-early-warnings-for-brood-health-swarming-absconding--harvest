@@ -62,7 +62,5 @@ def test_sequence_builder_preserves_positive_endpoints_when_capped() -> None:
 
     assert sequence_set.X.shape == (4, 8, 2)
     assert sequence_set.y.sum() == 1
-    positive_time = sequence_set.metadata.loc[
-        sequence_set.y.astype(bool), TIMESTAMP_COLUMN
-    ].iloc[0]
+    positive_time = sequence_set.metadata.loc[sequence_set.y.astype(bool), TIMESTAMP_COLUMN].iloc[0]
     assert positive_time == frame.loc[30, TIMESTAMP_COLUMN]

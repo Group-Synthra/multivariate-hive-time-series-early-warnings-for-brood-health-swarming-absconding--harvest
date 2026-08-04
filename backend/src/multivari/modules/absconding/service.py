@@ -13,6 +13,7 @@ import pandas as pd
 from multivari.common.schema import HIVE_COLUMN, SENSOR_COLUMNS, TIMESTAMP_COLUMN
 
 from .config import AbscondingSettings
+from .data import EXTERNAL_SENSOR_COLUMNS
 from .features import build_absconding_features
 from .iot import IotSettings, SupabaseIotRepository
 from .modeling import positive_probability
@@ -40,6 +41,10 @@ COLUMN_ALIASES = {
     "total_weight": "weight_kg",
     "hive_weight_kg": "weight_kg",
     "weight": "weight_kg",
+    "external_temp": "external_temperature_c",
+    "external_temperature_c": "external_temperature_c",
+    "external_humidity": "external_humidity_pct",
+    "external_humidity_pct": "external_humidity_pct",
 }
 
 
@@ -117,8 +122,9 @@ class AbscondingService:
             "hourly_rows": len(hourly),
             "predictions": predictions,
             "warning": (
-                "This model is exploratory because the training dataset contains only a small "
-                "number of confirmed absconding episodes."
+                "This model uses the separate labelled Absconding dataset. Treat live predictions "
+                "as research early warnings until locally labelled Sri Lankan events are available "
+                "for calibration and biological validation."
             ),
         }
 
@@ -172,9 +178,7 @@ class AbscondingService:
             scored_rows=len(scored),
         )
         factors = _signal_explanations(latest)
-        recommendation = _recommended_action(
-            prediction["risk_level"], prediction["arm"], factors
-        )
+        recommendation = _recommended_action(prediction["risk_level"], prediction["arm"], factors)
 
         timeline = []
         for _, row in scored.tail(168).iterrows():
@@ -350,9 +354,7 @@ class AbscondingService:
             bundle["estimator"], valid[bundle["feature_names"]]
         )
         valid["arm"] = (
-            valid.groupby(HIVE_COLUMN)["probability"]
-            .diff(settings.arm_change_hours)
-            .fillna(0.0)
+            valid.groupby(HIVE_COLUMN)["probability"].diff(settings.arm_change_hours).fillna(0.0)
         )
         valid["arm_per_hour"] = valid["arm"] / max(settings.arm_change_hours, 1)
         return bundle, settings, hourly, valid
@@ -414,10 +416,9 @@ class AbscondingService:
         missing = [column for column in required if column not in frame]
         if missing:
             raise ValueError(f"Missing live inference columns: {missing}")
-        frame = frame[required].copy()
-        timestamp = pd.to_datetime(
-            frame[TIMESTAMP_COLUMN], errors="coerce", utc=timestamps_are_utc
-        )
+        optional = [column for column in EXTERNAL_SENSOR_COLUMNS if column in frame]
+        frame = frame[[*required, *optional]].copy()
+        timestamp = pd.to_datetime(frame[TIMESTAMP_COLUMN], errors="coerce", utc=timestamps_are_utc)
         if timestamp.isna().any():
             raise ValueError("One or more live timestamps are invalid.")
         if timestamp.dt.tz is None:
@@ -428,7 +429,7 @@ class AbscondingService:
             timestamp = timestamp.dt.tz_convert("UTC")
         frame[TIMESTAMP_COLUMN] = timestamp.dt.tz_localize(None)
         frame[HIVE_COLUMN] = frame[HIVE_COLUMN].astype("string").str.strip()
-        for sensor in SENSOR_COLUMNS:
+        for sensor in (*SENSOR_COLUMNS, *optional):
             frame[sensor] = pd.to_numeric(frame[sensor], errors="coerce")
         return (
             frame.dropna(subset=[HIVE_COLUMN])
@@ -440,10 +441,12 @@ class AbscondingService:
     def _aggregate_hourly(frame: pd.DataFrame) -> pd.DataFrame:
         hourly = frame.copy()
         hourly[TIMESTAMP_COLUMN] = hourly[TIMESTAMP_COLUMN].dt.floor("h")
+        value_columns = [
+            *SENSOR_COLUMNS,
+            *[column for column in EXTERNAL_SENSOR_COLUMNS if column in hourly],
+        ]
         return (
-            hourly.groupby([HIVE_COLUMN, TIMESTAMP_COLUMN], as_index=False)[
-                list(SENSOR_COLUMNS)
-            ]
+            hourly.groupby([HIVE_COLUMN, TIMESTAMP_COLUMN], as_index=False)[value_columns]
             .mean()
             .sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN])
             .reset_index(drop=True)
@@ -582,9 +585,7 @@ def _raw_sensor_payload(row: pd.Series) -> dict[str, Any]:
 
 def _feature_sensor_payload(row: pd.Series) -> dict[str, Any]:
     return {
-        "environmental_stress_score": _optional_float(
-            row.get("environmental_stress_score"), 6
-        ),
+        "environmental_stress_score": _optional_float(row.get("environmental_stress_score"), 6),
         "stress_trend_24h": _optional_float(row.get("stress_trend_24h"), 6),
         "weight_change_1h": _optional_float(row.get("weight_kg_change_1h"), 3),
         "weight_change_6h": _optional_float(row.get("weight_kg_change_6h"), 3),
@@ -592,20 +593,22 @@ def _feature_sensor_payload(row: pd.Series) -> dict[str, Any]:
         "weight_change_72h": _optional_float(row.get("weight_kg_change_72h"), 3),
         "co2_change_6h": _optional_float(row.get("co2_ppm_change_6h"), 3),
         "co2_change_24h": _optional_float(row.get("co2_ppm_change_24h"), 3),
-        "temp_deviation_from_35": _optional_float(
-            row.get("temperature_deviation_from_35"), 3
-        ),
+        "temp_deviation_from_35": _optional_float(row.get("temperature_deviation_from_35"), 3),
         "humidity_deviation_from_optimal": _optional_float(
             row.get("humidity_deviation_from_optimal"), 3
         ),
+        "external_temperature_c": _optional_float(row.get("external_temperature_c"), 3),
+        "external_humidity_pct": _optional_float(row.get("external_humidity_pct"), 3),
+        "internal_external_temperature_difference": _optional_float(
+            row.get("internal_external_temperature_difference"), 3
+        ),
+        "internal_external_humidity_difference": _optional_float(
+            row.get("internal_external_humidity_difference"), 3
+        ),
         "co2_high_flag": int(_number(row.get("co2_high_flag"))),
         "rapid_weight_loss_flag": int(_number(row.get("rapid_weight_loss_flag"))),
-        "sustained_weight_loss_24h": int(
-            _number(row.get("sustained_weight_loss_24h"))
-        ),
-        "sustained_weight_loss_72h": int(
-            _number(row.get("sustained_weight_loss_72h"))
-        ),
+        "sustained_weight_loss_24h": int(_number(row.get("sustained_weight_loss_24h"))),
+        "sustained_weight_loss_72h": int(_number(row.get("sustained_weight_loss_72h"))),
     }
 
 

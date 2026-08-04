@@ -17,12 +17,8 @@ def add_time_features(df: pd.DataFrame) -> pd.DataFrame:
     time_features["month"] = timestamp.dt.month.astype("int8")
     time_features["day_of_year"] = timestamp.dt.dayofyear.astype("int16")
     time_features["is_weekend"] = (timestamp.dt.dayofweek >= 5).astype("int8")
-    time_features["hour_sin"] = np.sin(2 * np.pi * time_features["hour"] / 24).astype(
-        "float32"
-    )
-    time_features["hour_cos"] = np.cos(2 * np.pi * time_features["hour"] / 24).astype(
-        "float32"
-    )
+    time_features["hour_sin"] = np.sin(2 * np.pi * time_features["hour"] / 24).astype("float32")
+    time_features["hour_cos"] = np.cos(2 * np.pi * time_features["hour"] / 24).astype("float32")
     time_features["day_of_year_sin"] = np.sin(
         2 * np.pi * time_features["day_of_year"] / 365.25
     ).astype("float32")
@@ -52,9 +48,7 @@ def build_common_features(
             additions[f"{sensor}_lag_{lag}h"] = grouped[sensor].shift(lag).astype("float32")
 
         for period in change_hours:
-            additions[f"{sensor}_change_{period}h"] = grouped[sensor].diff(period).astype(
-                "float32"
-            )
+            additions[f"{sensor}_change_{period}h"] = grouped[sensor].diff(period).astype("float32")
 
         for window in rolling_windows_hours:
             rolling = grouped[sensor].rolling(window=window, min_periods=window)

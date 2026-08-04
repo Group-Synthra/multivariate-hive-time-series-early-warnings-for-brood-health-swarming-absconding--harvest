@@ -101,12 +101,10 @@ def evaluate_event_warnings(
                 "detected": bool(first_alert is not None),
                 "first_alert": first_alert.isoformat() if first_alert is not None else None,
                 "lead_hours": lead_hours,
-                "maximum_probability": round(
-                    float(window["absconding_probability"].max()), 6
-                )
+                "maximum_probability": round(float(window["absconding_probability"].max()), 6)
                 if not window.empty
                 else None,
-                "warning_rows": int(len(alerted)),
+                "warning_rows": len(alerted),
             }
         )
 

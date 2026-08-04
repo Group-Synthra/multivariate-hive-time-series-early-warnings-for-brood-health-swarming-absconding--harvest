@@ -14,16 +14,29 @@ from multivari.common.schema import (
 )
 
 from .config import AbscondingSettings
+from .data import EXTERNAL_SENSOR_COLUMNS
 
 NON_FEATURE_COLUMNS = {
     TIMESTAMP_COLUMN,
     HIVE_COLUMN,
     *TARGET_COLUMNS,
+    "absconding_active_1",
+    "absconding_event_label",
+    "absconding_label_next_72h",
+    "source_72h_target",
+    "dataset_source",
     "split",
     "is_boundary_gap",
     "history_rows",
     "has_full_absconding_history",
 }
+
+
+def absconding_sensor_columns(df: pd.DataFrame) -> tuple[str, ...]:
+    return (
+        *SENSOR_COLUMNS,
+        *tuple(column for column in EXTERNAL_SENSOR_COLUMNS if column in df.columns),
+    )
 
 
 def build_absconding_features(
@@ -32,9 +45,10 @@ def build_absconding_features(
 ) -> pd.DataFrame:
     """Build current/past-only features for long-term colony deterioration."""
     ordered = df.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN]).copy()
+    feature_sensors = absconding_sensor_columns(ordered)
     result = build_common_features(
         ordered,
-        sensor_columns=SENSOR_COLUMNS,
+        sensor_columns=feature_sensors,
         lags_hours=settings.lags_hours,
         change_hours=settings.change_hours,
         rolling_windows_hours=settings.rolling_windows_hours,
@@ -49,7 +63,7 @@ def build_absconding_features(
         history_rows >= settings.minimum_history_hours
     ).astype("int8")
 
-    for sensor in SENSOR_COLUMNS:
+    for sensor in feature_sensors:
         for window in settings.rolling_windows_hours:
             mean_column = f"{sensor}_roll_mean_{window}h"
             std_column = f"{sensor}_roll_std_{window}h"
@@ -117,6 +131,15 @@ def build_absconding_features(
         result["temperature_c"] * result["humidity_pct"]
     ).astype("float32")
 
+    if "external_temperature_c" in result:
+        additions["internal_external_temperature_difference"] = (
+            result["temperature_c"] - result["external_temperature_c"]
+        ).astype("float32")
+    if "external_humidity_pct" in result:
+        additions["internal_external_humidity_difference"] = (
+            result["humidity_pct"] - result["external_humidity_pct"]
+        ).astype("float32")
+
     # Report-aligned explainable stress indicators. These are operational
     # interpretation features, not universal biological cut-offs.
     temperature_stress = ((result["temperature_c"] - 35.0).abs() / 5.0).clip(0, 1)
@@ -125,7 +148,10 @@ def build_absconding_features(
     weight_change_24h = result.get("weight_kg_change_24h", pd.Series(0.0, index=result.index))
     weight_change_72h = result.get("weight_kg_change_72h", pd.Series(0.0, index=result.index))
     weight_stress = pd.concat(
-        [(-weight_change_24h / 2.0).clip(0, 1), (-weight_change_72h / 4.0).clip(0, 1)],
+        [
+            (-weight_change_24h / 2.0).clip(0, 1),
+            (-weight_change_72h / 4.0).clip(0, 1),
+        ],
         axis=1,
     ).max(axis=1)
     environmental_stress = (
@@ -134,8 +160,12 @@ def build_absconding_features(
         + 0.24 * co2_stress
         + 0.28 * weight_stress
     ).clip(0, 1)
-    additions["temperature_deviation_from_35"] = (result["temperature_c"] - 35.0).abs().astype("float32")
-    additions["humidity_deviation_from_optimal"] = (result["humidity_pct"] - 60.0).abs().astype("float32")
+    additions["temperature_deviation_from_35"] = (
+        (result["temperature_c"] - 35.0).abs().astype("float32")
+    )
+    additions["humidity_deviation_from_optimal"] = (
+        (result["humidity_pct"] - 60.0).abs().astype("float32")
+    )
     additions["co2_high_flag"] = result["co2_ppm"].ge(1800.0).astype("int8")
     additions["rapid_weight_loss_flag"] = weight_change_24h.le(-1.5).astype("int8")
     additions["sustained_weight_loss_24h"] = weight_change_24h.le(-0.5).astype("int8")
@@ -145,7 +175,7 @@ def build_absconding_features(
         environmental_stress.groupby(result[HIVE_COLUMN], sort=False).diff(24).fillna(0.0)
     ).astype("float32")
 
-    missing_sensor_count = result[list(SENSOR_COLUMNS)].isna().sum(axis=1).astype("int8")
+    missing_sensor_count = result[list(feature_sensors)].isna().sum(axis=1).astype("int8")
     additions["missing_sensor_count"] = missing_sensor_count
     if "row_has_missing_sensor" not in result.columns:
         additions["row_has_missing_sensor"] = missing_sensor_count.gt(0).astype("int8")

@@ -323,7 +323,9 @@ def feature_importance(
     maximum_rows: int,
     random_state: int,
 ) -> list[dict[str, float | str]]:
-    classifier = estimator.named_steps.get("classifier") if isinstance(estimator, Pipeline) else None
+    classifier = (
+        estimator.named_steps.get("classifier") if isinstance(estimator, Pipeline) else None
+    )
     if classifier is not None and hasattr(classifier, "feature_importances_"):
         values = np.asarray(classifier.feature_importances_, dtype=float)
     elif classifier is not None and hasattr(classifier, "coef_"):

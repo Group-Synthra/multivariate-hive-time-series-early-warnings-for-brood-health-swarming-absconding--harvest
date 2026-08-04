@@ -1,0 +1,80 @@
+{
+  "source_path": "hive_data_with_features.csv",
+  "rows_read": 277376,
+  "rows_clean": 277376,
+  "hives": 48,
+  "analysis_start": "2021-06-12T00:00:00",
+  "analysis_end": "2023-02-09T23:00:00",
+  "duplicate_hive_timestamps_removed": 0,
+  "invalid_timestamps_removed": 0,
+  "source_active_event_rows": 718,
+  "event_onset_markers": 89,
+  "merged_event_episodes": 58,
+  "derived_24h_positive_rows": 1550,
+  "derived_24h_positive_rate": 0.00561139,
+  "source_72h_positive_rows": 4851,
+  "derived_72h_positive_rows": 3681,
+  "source_derived_72h_agreement": 0.99819655,
+  "median_sampling_minutes": 60.0,
+  "non_hourly_interval_fraction": 0.0,
+  "missing_values_after_cleaning": {
+    "temperature_c": 0,
+    "humidity_pct": 0,
+    "co2_ppm": 0,
+    "weight_kg": 0,
+    "external_temperature_c": 0,
+    "external_humidity_pct": 0
+  },
+  "sensor_ranges": {
+    "temperature_c": {
+      "min": 20.0,
+      "max": 40.569,
+      "mean": 32.127794
+    },
+    "humidity_pct": {
+      "min": 47.014,
+      "max": 88.0,
+      "mean": 66.233757
+    },
+    "co2_ppm": {
+      "min": 400.0,
+      "max": 30000.0,
+      "mean": 4502.578678
+    },
+    "weight_kg": {
+      "min": 0.0,
+      "max": 83.347,
+      "mean": 43.703371
+    },
+    "external_temperature_c": {
+      "min": 3.851,
+      "max": 41.196,
+      "mean": 23.076795
+    },
+    "external_humidity_pct": {
+      "min": 8.0,
+      "max": 85.931,
+      "mean": 36.562052
+    }
+  },
+  "split_summary": [
+    {
+      "split": "train",
+      "rows": 194136,
+      "boundary_gap_rows": 3456,
+      "event_onset_markers": 30
+    },
+    {
+      "split": "validation",
+      "rows": 41611,
+      "boundary_gap_rows": 6912,
+      "event_onset_markers": 25
+    },
+    {
+      "split": "test",
+      "rows": 41629,
+      "boundary_gap_rows": 3456,
+      "event_onset_markers": 34
+    }
+  ]
+}

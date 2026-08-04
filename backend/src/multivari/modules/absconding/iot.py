@@ -45,8 +45,7 @@ class IotSettings:
             database_url=database_url,
             sslmode=os.getenv("DATABASE_SSLMODE", "require").strip() or "require",
             schema=os.getenv("IOT_SCHEMA", "public").strip() or "public",
-            table=os.getenv("IOT_SENSOR_TABLE", "beehive_readings").strip()
-            or "beehive_readings",
+            table=os.getenv("IOT_SENSOR_TABLE", "beehive_readings").strip() or "beehive_readings",
             hive_column=os.getenv("IOT_HIVE_COLUMN", "device_id").strip() or "device_id",
             timestamp_column=(
                 os.getenv("IOT_TIMESTAMP_COLUMN", "").strip()
@@ -55,14 +54,10 @@ class IotSettings:
             ),
             temperature_column=os.getenv("IOT_TEMPERATURE_COLUMN", "internal_temp").strip()
             or "internal_temp",
-            humidity_column=os.getenv(
-                "IOT_HUMIDITY_COLUMN", "internal_humidity"
-            ).strip()
+            humidity_column=os.getenv("IOT_HUMIDITY_COLUMN", "internal_humidity").strip()
             or "internal_humidity",
-            co2_column=os.getenv("IOT_CO2_COLUMN", "internal_co2").strip()
-            or "internal_co2",
-            weight_column=os.getenv("IOT_WEIGHT_COLUMN", "total_weight").strip()
-            or "total_weight",
+            co2_column=os.getenv("IOT_CO2_COLUMN", "internal_co2").strip() or "internal_co2",
+            weight_column=os.getenv("IOT_WEIGHT_COLUMN", "total_weight").strip() or "total_weight",
             external_temperature_column=os.getenv(
                 "IOT_EXTERNAL_TEMPERATURE_COLUMN", "external_temp"
             ).strip()
@@ -111,7 +106,7 @@ class SupabaseIotRepository:
     def fetch_latest(self) -> tuple[pd.DataFrame, dict[str, Any]]:
         if psycopg is None or sql is None:
             raise RuntimeError(
-                "PostgreSQL support is not installed. Run: python -m pip install -e \".[dev]\""
+                'PostgreSQL support is not installed. Run: python -m pip install -e ".[dev]"'
             )
 
         settings = self.settings
@@ -136,12 +131,8 @@ class SupabaseIotRepository:
             selected = [
                 sql.SQL("{} AS recorded_at").format(sql.Identifier(settings.timestamp_column)),
                 sql.SQL("{} AS device_id").format(sql.Identifier(settings.hive_column)),
-                sql.SQL("{} AS internal_temp").format(
-                    sql.Identifier(settings.temperature_column)
-                ),
-                sql.SQL("{} AS internal_humidity").format(
-                    sql.Identifier(settings.humidity_column)
-                ),
+                sql.SQL("{} AS internal_temp").format(sql.Identifier(settings.temperature_column)),
+                sql.SQL("{} AS internal_humidity").format(sql.Identifier(settings.humidity_column)),
                 sql.SQL("{} AS internal_co2").format(sql.Identifier(settings.co2_column)),
                 sql.SQL("{} AS total_weight").format(sql.Identifier(settings.weight_column)),
             ]

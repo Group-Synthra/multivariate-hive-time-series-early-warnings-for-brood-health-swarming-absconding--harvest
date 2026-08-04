@@ -41,6 +41,17 @@ function metric(value, digits = 4) {
   return value === null || value === undefined ? '—' : formatNumber(value, digits);
 }
 
+function metricPercentage(value, digits = 2) {
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue)
+    ? `${(numericValue * 100).toFixed(digits)}%`
+    : '—';
+}
+
 function SetupRequired({ error, onRetry }) {
   return (
     <div className="page-stack">
@@ -281,7 +292,7 @@ function ExploratoryAnalysis({ exploratory, summary, data, risks, selectedHive, 
       </div>
 
       <div className="two-column-grid">
-        <Panel title="Pre-event sensor differences" subtitle="Standardized mean differences between 72-hour warning rows and normal rows.">
+        <Panel title="Pre-event sensor differences" subtitle={`Standardized mean differences between ${summary.prediction_horizon_hours || 24}-hour warning rows and normal rows.`}>
           <div className="chart-area">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={effects} layout="vertical" margin={{ left: 30 }}>
@@ -331,11 +342,13 @@ function ModelTraining({ training, plots }) {
   const importance = training.feature_importance || [];
   return (
     <>
-      <div className="stats-grid">
-        <StatCard label="Precision" value={test.precision} note="Warning correctness on test" />
-        <StatCard label="Recall" value={test.recall} note="Future-event rows detected" />
-        <StatCard label="F2 score" value={test.f2} note="Recall-weighted threshold metric" />
-        <StatCard label="Median lead time" value={event.median_lead_hours} unit="hours" note={`${event.detected_event_count || 0}/${event.event_count || 0} test episodes detected`} />
+      <div className="stats-grid stats-grid-six">
+        <StatCard label="Accuracy" value={metricPercentage(test.accuracy)} note="Overall row-level correctness" />
+        <StatCard label="Balanced accuracy" value={metricPercentage(test.balanced_accuracy)} note="Average sensitivity across both classes" />
+        <StatCard label="Precision" value={metricPercentage(test.precision)} note="Warning correctness on test" />
+        <StatCard label="Recall" value={metricPercentage(test.recall)} note="Future-event rows detected" />
+        <StatCard label="F2 score" value={metricPercentage(test.f2)} note="Recall-weighted threshold metric" />
+        <StatCard label="Event recall" value={metricPercentage(event.event_recall)} note={`${event.detected_event_count || 0}/${event.event_count || 0} test episodes detected`} />
       </div>
 
       <Panel title="Report-aligned model design" subtitle="The current pipeline retrains compatible classical models on the new shared data contract.">
@@ -346,21 +359,41 @@ function ModelTraining({ training, plots }) {
         </div>
       </Panel>
 
-      <Panel title="Validation model comparison" subtitle={training.selection_rule}>
+      <Panel
+        title="Validation model comparison"
+        subtitle={`${training.selection_rule || ''} Accuracy is included for completeness, but PR-AUC, F2 and event recall are more informative for this rare-event target.`}
+      >
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Model</th><th>Score</th><th>PR-AUC</th><th>Precision</th><th>Recall</th><th>F2</th><th>Event recall</th><th>Threshold</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Selection score</th>
+                <th>Accuracy</th>
+                <th>Balanced accuracy</th>
+                <th>PR-AUC</th>
+                <th>Precision</th>
+                <th>Recall</th>
+                <th>F1</th>
+                <th>F2</th>
+                <th>Event recall</th>
+                <th>Threshold</th>
+              </tr>
+            </thead>
             <tbody>
               {comparison.map((row) => (
                 <tr key={row.model_key} className={row.model_key === training.selected_model?.model_key ? 'selected-model-row' : ''}>
                   <td><strong>{row.model_name}</strong>{row.model_key === training.selected_model?.model_key && <small> Selected</small>}</td>
                   <td>{metric(row.selection_score)}</td>
-                  <td>{metric(row.validation_metrics?.pr_auc)}</td>
-                  <td>{metric(row.validation_metrics?.precision)}</td>
-                  <td>{metric(row.validation_metrics?.recall)}</td>
-                  <td>{metric(row.validation_metrics?.f2)}</td>
-                  <td>{metric(row.validation_event_metrics?.event_recall)}</td>
-                  <td>{metric(row.threshold_selection?.threshold, 6)}</td>
+                  <td>{metricPercentage(row.validation_metrics?.accuracy)}</td>
+                  <td>{metricPercentage(row.validation_metrics?.balanced_accuracy)}</td>
+                  <td>{metricPercentage(row.validation_metrics?.pr_auc)}</td>
+                  <td>{metricPercentage(row.validation_metrics?.precision)}</td>
+                  <td>{metricPercentage(row.validation_metrics?.recall)}</td>
+                  <td>{metricPercentage(row.validation_metrics?.f1 ?? row.validation_metrics?.f1_score)}</td>
+                  <td>{metricPercentage(row.validation_metrics?.f2)}</td>
+                  <td>{metricPercentage(row.validation_event_metrics?.event_recall)}</td>
+                  <td>{metricPercentage(row.threshold_selection?.threshold)}</td>
                 </tr>
               ))}
             </tbody>
@@ -389,9 +422,15 @@ function ModelTraining({ training, plots }) {
           <dl className="metric-definition-grid">
             <div><dt>Test records</dt><dd>{formatNumber(test.records)}</dd></div>
             <div><dt>Positive rows</dt><dd>{formatNumber(test.positive_rows)}</dd></div>
-            <div><dt>PR-AUC</dt><dd>{metric(test.pr_auc)}</dd></div>
-            <div><dt>ROC-AUC</dt><dd>{metric(test.roc_auc)}</dd></div>
-            <div><dt>Alert fraction</dt><dd>{percentage((test.alert_fraction || 0) * 100)}</dd></div>
+            <div><dt>Accuracy</dt><dd>{metricPercentage(test.accuracy)}</dd></div>
+            <div><dt>Balanced accuracy</dt><dd>{metricPercentage(test.balanced_accuracy)}</dd></div>
+            <div><dt>Precision</dt><dd>{metricPercentage(test.precision)}</dd></div>
+            <div><dt>Recall</dt><dd>{metricPercentage(test.recall)}</dd></div>
+            <div><dt>F1</dt><dd>{metricPercentage(test.f1 ?? test.f1_score)}</dd></div>
+            <div><dt>F2</dt><dd>{metricPercentage(test.f2)}</dd></div>
+            <div><dt>PR-AUC</dt><dd>{metricPercentage(test.pr_auc)}</dd></div>
+            <div><dt>ROC-AUC</dt><dd>{metricPercentage(test.roc_auc)}</dd></div>
+            <div><dt>Alert fraction</dt><dd>{metricPercentage(test.alert_fraction)}</dd></div>
             <div><dt>Brier score</dt><dd>{metric(test.brier_score, 6)}</dd></div>
           </dl>
           <div className="confusion-grid">
@@ -439,7 +478,7 @@ function LiveEarlyWarning({ risks, selectedHive, onHiveChange, detail, liveInfer
         <div className="stats-grid">
           <StatCard label="Selected hive" value={latest.hive_id} note={new Date(latest.timestamp).toLocaleString()} />
           <StatCard label="Risk level" value={latest.risk_level} note={`High: ${thresholds.high || 'configured threshold'}`} />
-          <StatCard label="Probability" value={latest.risk_percentage} unit="%" note="72-hour future-event probability-like score" />
+          <StatCard label="Probability" value={latest.risk_percentage} unit="%" note={`${liveInference?.prediction_horizon_hours || 24}-hour future-event probability-like score`} />
           <StatCard label="ARM trend" value={latest.arm_trend} note={`24-hour change: ${metric(latest.arm, 6)}`} />
         </div>
       )}
