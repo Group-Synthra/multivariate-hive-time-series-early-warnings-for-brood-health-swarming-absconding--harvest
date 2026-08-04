@@ -28,4 +28,11 @@ if __name__ == "__main__":
         "on",
     }
 
+    # Flask debug mode creates a parent process and a reloader child. Start the
+    # background poller only in the process that actually serves requests.
+    monitor = app.extensions.get("absconding_iot_monitor")
+    serving_process = not debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true"
+    if monitor is not None and monitor.enabled and serving_process:
+        monitor.start()
+
     app.run(host=host, port=port, debug=debug)

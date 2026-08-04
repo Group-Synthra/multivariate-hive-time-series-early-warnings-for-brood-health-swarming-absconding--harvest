@@ -90,10 +90,12 @@ backend/data/manifests/*
 backend/artifacts/models/*
 backend/artifacts/metrics/*
 backend/artifacts/reports/*
+backend/artifacts/predictions/*
 
 !backend/artifacts/models/.gitkeep
 !backend/artifacts/metrics/.gitkeep
 !backend/artifacts/reports/.gitkeep
+!backend/artifacts/predictions/.gitkeep
 
 
 # ============================================================

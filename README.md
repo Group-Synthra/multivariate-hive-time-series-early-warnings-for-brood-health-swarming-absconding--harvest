@@ -35,3 +35,20 @@ ruff check src tests scripts
 ```
 
 Move the existing Vite application into `frontend/`. Never commit `.env`, `node_modules`, raw datasets, or trained model binaries.
+
+## Absconding module
+
+After the common pipeline has generated the cleaned parquet and split manifest, run:
+
+```bash
+cd backend
+python scripts/run_absconding_pipeline.py
+```
+
+Then start the API and frontend normally. The Absconding page reads generated artifacts from `/api/absconding/summary`.
+
+## Absconding: report-aligned UI and live Supabase IoT
+
+The Absconding workspace provides **Exploratory Analysis**, **Model Training**, and **Live Prediction (IoT)** views. Live inference reads the configured Supabase PostgreSQL `beehive_readings` history, maps the IoT columns, aggregates ten-minute readings to hourly features, loads the saved Absconding model, calculates ARM, and returns risk, explanations, freshness and recommended actions.
+
+See [`ABSCONDING_IOT_UI_UPDATE_GUIDE.md`](ABSCONDING_IOT_UI_UPDATE_GUIDE.md) for environment configuration, retraining, endpoints and file locations.

@@ -1,0 +1,37 @@
+module:
+  event_column: absconding_happened_1
+  target_column: absconding_within_24h
+  prediction_horizon_hours: 24
+  event_merge_gap_hours: 24
+  minimum_history_hours: 168
+
+features:
+  lags_hours: [1, 6, 24, 72, 168]
+  change_hours: [1, 6, 24, 72, 168]
+  rolling_windows_hours: [6, 24, 72, 168]
+  rolling_statistics: [mean, std, min, max]
+
+training:
+  random_state: 42
+  model_candidates:
+    - dummy_prior
+    - rule_based_stress
+    - gaussian_nb
+    - logistic_balanced
+    - ridge_classifier
+    - decision_tree
+    - random_forest
+    - extra_trees
+    - isolation_forest
+  threshold_beta: 2.0
+  maximum_validation_alert_fraction: 0.05
+  comparison_training_rows: 60000
+  final_training_rows: 80000
+  anomaly_training_rows: 50000
+  permutation_importance_rows: 3000
+  timeline_points_per_hive: 336
+
+risk:
+  medium_threshold_ratio: 0.60
+  arm_change_hours: 24
+  arm_escalation_threshold: 0.10
