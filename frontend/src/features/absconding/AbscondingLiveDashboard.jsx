@@ -6,6 +6,7 @@ import {
   Area, AreaChart, CartesianGrid, Legend, Line, LineChart, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts';
+import "../../styles/absconding.css";
 
 const RANGE_OPTIONS = [
   { label: '1H', hours: 1 },
@@ -400,7 +401,7 @@ export default function AbscondingLiveDashboard({
                     <stop offset="95%" stopColor="var(--accent-emerald)" stopOpacity={0.04} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.28)" />
                 <XAxis dataKey="time" stroke="var(--text-secondary)" tick={{ fontSize: 11 }} minTickGap={18} />
                 <YAxis stroke="var(--text-secondary)" tick={{ fontSize: 11 }} domain={[0, 100]} />
                 <Tooltip content={<DashboardTooltip />} />
@@ -419,7 +420,7 @@ export default function AbscondingLiveDashboard({
           <div className="iot-chart-box">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={sensorRows} margin={{ top: 18, right: 20, left: -18, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.28)" />
                 <XAxis dataKey="time" stroke="var(--text-secondary)" tick={{ fontSize: 11 }} minTickGap={16} />
                 <YAxis yAxisId="left" stroke="var(--text-secondary)" tick={{ fontSize: 11 }} />
                 <YAxis yAxisId="right" orientation="right" stroke="var(--accent-gold)" tick={{ fontSize: 11 }} />

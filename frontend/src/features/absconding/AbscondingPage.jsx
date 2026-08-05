@@ -29,6 +29,7 @@ import { formatDate, formatNumber, percentage } from '../../utils/formatters';
 import { useAbscondingData } from '../../hooks/useAbscondingData';
 import { ModuleTabs } from '../shared/ModuleTabs';
 import AbscondingLiveDashboard from './AbscondingLiveDashboard';
+import "../../styles/absconding.css";
 
 const RISK_ORDER = { High: 0, Medium: 1, Low: 2 };
 const RISK_COLOURS = { High: '#dc2626', Medium: '#d97706', Low: '#059669' };
