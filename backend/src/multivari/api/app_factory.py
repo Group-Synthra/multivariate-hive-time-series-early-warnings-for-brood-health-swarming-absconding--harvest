@@ -6,6 +6,10 @@ from pathlib import Path
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+from multivari.modules.absconding.iot_monitor import AbscondingIotMonitor
+from multivari.modules.absconding.routes import create_absconding_blueprint
+from multivari.modules.absconding.service import AbscondingService
+
 from .eda_service import EDAService
 from .routes import create_api_blueprint
 
@@ -21,6 +25,13 @@ def _allowed_origins() -> list[str]:
         "http://localhost:5173,http://127.0.0.1:5173",
     )
     return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
+def _bool_env(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def create_app() -> Flask:
@@ -39,7 +50,19 @@ def create_app() -> Flask:
     )
 
     service = EDAService(backend_root=backend_root)
+    absconding_service = AbscondingService(backend_root=backend_root)
+    iot_monitor = AbscondingIotMonitor(
+        prediction_factory=absconding_service.build_live_iot_prediction,
+        cache_path=(
+            backend_root / "artifacts" / "predictions" / "absconding" / "iot_live_latest.json"
+        ),
+        interval_minutes=max(1, int(os.getenv("IOT_INTERVAL_MINUTES", "10"))),
+        enabled=_bool_env("IOT_MONITOR_ENABLED", bool(os.getenv("DATABASE_URL"))),
+    )
+
     app.register_blueprint(create_api_blueprint(service))
+    app.register_blueprint(create_absconding_blueprint(absconding_service, iot_monitor))
+    app.extensions["absconding_iot_monitor"] = iot_monitor
 
     @app.get("/")
     def index():
@@ -51,6 +74,9 @@ def create_app() -> Flask:
                 "endpoints": {
                     "health": f"{base_url}/api/health",
                     "common_eda": f"{base_url}/api/eda",
+                    "absconding": f"{base_url}/api/absconding/summary",
+                    "absconding_iot": f"{base_url}/api/absconding/iot/live",
+                    "absconding_iot_monitor": (f"{base_url}/api/absconding/iot/monitor/status"),
                 },
             }
         )

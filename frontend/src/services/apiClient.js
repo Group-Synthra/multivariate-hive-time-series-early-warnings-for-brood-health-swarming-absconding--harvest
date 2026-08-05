@@ -9,24 +9,34 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiGet(path, { signal } = {}) {
+async function apiRequest(path, { method = 'GET', body, signal } = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
+    method,
+    headers: {
+      Accept: 'application/json',
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
     signal,
   });
 
-  const body = await response.json().catch(() => null);
-
+  const payload = await response.json().catch(() => null);
   if (!response.ok) {
     throw new ApiError(
-      body?.error || body?.message || `Request failed with HTTP ${response.status}`,
+      payload?.error || payload?.message || `Request failed with HTTP ${response.status}`,
       response.status,
-      body,
+      payload,
     );
   }
+  return payload;
+}
 
-  return body;
+export function apiGet(path, { signal } = {}) {
+  return apiRequest(path, { method: 'GET', signal });
+}
+
+export function apiPost(path, body = {}, { signal } = {}) {
+  return apiRequest(path, { method: 'POST', body, signal });
 }
 
 export function apiAssetUrl(path) {
