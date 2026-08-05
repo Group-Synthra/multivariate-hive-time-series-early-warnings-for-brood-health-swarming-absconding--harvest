@@ -325,12 +325,31 @@ function ExploratoryAnalysis({ exploratory, summary, data, risks, selectedHive, 
         </Panel>
       </div>
 
-      <Panel title="Generated module artifacts" subtitle="These are produced by the Absconding pipeline, not manually entered dashboard values.">
-        <div className="artifact-grid">
-          {Object.entries(data?.plots || {}).map(([label, path]) => (
-            <a key={label} href={path} target="_blank" rel="noreferrer"><span>{label.replaceAll('_', ' ')}</span><code>{path}</code></a>
-          ))}
-        </div>
+      <Panel
+        title="Generated module images"
+        subtitle="These figures are generated automatically by the Absconding pipeline."
+      >
+        {Object.keys(data?.plots || {}).length ? (
+          <div className="report-figure-grid">
+            {Object.entries(data.plots).map(([label, imagePath]) => (
+              <figure className="report-figure" key={label}>
+                <figcaption className="report-figure-toolbar">
+                  <span>{label.replaceAll('_', ' ')}</span>
+                  <a href={imagePath} target="_blank" rel="noreferrer">
+                    Open full image
+                  </a>
+                </figcaption>
+                <img
+                  src={imagePath}
+                  alt={`Absconding ${label.replaceAll('_', ' ')}`}
+                  loading="lazy"
+                />
+              </figure>
+            ))}
+          </div>
+        ) : (
+          <EmptyState message="No generated Absconding images are available yet." />
+        )}
       </Panel>
     </>
   );

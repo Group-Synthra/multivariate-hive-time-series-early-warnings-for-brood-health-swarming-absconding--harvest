@@ -6,7 +6,6 @@ import {
   Area, AreaChart, CartesianGrid, Legend, Line, LineChart, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts';
-import "../../styles/absconding.css";
 
 const RANGE_OPTIONS = [
   { label: '1H', hours: 1 },
@@ -255,7 +254,8 @@ export default function AbscondingLiveDashboard({
   const nextExpected = iotLiveData.next_expected_reading || addMinutes(lastUpdated, interval);
   const riskProbability = getNum(iotLiveData.risk_probability, getNum(iotLiveData.risk_percentage) / 100);
   const riskPercentage = clamp(getNum(iotLiveData.risk_percentage, riskProbability * 100));
-  const riskLevel = iotLiveData.risk_level || (riskPercentage >= 70 ? 'High' : riskPercentage >= 35 ? 'Medium' : 'Low');
+  const riskLevel = iotLiveData.risk_level
+    || (riskPercentage > 70 ? 'High' : riskPercentage > 35 ? 'Medium' : 'Low');
   const color = riskColor(riskLevel);
   const arm = getNum(iotLiveData.arm, 0);
   const armPct = arm * 100;
@@ -401,13 +401,13 @@ export default function AbscondingLiveDashboard({
                     <stop offset="95%" stopColor="var(--accent-emerald)" stopOpacity={0.04} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.28)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" />
                 <XAxis dataKey="time" stroke="var(--text-secondary)" tick={{ fontSize: 11 }} minTickGap={18} />
                 <YAxis stroke="var(--text-secondary)" tick={{ fontSize: 11 }} domain={[0, 100]} />
                 <Tooltip content={<DashboardTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <ReferenceLine y={35} stroke="var(--accent-gold)" strokeDasharray="4 4" label={{ value: 'Good Threshold (0.35)', fill: 'var(--accent-gold)', fontSize: 11 }} />
-                <ReferenceLine y={70} stroke="var(--accent-crimson)" strokeDasharray="4 4" label={{ value: 'Risk Threshold (0.70)', fill: 'var(--accent-crimson)', fontSize: 11 }} />
+                <ReferenceLine y={35} stroke="var(--accent-gold)" strokeDasharray="4 4" label={{ value: 'Low / Medium boundary (35%)', fill: 'var(--accent-gold)', fontSize: 11 }} />
+                <ReferenceLine y={70} stroke="var(--accent-crimson)" strokeDasharray="4 4" label={{ value: 'Medium / High boundary (70%)', fill: 'var(--accent-crimson)', fontSize: 11 }} />
                 <Area type="monotone" dataKey="risk" name="Absconding Probability" unit="%" stroke="var(--accent-emerald)" fill="url(#iotRiskGradient)" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
               </AreaChart>
             </ResponsiveContainer>
@@ -420,7 +420,7 @@ export default function AbscondingLiveDashboard({
           <div className="iot-chart-box">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={sensorRows} margin={{ top: 18, right: 20, left: -18, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.28)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" />
                 <XAxis dataKey="time" stroke="var(--text-secondary)" tick={{ fontSize: 11 }} minTickGap={16} />
                 <YAxis yAxisId="left" stroke="var(--text-secondary)" tick={{ fontSize: 11 }} />
                 <YAxis yAxisId="right" orientation="right" stroke="var(--accent-gold)" tick={{ fontSize: 11 }} />
