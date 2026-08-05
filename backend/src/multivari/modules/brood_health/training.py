@@ -9,13 +9,18 @@ from typing import Any
 
 import joblib
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
 from sklearn.dummy import DummyRegressor
-from sklearn.ensemble import ExtraTreesRegressor, HistGradientBoostingRegressor, RandomForestRegressor
+from sklearn.ensemble import (
+    ExtraTreesRegressor,
+    HistGradientBoostingRegressor,
+    RandomForestRegressor,
+)
 from sklearn.impute import SimpleImputer
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import Ridge
@@ -232,7 +237,7 @@ def _systematic_cap(
     proportions = metadata["hive_id"].value_counts(normalize=True)
     for hive_id, proportion in proportions.items():
         positions = np.flatnonzero(metadata["hive_id"].eq(hive_id).to_numpy())
-        quota = max(20, int(round(maximum * float(proportion))))
+        quota = max(20, round(maximum * float(proportion)))
         if len(positions) > quota:
             positions = positions[np.linspace(0, len(positions) - 1, quota, dtype=int)]
         selected.extend(positions.tolist())
@@ -691,7 +696,8 @@ def run_training(
                     f"transition level accuracy {100 * float(test_metrics.get('transition_level_accuracy') or 0):.2f}%"
                 ),
             )
-        except Exception as exc:
+        # Model comparison is fault-tolerant: one estimator failure must not abort the run.
+        except Exception as exc:  # noqa: BLE001
             comparison.append({"model": name, "status": "failed", "error": str(exc)})
             _notify(
                 progress_callback,
@@ -850,9 +856,9 @@ def run_training(
         "grouped_feature_importance": grouped_importance,
         "split_summary": {
             "strategy": "stratified group holdout by hive",
-            "train_rows": int(len(x_train)),
-            "validation_rows": int(len(x_validation)),
-            "test_rows": int(len(x_test)),
+            "train_rows": len(x_train),
+            "validation_rows": len(x_validation),
+            "test_rows": len(x_test),
             "train_hives": int(meta_train["hive_id"].nunique()),
             "validation_hives": int(meta_validation["hive_id"].nunique()),
             "test_hives": int(meta_test["hive_id"].nunique()),

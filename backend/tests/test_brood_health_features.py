@@ -54,4 +54,12 @@ def test_live_mapping_and_hourly_aggregation():
     })
     hourly = aggregate_live_hourly(map_iot_frame(raw))
     assert list(hourly["raw_reading_count"]) == [6, 6]
-    assert set(["hive_id", "timestamp", "temperature_c", "humidity_pct", "co2_ppm", "weight_kg"]).issubset(hourly)
+    required_columns = {
+        "hive_id",
+        "timestamp",
+        "temperature_c",
+        "humidity_pct",
+        "co2_ppm",
+        "weight_kg",
+    }
+    assert required_columns.issubset(hourly)

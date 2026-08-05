@@ -3,12 +3,11 @@ from __future__ import annotations
 import json
 import threading
 import traceback
-from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
-from .config import IoTSettings, PATHS
+from .config import PATHS, IoTSettings
 from .eda import build_brood_eda
 from .predictor import BroodHealthPredictor, ModelNotReadyError
 from .repository import IoTConfigurationError, IoTRepositoryError, PostgresIoTRepository
@@ -36,11 +35,15 @@ class BroodHealthService:
         source_mtime = source.stat().st_mtime if source.exists() else None
         if not force and self._eda_cache is not None and self._eda_source_mtime == source_mtime:
             return self._eda_cache
-        if not force and PATHS.eda_cache.exists() and source_mtime is not None:
-            if PATHS.eda_cache.stat().st_mtime >= source_mtime:
-                self._eda_cache = json.loads(PATHS.eda_cache.read_text(encoding="utf-8"))
-                self._eda_source_mtime = source_mtime
-                return self._eda_cache
+        if (
+            not force
+            and PATHS.eda_cache.exists()
+            and source_mtime is not None
+            and PATHS.eda_cache.stat().st_mtime >= source_mtime
+        ):
+            self._eda_cache = json.loads(PATHS.eda_cache.read_text(encoding="utf-8"))
+            self._eda_source_mtime = source_mtime
+            return self._eda_cache
         self._eda_cache = build_brood_eda(save_cache=True)
         self._eda_source_mtime = source_mtime
         return self._eda_cache
@@ -105,7 +108,8 @@ class BroodHealthService:
                             "error": None,
                         }
                     )
-            except Exception as exc:
+            # The background thread must record every failure instead of terminating silently.
+            except Exception as exc:  # noqa: BLE001
                 with self._training_lock:
                     self._training_state.update(
                         {
@@ -156,7 +160,7 @@ class BroodHealthService:
                 f"received {prediction.get('hourly_rows', 0)}"
             )
         prediction["source"] = "postgresql"
-        prediction["raw_rows"] = int(len(history))
+        prediction["raw_rows"] = len(history)
         return prediction
 
     def predict_all_devices(self, *, lookback_hours: int | None = None) -> dict[str, Any]:
@@ -177,7 +181,8 @@ class BroodHealthService:
                         "warning_level": prediction["warning"]["level"],
                     }
                 )
-            except Exception as exc:
+            # Batch prediction is best-effort: retain errors per device and continue.
+            except Exception as exc:  # noqa: BLE001
                 failures.append({"device_id": device_id, "error": str(exc)})
         return {"predictions": predictions, "failures": failures}
 

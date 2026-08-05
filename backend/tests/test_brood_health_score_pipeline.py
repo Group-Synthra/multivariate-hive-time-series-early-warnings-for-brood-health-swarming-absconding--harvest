@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 from multivari.modules.brood_health.features import (

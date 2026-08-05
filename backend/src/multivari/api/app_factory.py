@@ -6,14 +6,14 @@ from pathlib import Path
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-from .eda_service import EDAService
-from .routes import create_api_blueprint
 from multivari.modules.brood_health.routes import create_brood_health_blueprint
 from multivari.modules.brood_health.service import BroodHealthService
 
+from .eda_service import EDAService
+from .routes import create_api_blueprint
+
 
 def _backend_root() -> Path:
-    # .../backend/src/multivari/api/app_factory.py -> .../backend
     return Path(__file__).resolve().parents[3]
 
 

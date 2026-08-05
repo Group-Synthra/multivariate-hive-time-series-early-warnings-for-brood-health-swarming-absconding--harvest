@@ -172,7 +172,7 @@ class BroodHealthPredictor:
             "device_id": str(latest["hive_id"]),
             "latest_timestamp": latest_timestamp.isoformat(),
             "data_freshness_minutes": freshness_minutes,
-            "hourly_rows": int(len(data)),
+            "hourly_rows": len(data),
             "raw_readings_in_latest_hour": optional_context.get("raw_reading_count"),
             "feature_completeness_percentage": self._feature_completeness(latest_features),
             "minimum_recommended_history_hours": 72,

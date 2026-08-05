@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -211,7 +212,7 @@ def _transitions_and_episodes(frame: pd.DataFrame) -> dict[str, Any]:
     probability = matrix.div(matrix.sum(axis=1).replace(0, np.nan), axis=0).fillna(0.0)
 
     changed = ordered[TARGET_COLUMN].ne(previous) | ordered["hive_id"].ne(ordered["hive_id"].shift(1))
-    run_id = changed.cumsum()
+    run_id = changed.astype("int64").cumsum()
     episodes = (
         ordered.assign(run_id=run_id)
         .groupby(["hive_id", "run_id", TARGET_COLUMN], observed=True)
@@ -426,7 +427,7 @@ def build_brood_eda(*, data_path: Path | None = None, save_cache: bool = True) -
     frame = compute_condition_history(frame)
 
     healthy_count = int(frame[TARGET_COLUMN].sum())
-    total = int(len(frame))
+    total = len(frame)
     unhealthy_count = total - healthy_count
     payload: dict[str, Any] = {
         "meta": {

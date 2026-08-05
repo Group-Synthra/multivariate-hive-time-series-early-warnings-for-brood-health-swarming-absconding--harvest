@@ -41,7 +41,7 @@ class BroodHealthScoreConfig:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any] | None) -> "BroodHealthScoreConfig":
+    def from_dict(cls, payload: dict[str, Any] | None) -> BroodHealthScoreConfig:
         if not payload:
             return cls()
         allowed = set(cls.__dataclass_fields__)

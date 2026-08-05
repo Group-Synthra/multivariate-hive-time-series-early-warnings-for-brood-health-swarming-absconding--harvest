@@ -26,7 +26,8 @@ def create_brood_health_blueprint(service: BroodHealthService | None = None) -> 
         try:
             force = request.args.get("force", "false").lower() in {"1", "true", "yes"}
             return jsonify(module_service.get_eda(force=force))
-        except Exception as exc:
+        # API boundary: convert unexpected EDA failures into a JSON 500 response.
+        except Exception as exc:  # noqa: BLE001
             return error_response(exc, 500)
 
     @blueprint.get("/model")
@@ -42,7 +43,8 @@ def create_brood_health_blueprint(service: BroodHealthService | None = None) -> 
             if not 1 <= horizon <= 168:
                 raise ValueError("horizon_hours must be between 1 and 168")
             return jsonify(module_service.start_training(horizon_hours=horizon, fast_mode=fast_mode)), 202
-        except Exception as exc:
+        # API boundary: preserve the existing JSON error contract for bad requests.
+        except Exception as exc:  # noqa: BLE001
             return error_response(exc)
 
     @blueprint.get("/train/status")
@@ -73,7 +75,8 @@ def create_brood_health_blueprint(service: BroodHealthService | None = None) -> 
             return error_response(exc, 503)
         except (IoTConfigurationError, IoTRepositoryError) as exc:
             return error_response(exc, 503)
-        except Exception as exc:
+        # API boundary: prediction validation errors must remain JSON responses.
+        except Exception as exc:  # noqa: BLE001
             return error_response(exc)
 
     @blueprint.get("/iot/predict-all")
@@ -94,7 +97,8 @@ def create_brood_health_blueprint(service: BroodHealthService | None = None) -> 
             return jsonify(module_service.predict_manual(payload.get("readings", [])))
         except ModelNotReadyError as exc:
             return error_response(exc, 503)
-        except Exception as exc:
+        # API boundary: malformed manual readings must remain JSON responses.
+        except Exception as exc:  # noqa: BLE001
             return error_response(exc)
 
     @blueprint.get("/reports/<path:filename>")

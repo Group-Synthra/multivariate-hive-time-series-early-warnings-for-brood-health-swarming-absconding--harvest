@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -32,7 +32,7 @@ def _first_env(*names: str, default: str = "") -> str:
 
 @dataclass(frozen=True)
 class BroodPaths:
-    backend: Path = backend_root()
+    backend: Path = field(default_factory=backend_root)
 
     @property
     def clean_data(self) -> Path:
@@ -103,7 +103,7 @@ class IoTSettings:
     sslmode: str
 
     @classmethod
-    def from_environment(cls) -> "IoTSettings":
+    def from_environment(cls) -> IoTSettings:
         load_backend_environment()
 
         # Supports the exact variable names already present in the supplied .env,

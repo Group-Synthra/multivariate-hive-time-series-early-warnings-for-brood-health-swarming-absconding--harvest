@@ -49,7 +49,7 @@ def binary_target_persistence_audit(
 
     healthy_rows = int((valid_target == 1).sum())
     unhealthy_rows = int((valid_target == 0).sum())
-    total = int(len(valid_target))
+    total = len(valid_target)
     return {
         "target_column": TARGET_COLUMN,
         "valid_rows": total,
