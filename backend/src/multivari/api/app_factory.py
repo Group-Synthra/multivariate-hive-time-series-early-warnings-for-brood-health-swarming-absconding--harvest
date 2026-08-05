@@ -8,6 +8,8 @@ from flask_cors import CORS
 
 from .eda_service import EDAService
 from .routes import create_api_blueprint
+from multivari.modules.brood_health.routes import create_brood_health_blueprint
+from multivari.modules.brood_health.service import BroodHealthService
 
 
 def _backend_root() -> Path:
@@ -40,6 +42,8 @@ def create_app() -> Flask:
 
     service = EDAService(backend_root=backend_root)
     app.register_blueprint(create_api_blueprint(service))
+    brood_service = BroodHealthService()
+    app.register_blueprint(create_brood_health_blueprint(brood_service))
 
     @app.get("/")
     def index():
@@ -51,6 +55,9 @@ def create_app() -> Flask:
                 "endpoints": {
                     "health": f"{base_url}/api/health",
                     "common_eda": f"{base_url}/api/eda",
+                    "brood_health_eda": f"{base_url}/api/brood-health/eda",
+                    "brood_health_model": f"{base_url}/api/brood-health/model",
+                    "brood_health_iot": f"{base_url}/api/brood-health/iot/health",
                 },
             }
         )
