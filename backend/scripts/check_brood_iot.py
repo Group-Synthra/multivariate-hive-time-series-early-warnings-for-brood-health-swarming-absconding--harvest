@@ -8,7 +8,7 @@ from multivari.modules.brood_health.service import BroodHealthService
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Check PostgreSQL connectivity and the Brood Health v4 exact +6-hour predictor."
+        description="Check PostgreSQL connectivity and the Brood Health v6 exact +6-hour predictor."
     )
     parser.add_argument("--device-id", help="Run a complete prediction for one live hive.")
     parser.add_argument("--lookback-hours", type=int, default=None)
@@ -24,7 +24,7 @@ def main() -> None:
         )
     if not status.get("model", {}).get("ready"):
         raise SystemExit(
-            "The Brood Health v4 model is not ready. Run scripts/train_brood_health.py first."
+            "The Brood Health v6 model is not ready. Run scripts/train_brood_health.py first."
         )
 
     if args.device_id:
@@ -34,8 +34,10 @@ def main() -> None:
         )
         concise = {
             "device_id": result["device_id"],
-            "latest_timestamp": result["latest_timestamp"],
+            "latest_raw_timestamp": result.get("live_latest_timestamp"),
+            "rolling_forecast_anchor": result["prediction"].get("forecast_anchor_timestamp"),
             "forecast_timestamp": result["forecast_timestamp"],
+            "observed_reading_interval_minutes": result.get("reading_interval_minutes"),
             "current_condition": result["current_condition"],
             "exact_plus_6h_prediction": {
                 "score": result["prediction"]["exact_score"],
@@ -47,6 +49,8 @@ def main() -> None:
                 "score": result["prediction"]["safety_minimum_score"],
                 "level": result["prediction"]["safety_minimum_level"],
             },
+            "forecast_indicators": result.get("forecast_indicators", {}),
+            "deployment": result.get("deployment", {}),
             "warning": result["warning"],
             "domain_shift_warnings": result.get("domain_shift_warnings", []),
             "weight_conversion": result.get("database_weight_conversion", {}),

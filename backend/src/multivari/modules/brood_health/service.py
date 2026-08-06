@@ -60,7 +60,7 @@ class BroodHealthService:
             return {
                 "trained": False,
                 "message": (
-                    "No Brood Health v4 model was found. Run the cleanup script and "
+                    "No Brood Health v6 model was found. Run the cleanup script and "
                     "train the exact +6-hour multi-horizon forecaster."
                 ),
                 "training_status": self.training_status(),
@@ -106,7 +106,7 @@ class BroodHealthService:
                 "running": True,
                 "progress": 1,
                 "event": "queued",
-                "message": "Brood Health v4 training has been queued.",
+                "message": "Brood Health v6 training has been queued.",
                 "model": None,
                 "error": None,
                 "horizon_hours": int(horizon_hours),
@@ -144,7 +144,7 @@ class BroodHealthService:
 
         threading.Thread(
             target=worker,
-            name="brood-health-training-v4",
+            name="brood-health-training-v6",
             daemon=True,
         ).start()
         return self.training_status()

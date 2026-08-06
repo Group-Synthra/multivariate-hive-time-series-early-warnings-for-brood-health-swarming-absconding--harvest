@@ -32,7 +32,9 @@ function ModelComparisonTable({ models, bestModel }) {
           <tr>
             <th>Model</th><th>Exact +6 h MAE ↓</th><th>MSE ↓</th><th>RMSE ↓</th><th>R² ↑</th>
             <th>Level accuracy ↑</th><th>Transition accuracy ↑</th>
-            <th>Deterioration recall ↑</th><th>Critical recall ↑</th><th>Group-CV MAE ↓</th>
+            <th>Deterioration recall ↑</th><th>Critical recall ↑</th>
+            <th>Forecast BHSI accuracy ↑</th><th>Forecast trend accuracy ↑</th>
+            <th>Group-CV MAE ↓</th>
           </tr>
         </thead>
         <tbody>
@@ -45,7 +47,7 @@ function ModelComparisonTable({ models, bestModel }) {
               <tr key={row.model} className={`${row.status !== 'ok' ? 'failed-row' : ''} ${selected ? 'selected-row' : ''}`}>
                 <td><strong>{row.model}</strong>{selected && <span className="brood-selected-badge">Selected</span>}</td>
                 {row.status !== 'ok' ? (
-                  <td colSpan={9}>{row.error || 'Model failed'}</td>
+                  <td colSpan={11}>{row.error || 'Model failed'}</td>
                 ) : (
                   <>
                     <td>{numberValue(exact.mae, 3)}</td>
@@ -56,6 +58,8 @@ function ModelComparisonTable({ models, bestModel }) {
                     <td><strong>{asPercent(transition.health_level_accuracy)}</strong></td>
                     <td>{asPercent(deterioration.recall)}</td>
                     <td>{asPercent(exact.critical_recall)}</td>
+                    <td>{asPercent(row.test?.forecast_indicators?.forecast_bhsi_level_accuracy)}</td>
+                    <td>{asPercent(row.test?.forecast_indicators?.forecast_trend_accuracy)}</td>
                     <td>{numberValue(row.test?.cv_mae_mean, 3)}</td>
                   </>
                 )}
@@ -168,6 +172,7 @@ export function BroodTrainingTab() {
   const exact = metrics.exact_horizon || {};
   const transition = metrics.transition || {};
   const deterioration = metrics.deterioration || {};
+  const forecastIndicators = metrics.forecast_indicators || {};
   const split = data?.split_summary || {};
   const interpretation = data?.accuracy_interpretation || {};
 
@@ -176,10 +181,11 @@ export function BroodTrainingTab() {
       <div className="brood-section-heading">
         <div>
           <span className="eyebrow">BROOD-SPECIFIC MODEL DEVELOPMENT</span>
-          <h3>Forecast the exact Brood Health Score six hours ahead</h3>
+          <h3>Forecast exact +6-hour health, Future BHSI and Forecast RoD</h3>
           <p>
-            The model predicts a complete +1 to +6 hour trajectory. The exact +6 hour score is the
-            primary output; the lowest value on that trajectory is retained only as a secondary safety indicator.
+            The model predicts the +1 to +6 hour score trajectory. The current-to-future
+            path is then evaluated for stability through Forecast BHSI and for direction
+            and speed through Forecast RoD.
           </p>
         </div>
         <div className="brood-action-group">
@@ -202,7 +208,7 @@ export function BroodTrainingTab() {
 
       {!data?.trained && !status.running && !resource.loading && (
         <div className="brood-empty-workspace">
-          <BrainCircuit size={48} /><h3>No v4 brood-health forecaster is available</h3>
+          <BrainCircuit size={48} /><h3>No v6 brood-health forecaster is available</h3>
           <p>Run the model comparison after deleting the older generated artifacts.</p>
         </div>
       )}
@@ -217,6 +223,20 @@ export function BroodTrainingTab() {
             <StatCard label="Deterioration recall" value={asPercent(deterioration.recall)} icon={Crosshair} />
             <StatCard label="Critical recall" value={asPercent(exact.critical_recall)} icon={ShieldCheck} />
           </div>
+
+          <Panel
+            title="Future-indicator validation on unseen hives"
+            subtitle="These metrics verify the derived six-hour stability and trend outputs, not only the final score."
+          >
+            <div className="stats-grid stats-grid-six">
+              <StatCard label="Forecast BHSI MAE" value={numberValue(forecastIndicators.forecast_bhsi_mae, 2)} unit="points" />
+              <StatCard label="Forecast BHSI RMSE" value={numberValue(forecastIndicators.forecast_bhsi_rmse, 2)} unit="points" />
+              <StatCard label="BHSI level accuracy" value={asPercent(forecastIndicators.forecast_bhsi_level_accuracy)} note="Low, Moderate or High" />
+              <StatCard label="Forecast RoD MAE" value={numberValue(forecastIndicators.forecast_rod_mae, 2)} unit="points/h" />
+              <StatCard label="Forecast RoD RMSE" value={numberValue(forecastIndicators.forecast_rod_rmse, 2)} unit="points/h" />
+              <StatCard label="Forecast trend accuracy" value={asPercent(forecastIndicators.forecast_trend_accuracy)} note="Declining, Stable or Improving classes" />
+            </div>
+          </Panel>
 
           <div className="brood-alert info">
             <Layers3 size={20} />

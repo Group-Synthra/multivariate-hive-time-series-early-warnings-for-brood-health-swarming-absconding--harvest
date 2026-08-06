@@ -387,6 +387,8 @@ export function HealthScoreComparisonChart({
   exactScore,
   safetyScore,
   forecastHorizonHours = 6,
+  currentTimestamp,
+  forecastTimestamp,
 }) {
   const comparisonId = useId().replaceAll(':', '');
   const trackClipId = `${comparisonId}-track`;
@@ -422,6 +424,12 @@ export function HealthScoreComparisonChart({
   const predictedLevel = levelForScore(predicted);
   const safetyLevel = safety === null ? null : levelForScore(safety);
   const difference = predicted - current;
+  const currentTimeLabel = currentTimestamp
+    ? new Date(currentTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : 'Now';
+  const forecastTimeLabel = forecastTimestamp
+    ? new Date(forecastTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : `+${forecastHorizonHours} h`;
 
   const trendColor = difference < -0.05
     ? '#dc2626'
@@ -474,7 +482,7 @@ export function HealthScoreComparisonChart({
         </div>
         <span className={`brood-comparison-trend ${difference < -0.05 ? 'decline' : difference > 0.05 ? 'improve' : 'stable'}`}>
           {difference < -0.05 ? '↓' : difference > 0.05 ? '↑' : '→'}
-          Exact +{forecastHorizonHours} h
+          {currentTimeLabel} → {forecastTimeLabel}
         </span>
       </div>
 
@@ -749,8 +757,10 @@ export function LiveEarlyWarningTimeline({ data }) {
           <Line yAxisId="score" type="monotone" dataKey="condition_score" name="Current score" stroke="#d97706" strokeWidth={2.5} dot={false} />
           <Line yAxisId="score" type="monotone" dataKey="exact_forecast_score" name="Exact +6 h score" stroke="#2563eb" strokeWidth={3} dot={false} />
           <Line yAxisId="score" type="monotone" dataKey="safety_minimum_score" name="Safety minimum" stroke="#7c3aed" strokeWidth={2.2} dot={false} />
-          <Line yAxisId="score" type="monotone" dataKey="bhsi" name="BHSI" stroke="#0f766e" strokeWidth={2} dot={false} />
-          <Line yAxisId="rod" type="monotone" dataKey="rod_points_per_hour" name="RoD" stroke="#dc2626" strokeWidth={2} dot={false} />
+          <Line yAxisId="score" type="monotone" dataKey="forecast_bhsi" name="Forecast BHSI" stroke="#0f766e" strokeWidth={2.4} dot={false} />
+          <Line yAxisId="rod" type="monotone" dataKey="forecast_rod_points_per_hour" name="Forecast RoD" stroke="#dc2626" strokeWidth={2.4} dot={false} />
+          <Line yAxisId="score" type="monotone" dataKey="bhsi" name="Observed BHSI" stroke="#64748b" strokeWidth={1.4} strokeDasharray="4 4" dot={false} />
+          <Line yAxisId="rod" type="monotone" dataKey="rod_points_per_hour" name="Observed RoD" stroke="#94a3b8" strokeWidth={1.4} strokeDasharray="4 4" dot={false} />
         </LineChart>
       </ResponsiveContainer>
     </ChartShell>
@@ -777,31 +787,139 @@ export function HorizonErrorChart({ data }) {
   );
 }
 
-export function ForecastTrajectoryChart({ data, currentScore, exactHorizon = 6 }) {
-  const current = {
-    horizon_hours: 0,
-    score: Number(currentScore || 0),
-    level: 'Current',
+export function ForecastTrajectoryChart({
+  data,
+  currentScore,
+  exactHorizon = 6,
+  anchorTimestamp,
+  targetTimestamp,
+}) {
+  const source = data || [];
+  const alreadyContainsCurrent = Number(source?.[0]?.offset_minutes) === 0;
+  const chartData = alreadyContainsCurrent
+    ? source
+    : [
+      {
+        offset_minutes: 0,
+        horizon_hours: 0,
+        score: Number(currentScore || 0),
+        level: 'Current',
+        forecast_timestamp: anchorTimestamp,
+        is_native_model_point: true,
+        value_kind: 'current_observation',
+      },
+      ...source.map((row) => ({
+        ...row,
+        offset_minutes: Number(
+          row.offset_minutes ?? Number(row.horizon_hours || 0) * 60,
+        ),
+      })),
+    ];
+
+  const futureRows = chartData.filter((row) => Number(row.offset_minutes) > 0);
+  const minimum = futureRows.length
+    ? Math.min(...futureRows.map((row) => Number(row.score || 100)))
+    : 0;
+  const targetMinutes = Number(exactHorizon) * 60;
+  const ticks = Array.from(
+    { length: Number(exactHorizon) + 1 },
+    (_, index) => index * 60,
+  );
+
+  const renderPoint = (props) => {
+    const { cx, cy, payload } = props;
+    const nativePoint = Boolean(payload?.is_native_model_point);
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={nativePoint ? 5 : 2.4}
+        fill={nativePoint ? '#2563eb' : '#93c5fd'}
+        stroke="#ffffff"
+        strokeWidth={nativePoint ? 2 : 1}
+      >
+        <title>
+          {payload?.value_kind === 'display_interpolation'
+            ? 'Display interpolation between hourly model outputs'
+            : payload?.value_kind === 'current_observation'
+              ? 'Current rolling condition score'
+              : 'Native hourly model output'}
+        </title>
+      </circle>
+    );
   };
-  const chartData = [current, ...(data || [])];
-  const minimum = Math.min(...chartData.slice(1).map((row) => Number(row.score || 100)));
+
   return (
-    <ChartShell data={chartData} height={350} message="Forecast trajectory is unavailable.">
+    <ChartShell data={chartData} height={380} message="Forecast trajectory is unavailable.">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData} margin={{ top: 12, right: 28, left: 8, bottom: 8 }}>
+        <LineChart data={chartData} margin={{ top: 18, right: 28, left: 8, bottom: 16 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="horizon_hours" tickFormatter={(value) => value === 0 ? 'Now' : `+${value} h`} />
+          <XAxis
+            type="number"
+            dataKey="offset_minutes"
+            domain={[0, targetMinutes]}
+            ticks={ticks}
+            tickFormatter={(value) => value === 0 ? 'Now' : `+${value / 60} h`}
+          />
           <YAxis domain={[0, 100]} />
-          <Tooltip labelFormatter={(value) => value === 0 ? 'Current observation' : `Forecast +${value} hours`} formatter={(value) => `${Number(value).toFixed(1)} / 100`} />
+          <Tooltip
+            labelFormatter={(_, payload) => {
+              const row = payload?.[0]?.payload;
+              const time = row?.forecast_timestamp
+                ? new Date(row.forecast_timestamp).toLocaleString()
+                : `+${row?.offset_minutes || 0} minutes`;
+              const kind = row?.value_kind === 'display_interpolation'
+                ? 'interpolated display point'
+                : row?.value_kind === 'current_observation'
+                  ? 'current score'
+                  : 'native hourly model output';
+              return `${time} · ${kind}`;
+            }}
+            formatter={(value) => [`${Number(value).toFixed(1)} / 100`, 'Brood Health Score']}
+          />
           <Legend />
           <ReferenceLine y={40} stroke="#dc2626" strokeDasharray="4 4" />
           <ReferenceLine y={60} stroke="#d97706" strokeDasharray="4 4" />
           <ReferenceLine y={80} stroke="#0f766e" strokeDasharray="4 4" />
-          <ReferenceLine x={exactHorizon} stroke="#2563eb" strokeDasharray="5 5" label={{ value: `Exact +${exactHorizon} h`, position: 'insideTopRight' }} />
-          <ReferenceLine y={minimum} stroke="#7c3aed" strokeDasharray="3 3" label={{ value: `Safety minimum ${minimum.toFixed(1)}`, position: 'insideBottomRight' }} />
-          <Line type="monotone" dataKey="score" name="Predicted Brood Health Score" stroke="#2563eb" strokeWidth={3.2} dot={{ r: 5 }} activeDot={{ r: 7 }} />
+          <ReferenceLine
+            x={targetMinutes}
+            stroke="#2563eb"
+            strokeDasharray="5 5"
+            label={{
+              value: targetTimestamp
+                ? `Exact target ${new Date(targetTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : `Exact +${exactHorizon} h`,
+              position: 'insideTopRight',
+            }}
+          />
+          {futureRows.length > 0 && (
+            <ReferenceLine
+              y={minimum}
+              stroke="#7c3aed"
+              strokeDasharray="3 3"
+              label={{
+                value: `Safety minimum ${minimum.toFixed(1)}`,
+                position: 'insideBottomRight',
+              }}
+            />
+          )}
+          <Line
+            type="linear"
+            dataKey="score"
+            name="Current-to-future Brood Health Score"
+            stroke="#2563eb"
+            strokeWidth={3.2}
+            dot={renderPoint}
+            activeDot={{ r: 7 }}
+            isAnimationActive
+          />
         </LineChart>
       </ResponsiveContainer>
+      <p className="chart-footnote">
+        Large points are native hourly model outputs. Small points are ten-minute
+        display interpolation. The exact +{exactHorizon}-hour score remains a native
+        model output; interpolation does not create extra training information.
+      </p>
     </ChartShell>
   );
 }

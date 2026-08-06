@@ -47,7 +47,7 @@ def main() -> None:
             root / "artifacts" / "reports" / "brood_health" / "model",
         ):
             directory.mkdir(parents=True, exist_ok=True)
-        print("Brood Health generated artifacts were reset for version 4.0.")
+        print("Brood Health generated artifacts were reset for version 6.0.")
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ import pandas as pd
 
 from .scoring import BroodHealthScoreConfig, compute_score_components, health_level_code
 
-FEATURE_SCHEMA_VERSION = "brood-score-v4.0"
+FEATURE_SCHEMA_VERSION = "brood-score-v6.0"
 TARGET_COLUMN = "brood_health_healthy_1"
 SENSORS = ("temperature_c", "humidity_pct", "co2_ppm", "weight_kg")
 ENVIRONMENT_SENSORS = ("temperature_c", "humidity_pct", "co2_ppm")
@@ -109,11 +109,29 @@ def map_iot_frame(
     return normalise_historical(out)
 
 
-def aggregate_live_hourly(frame: pd.DataFrame, *, frequency: str = "1h") -> pd.DataFrame:
-    """Aggregate approximately ten-minute readings to the hourly training schema."""
+def aggregate_live_hourly(
+    frame: pd.DataFrame,
+    *,
+    frequency: str = "1h",
+    anchor_to_latest: bool = True,
+) -> pd.DataFrame:
+    """Aggregate live readings to complete rolling one-hour windows.
+
+    Historical training observations are hourly. During deployment the latest raw IoT
+    timestamp may be 10:32, 10:42, and so on. When ``anchor_to_latest`` is enabled,
+    complete one-hour windows are aligned to that latest timestamp:
+
+        (09:32, 10:32] -> 10:32
+        (08:32, 09:32] -> 09:32
+
+    This preserves one-hour spacing while allowing the six-hour forecast target to move
+    with each new reading. No synthetic ten-minute training rows are created.
+    """
 
     if frame.empty:
         return frame.copy()
+    if str(frequency).lower() not in {"1h", "60min", "60t"}:
+        raise ValueError("Live brood-health aggregation currently requires one-hour windows")
 
     numeric = [
         column
@@ -122,21 +140,59 @@ def aggregate_live_hourly(frame: pd.DataFrame, *, frequency: str = "1h") -> pd.D
     ]
     pieces: list[pd.DataFrame] = []
     for hive_id, group in frame.groupby("hive_id", sort=False):
-        indexed = group.set_index("timestamp").sort_index()
-        hourly = indexed[numeric].resample(frequency).median()
-        hourly["raw_reading_count"] = indexed[numeric[0]].resample(frequency).count()
+        ordered = group.sort_values("timestamp").copy()
+        ordered["timestamp"] = pd.to_datetime(
+            ordered["timestamp"], errors="coerce", utc=True
+        )
+        ordered = ordered.dropna(subset=["timestamp"])
+        if ordered.empty:
+            continue
+
+        if anchor_to_latest:
+            anchor = pd.Timestamp(ordered["timestamp"].max())
+            seconds_back = (anchor - ordered["timestamp"]).dt.total_seconds()
+            bucket_index = np.floor(
+                np.maximum(seconds_back.to_numpy(dtype=float), 0.0) / 3600.0
+            ).astype(int)
+            ordered["_bucket_end"] = anchor - pd.to_timedelta(bucket_index, unit="h")
+            aggregated = (
+                ordered.groupby("_bucket_end", sort=True, observed=True)[numeric]
+                .median()
+                .reset_index()
+                .rename(columns={"_bucket_end": "timestamp"})
+            )
+            counts = (
+                ordered.groupby("_bucket_end", sort=True, observed=True)[numeric[0]]
+                .count()
+                .rename("raw_reading_count")
+                .reset_index()
+                .rename(columns={"_bucket_end": "timestamp"})
+            )
+            hourly = aggregated.merge(counts, on="timestamp", how="left")
+        else:
+            indexed = ordered.set_index("timestamp")
+            hourly = indexed[numeric].resample(
+                frequency, label="right", closed="right"
+            ).median()
+            hourly["raw_reading_count"] = indexed[numeric[0]].resample(
+                frequency, label="right", closed="right"
+            ).count()
+            hourly = hourly.reset_index()
+
         hourly["hive_id"] = hive_id
-        pieces.append(hourly.reset_index())
+        pieces.append(hourly)
+
+    if not pieces:
+        return frame.iloc[0:0].copy()
 
     result = pd.concat(pieces, ignore_index=True)
-    optional = [
-        column
-        for column in ("external_temp", "external_humidity", "battery_voltage", "raw_reading_count")
-        if column in result.columns
-    ]
+
     normalised = normalise_historical(result)
-    for column in optional:
-        normalised[column] = result.loc[normalised.index, column].to_numpy()
+    normalised.attrs["aggregation_strategy"] = (
+        "rolling_one_hour_median_aligned_to_latest_reading"
+        if anchor_to_latest
+        else "clock_hour_median"
+    )
     return normalised
 
 

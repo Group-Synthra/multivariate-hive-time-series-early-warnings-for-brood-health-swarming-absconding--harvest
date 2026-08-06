@@ -60,31 +60,31 @@ class BroodPaths:
 
     @property
     def model_bundle(self) -> Path:
-        return self.model_dir / "brood_health_forecaster_v4.joblib"
+        return self.model_dir / "brood_health_forecaster_v6.joblib"
 
     @property
     def training_summary(self) -> Path:
-        return self.metrics_dir / "training_summary_v4.json"
+        return self.metrics_dir / "training_summary_v6.json"
 
     @property
     def feature_importance(self) -> Path:
-        return self.metrics_dir / "feature_importance_v4.csv"
+        return self.metrics_dir / "feature_importance_v6.csv"
 
     @property
     def test_predictions(self) -> Path:
-        return self.metrics_dir / "test_predictions_v4.csv"
+        return self.metrics_dir / "test_predictions_v6.csv"
 
     @property
     def model_comparison(self) -> Path:
-        return self.metrics_dir / "model_comparison_v4.csv"
+        return self.metrics_dir / "model_comparison_v6.csv"
 
     @property
     def weight_sensitivity(self) -> Path:
-        return self.metrics_dir / "weight_sensitivity_v4.csv"
+        return self.metrics_dir / "weight_sensitivity_v6.csv"
 
     @property
     def eda_cache(self) -> Path:
-        return self.metrics_dir / "eda_cache_v4.json"
+        return self.metrics_dir / "eda_cache_v6.json"
 
 
 @dataclass(frozen=True)

@@ -425,7 +425,7 @@ def _save_report_images(payload: dict[str, Any], frame: pd.DataFrame, directory:
 
 
 def _active_score_config() -> BroodHealthScoreConfig:
-    """Use calibrated weights when the v4 model exists; otherwise use the prior."""
+    """Use calibrated weights when the v6 model exists; otherwise use the prior."""
 
     if PATHS.model_bundle.exists():
         try:

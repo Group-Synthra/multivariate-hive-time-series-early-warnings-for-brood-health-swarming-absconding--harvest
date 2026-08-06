@@ -138,14 +138,25 @@ def build_warning_payload(
     exact_forecast_score: float,
     safety_minimum_score: float,
     current_condition_score: float,
-    bhsi: float,
-    rod_points_per_hour: float,
+    forecast_bhsi: float | None = None,
+    forecast_rod_points_per_hour: float | None = None,
+    bhsi: float | None = None,
+    rod_points_per_hour: float | None = None,
     exact_forecast_drop_points: float | None = None,
     safety_drop_points: float | None = None,
     domain_shift_warnings: list[str] | None = None,
     history_sufficient: bool = True,
 ) -> dict[str, Any]:
-    """Combine exact +6 h forecast, safety minimum, BHSI and RoD."""
+    """Combine exact forecast, safety minimum, Forecast BHSI and Forecast RoD."""
+
+    forecast_bhsi = float(
+        forecast_bhsi if forecast_bhsi is not None else (bhsi if bhsi is not None else 100.0)
+    )
+    forecast_rod_points_per_hour = float(
+        forecast_rod_points_per_hour
+        if forecast_rod_points_per_hour is not None
+        else (rod_points_per_hour if rod_points_per_hour is not None else 0.0)
+    )
 
     exact_level = classify_health_level(exact_forecast_score)
     minimum_level = classify_health_level(safety_minimum_score)
@@ -185,19 +196,25 @@ def build_warning_payload(
             f"{max(safety_drop, exact_drop):.1f} points."
         )
 
-    if bhsi < 40.0:
+    if forecast_bhsi < 40.0:
         severity = max(severity, 2)
-        reasons.append("BHSI indicates low six-hour environmental stability.")
-    elif bhsi < 70.0:
+        reasons.append(
+            "Forecast BHSI indicates low stability in the predicted six-hour "
+            "health-score trajectory."
+        )
+    elif forecast_bhsi < 70.0:
         severity = max(severity, 1)
-        reasons.append("BHSI indicates moderate six-hour environmental stability.")
+        reasons.append(
+            "Forecast BHSI indicates moderate stability in the predicted six-hour "
+            "health-score trajectory."
+        )
 
-    if rod_points_per_hour < -3.0:
+    if forecast_rod_points_per_hour < -3.0:
         severity = max(severity, 2)
-        reasons.append("RoD indicates rapid recent deterioration.")
-    elif rod_points_per_hour < -0.5:
+        reasons.append("Forecast RoD indicates rapid predicted deterioration.")
+    elif forecast_rod_points_per_hour < -0.5:
         severity = max(severity, 1)
-        reasons.append("RoD indicates a slowly declining recent trend.")
+        reasons.append("Forecast RoD indicates a slowly declining predicted trend.")
 
     domain_shift_warnings = domain_shift_warnings or []
     if domain_shift_warnings:
@@ -226,7 +243,8 @@ def build_warning_payload(
 
     if not reasons:
         reasons.append(
-            "Current score, exact forecast, safety minimum, BHSI and RoD remain within "
+            "Current score, exact forecast, safety minimum, Forecast BHSI and "
+            "Forecast RoD remain within "
             "the configured operating range."
         )
 

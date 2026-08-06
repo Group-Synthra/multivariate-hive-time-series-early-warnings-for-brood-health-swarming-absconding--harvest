@@ -10,7 +10,7 @@ from multivari.modules.brood_health.training import run_training
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
-            "Train and evaluate the Brood Health v4 multi-horizon regressor. "
+            "Train and evaluate the Brood Health v6 multi-horizon regressor. "
             "Primary output: exact score at +6 hours. Secondary output: minimum "
             "predicted score inside the 1–6 hour trajectory."
         )
@@ -57,6 +57,7 @@ def main() -> None:
     metrics = summary["best_metrics"]
     exact = metrics["exact_horizon"]
     transition = metrics["transition"]
+    forecast_indicators = metrics.get("forecast_indicators", {})
     print(
         json.dumps(
             {
@@ -74,6 +75,19 @@ def main() -> None:
                 "critical_recall_percent": 100 * exact["critical_recall"],
                 "deterioration_recall_percent": 100
                 * metrics["deterioration"]["recall"],
+                "forecast_bhsi_mae": forecast_indicators.get("forecast_bhsi_mae"),
+                "forecast_bhsi_level_accuracy_percent": 100
+                * float(
+                    forecast_indicators.get("forecast_bhsi_level_accuracy")
+                    or 0.0
+                ),
+                "forecast_rod_mae_points_per_hour": forecast_indicators.get(
+                    "forecast_rod_mae"
+                ),
+                "forecast_trend_accuracy_percent": 100
+                * float(
+                    forecast_indicators.get("forecast_trend_accuracy") or 0.0
+                ),
                 "selected_score_weights": summary["weight_calibration"].get(
                     "selected_weights"
                 ),

@@ -37,6 +37,7 @@ from sklearn.multioutput import MultiOutputRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from .analyzer import classify_stability, classify_trend
 from .audit import binary_target_persistence_audit, feature_leakage_audit
 from .calibration import calibrate_component_weights
 from .config import PATHS
@@ -48,6 +49,10 @@ from .features import (
     build_supervised_dataset,
     normalise_historical,
     target_columns,
+)
+from .forecast_indicators import (
+    calibrate_forecast_stability_reference,
+    indicator_metrics,
 )
 from .scoring import (
     CODE_TO_LEVEL,
@@ -333,6 +338,8 @@ def _score_metrics(
     y_true: pd.DataFrame,
     predicted: np.ndarray,
     metadata: pd.DataFrame,
+    *,
+    forecast_stability_reference: dict[str, float],
 ) -> dict[str, Any]:
     horizon = y_true.shape[1]
     actual_matrix = np.clip(y_true.to_numpy(dtype=float), 1.0, 100.0)
@@ -449,6 +456,15 @@ def _score_metrics(
         ),
     }
 
+    forecast_indicators = indicator_metrics(
+        current_scores=current,
+        actual_future_scores=actual_matrix,
+        predicted_future_scores=predicted_matrix,
+        reference=forecast_stability_reference,
+        stability_classifier=classify_stability,
+        trend_classifier=classify_trend,
+    )
+
     return {
         "multi_horizon_mae": float(
             mean_absolute_error(actual_matrix, predicted_matrix)
@@ -457,6 +473,7 @@ def _score_metrics(
         "safety_minimum": safety,
         "transition": transition_metrics,
         "deterioration": deterioration,
+        "forecast_indicators": forecast_indicators,
         "per_horizon": per_horizon,
         # Compatibility aliases used by the current frontend and report.
         "test_mae": exact["mae"],
@@ -529,19 +546,28 @@ def _group_cv_exact_mae(
 def _selection_key(
     validation: dict[str, Any],
     persistence: dict[str, Any],
-) -> tuple[float, float, float, float, float, float]:
+) -> tuple[float, float, float, float, float, float, float, float]:
     exact = validation["exact_horizon"]
     transition = validation["transition"]
+    indicators = validation.get("forecast_indicators", {})
     beats_persistence = float(
         exact["mae"] < persistence["exact_horizon"]["mae"]
     )
     transition_accuracy = float(transition.get("health_level_accuracy") or 0.0)
     deterioration_recall = float(validation["deterioration"]["recall"])
     critical_recall = float(exact["critical_recall"])
+    forecast_trend_accuracy = float(
+        indicators.get("forecast_trend_accuracy") or 0.0
+    )
+    forecast_bhsi_accuracy = float(
+        indicators.get("forecast_bhsi_level_accuracy") or 0.0
+    )
     return (
         beats_persistence,
         transition_accuracy,
         deterioration_recall,
+        forecast_trend_accuracy,
+        forecast_bhsi_accuracy,
         critical_recall,
         -float(exact["mae"]),
         -float(validation["multi_horizon_mae"]),
@@ -740,7 +766,7 @@ def _save_reports(
     ax.barh(top["feature"], top["importance_percentage"])
     ax.set_xlabel("Relative importance (%)")
     ax.set_title("Top causal predictive features")
-    save(fig, "feature_importance_v4.png", "Feature importance")
+    save(fig, "feature_importance_v6.png", "Feature importance")
 
     per_horizon = pd.DataFrame(summary["best_metrics"]["per_horizon"])
     fig, ax = plt.subplots(figsize=(8, 4.5))
@@ -885,15 +911,23 @@ def run_training(
         limits[2],
     )
 
+    forecast_stability_reference = calibrate_forecast_stability_reference(
+        meta_train["current_score"].to_numpy(dtype=float),
+        y_train.to_numpy(dtype=float),
+        quantile=0.90,
+    )
+
     persistence_validation = _score_metrics(
         y_validation,
         _persistence_predictions(meta_validation, horizon),
         meta_validation,
+        forecast_stability_reference=forecast_stability_reference,
     )
     persistence_test = _score_metrics(
         y_test,
         _persistence_predictions(meta_test, horizon),
         meta_test,
+        forecast_stability_reference=forecast_stability_reference,
     )
 
     candidates = _candidate_models(fast_mode=fast_mode)
@@ -922,12 +956,14 @@ def run_training(
                 y_validation,
                 validation_prediction,
                 meta_validation,
+                forecast_stability_reference=forecast_stability_reference,
             )
             test_prediction = _clip_predictions(model.predict(x_test), horizon)
             test_metrics = _score_metrics(
                 y_test,
                 test_prediction,
                 meta_test,
+                forecast_stability_reference=forecast_stability_reference,
             )
 
             cv_mean, cv_std, cv_folds = _group_cv_exact_mae(
@@ -1054,6 +1090,19 @@ def run_training(
             "80_percent": interval_80,
             "90_percent": interval_90,
         },
+        "forecast_stability_reference": forecast_stability_reference,
+        "forecast_indicator_definition": {
+            "bhsi": (
+                "Stability of the predicted current-to-+6-hour health-score trajectory. "
+                "It measures fluctuation around the fitted trend; direction is reported "
+                "separately by Forecast RoD."
+            ),
+            "rod": (
+                "Linear slope of the predicted current-to-+6-hour Brood Health Score "
+                "trajectory in score points per hour."
+            ),
+            "calibration_scope": "training hives only",
+        },
         "weight_calibration": calibration.method,
         "weight_transfer_strategy": "relative_change_and_stability_only",
         "model_limitations": [
@@ -1062,6 +1111,8 @@ def run_training(
             "Historical evaluation holds out complete hives, but Sri Lankan field performance must be verified against physical brood inspections.",
             "No accuracy value is capped or deliberately reduced. Transition and deterioration metrics must be interpreted alongside overall accuracy.",
             "External temperature and humidity are shown as context unless equivalent historical training variables are available.",
+            "The live forecast timestamp may update every ten minutes through rolling one-hour windows, but the native model resolution remains hourly.",
+            "Ten-minute trajectory points are display interpolation between native hourly model outputs and do not add new predictive information.",
         ],
     }
     joblib.dump(bundle, PATHS.model_bundle)
@@ -1150,7 +1201,7 @@ def run_training(
 
     best_metrics = best_result["test"]
     summary: dict[str, Any] = {
-        "version": "4.0",
+        "version": "6.0",
         "trained": True,
         "best_model": best_name,
         "horizon_hours": horizon,
@@ -1163,17 +1214,28 @@ def run_training(
             f"Minimum of the model's predicted 1–{horizon} hour trajectory; used only as a safety early-warning indicator."
         ),
         "forecast_strategy": {
-            "type": "multi-horizon direct regression",
+            "type": "multi-horizon direct regression with rolling live-hour windows",
             "horizons": list(range(1, horizon + 1)),
             "primary_output": f"exact +{horizon} hour score",
             "secondary_output": f"minimum predicted score within 1–{horizon} hours",
+            "future_indicators": [
+                "Forecast BHSI from current-to-future score-path stability",
+                "Forecast RoD from current-to-future score-path slope",
+            ],
+            "live_anchor": (
+                "During IoT deployment, complete one-hour windows are aligned to the "
+                "latest raw reading so the forecast target timestamp advances with each "
+                "new reading."
+            ),
             "reason": (
-                "This provides the exact requested future score while retaining a worst-case "
-                "trajectory indicator for earlier intervention."
+                "This provides the exact requested future score, a conservative safety "
+                "minimum, and interpretable future stability and deterioration speed."
             ),
         },
         "score_definition": score_definition(score_config),
         "weight_calibration": calibration.method,
+        "forecast_stability_reference": forecast_stability_reference,
+        "forecast_indicator_definition": bundle["forecast_indicator_definition"],
         "weight_sensitivity_top": (
             calibration.comparison.head(20).to_dict(orient="records")
             if not calibration.comparison.empty
@@ -1254,8 +1316,10 @@ def run_training(
         },
         "metrics_note": (
             "MAE, MSE, RMSE, R², health-level accuracy, Critical recall and group-CV "
-            "MAE are reported for the exact +6-hour score. Transition and deterioration "
-            "metrics are added because stable observations can inflate overall accuracy."
+            "MAE are reported for the exact +6-hour score. Forecast BHSI MAE and "
+            "stability-level accuracy, Forecast RoD MAE and forecast-trend accuracy, "
+            "transition metrics and deterioration metrics are also reported because "
+            "stable observations can inflate overall score accuracy."
         ),
         "prediction_sample": prediction_sample,
         "trained_at_utc": bundle["trained_at_utc"],

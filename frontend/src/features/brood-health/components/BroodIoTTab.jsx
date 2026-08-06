@@ -98,6 +98,7 @@ export function BroodIoTTab() {
   const modelReady = Boolean(health?.model?.ready);
   const current = prediction?.current_condition || {};
   const forecast = prediction?.prediction || {};
+  const forecastIndicators = prediction?.forecast_indicators || {};
   const warning = prediction?.warning || {};
   const refreshSeconds = Number(
     iot.devices.data?.refresh_seconds
@@ -127,6 +128,7 @@ export function BroodIoTTab() {
 
   const latestSensors = {
     ...(prediction?.latest_sensors || {}),
+    ...(prediction?.latest_raw_sensors || {}),
     ...(prediction?.context || {}),
   };
   const conversion = prediction?.database_weight_conversion || {};
@@ -140,11 +142,11 @@ export function BroodIoTTab() {
       <div className="brood-section-heading">
         <div>
           <span className="eyebrow">SRI LANKAN HIVE IOT DEPLOYMENT</span>
-          <h3>Live current condition, exact +6-hour forecast, BHSI and RoD</h3>
+          <h3>Rolling exact +6-hour forecast, Future BHSI and Forecast RoD</h3>
           <p>
-            Approximately ten-minute PostgreSQL readings are mapped to the historical schema,
-            converted when required, aggregated to hourly medians and passed through the same saved
-            causal feature pipeline used during model training.
+            Every new IoT reading moves the rolling one-hour aggregation window. A reading at
+            10:40 therefore produces a forecast target at 16:40. The native model remains hourly;
+            ten-minute points between native forecasts are clearly marked display interpolation.
           </p>
         </div>
         <div className="brood-action-group">
@@ -174,7 +176,7 @@ export function BroodIoTTab() {
       {!modelReady && (
         <div className="brood-alert danger">
           <AlertTriangle size={20} />
-          <div><strong>The Brood Health v4 model is not available</strong><p>{health?.model?.error || 'Delete the old model artifacts and retrain.'}</p></div>
+          <div><strong>The Brood Health v6 model is not available</strong><p>{health?.model?.error || 'Delete the old model artifacts and retrain.'}</p></div>
         </div>
       )}
 
@@ -201,9 +203,12 @@ export function BroodIoTTab() {
       >
         <div className="brood-live-meta">
           <span><Clock3 size={15} /> Next refresh: {countdown}</span>
-          <span>Latest sensor: {timestampValue(prediction?.latest_timestamp)}</span>
+          <span>Latest IoT reading: {timestampValue(prediction?.live_latest_timestamp || prediction?.latest_timestamp)}</span>
+          <span>Rolling model anchor: {timestampValue(forecast.forecast_anchor_timestamp || prediction?.latest_timestamp)}</span>
+          <span>Forecast target: {timestampValue(forecast.exact_forecast_timestamp)}</span>
+          <span>Observed interval: {numberValue(prediction?.reading_interval_minutes, 0)} min</span>
           <span>Raw readings: {numberValue(prediction?.raw_rows, 0)}</span>
-          <span>Hourly observations: {numberValue(prediction?.hourly_rows, 0)}</span>
+          <span>Hourly windows: {numberValue(prediction?.hourly_rows, 0)}</span>
         </div>
       </Panel>
 
@@ -230,8 +235,20 @@ export function BroodIoTTab() {
               badge={timestampValue(forecast.exact_forecast_timestamp)}
               detail={`Selected model: ${prediction.model?.model_name || health?.model?.model_name || 'trained model'}`}
             />
-            <StabilityGauge score={current.bhsi} level={current.stability_level} />
-            <RoDMeter value={current.rod_points_per_hour} label={current.trend_label} />
+            <StabilityGauge
+              score={forecastIndicators.bhsi}
+              level={forecastIndicators.stability_level}
+              label="Forecast BHSI"
+              badge="Next 6 h"
+              detail="Stability of the predicted health-score path from now to the exact +6-hour score."
+            />
+            <RoDMeter
+              value={forecastIndicators.rod_points_per_hour}
+              label={forecastIndicators.trend_label}
+              title="Forecast RoD"
+              badge="Next 6 h"
+              detail="Predicted health-score slope from current condition through the next six hours."
+            />
           </div>
 
           <div className="stats-grid stats-grid-six">
@@ -243,6 +260,20 @@ export function BroodIoTTab() {
             <StatCard label="Data freshness" value={freshnessLabel(prediction.data_freshness_minutes)} note={`${numberValue(prediction.data_freshness_minutes, 0)} minutes`} />
           </div>
 
+          <Panel
+            title="Observed condition versus six-hour forecast indicators"
+            subtitle="Observed indicators describe the recent past. Forecast indicators describe the predicted path from the current score to the exact +6-hour score."
+          >
+            <div className="stats-grid stats-grid-six">
+              <StatCard label="Observed BHSI" value={numberValue(current.bhsi, 1)} unit="/100" note={`${current.stability_level || '—'} · recent historical stability`} />
+              <StatCard label="Forecast BHSI" value={numberValue(forecastIndicators.bhsi, 1)} unit="/100" note={`${forecastIndicators.stability_level || '—'} · predicted next-six-hour stability`} />
+              <StatCard label="Observed RoD" value={signedNumber(current.rod_points_per_hour, 2)} unit="points/h" note={current.trend_label || '—'} />
+              <StatCard label="Forecast RoD" value={signedNumber(forecastIndicators.rod_points_per_hour, 2)} unit="points/h" note={forecastIndicators.trend_label || '—'} />
+              <StatCard label="Forecast window start" value={timestampValue(forecastIndicators.window_start_timestamp)} note="Latest rolling IoT anchor" />
+              <StatCard label="Forecast window end" value={timestampValue(forecastIndicators.window_end_timestamp)} note="Exact +6-hour target" />
+            </div>
+          </Panel>
+
           <div className="two-column-grid">
             <Panel
               title="Current and Predicted Health Comparison"
@@ -253,6 +284,8 @@ export function BroodIoTTab() {
                 exactScore={forecast.exact_score}
                 safetyScore={forecast.safety_minimum_score}
                 forecastHorizonHours={forecast.horizon_hours || 6}
+                currentTimestamp={forecast.forecast_anchor_timestamp || prediction?.latest_timestamp}
+                forecastTimestamp={forecast.exact_forecast_timestamp}
               />
             </Panel>
             <Panel title="Prediction interval and deployment information" subtitle="Residual uncertainty is estimated on validation hives and transferred with the saved model.">
@@ -265,18 +298,26 @@ export function BroodIoTTab() {
                 <span>Selected model <strong>{prediction.model?.model_name || '—'}</strong></span>
                 <span>Primary target <strong>Exact score at +{forecast.horizon_hours || 6} hours</strong></span>
                 <span>Secondary target <strong>Minimum predicted score in 1–6 hours</strong></span>
-                <span>Forecast time <strong>{timestampValue(forecast.exact_forecast_timestamp)}</strong></span>
-                <span>Aggregation <strong>Hourly median</strong></span>
+                <span>Forecast anchor <strong>{timestampValue(forecast.forecast_anchor_timestamp)}</strong></span>
+                <span>Forecast target <strong>{timestampValue(forecast.exact_forecast_timestamp)}</strong></span>
+                <span>Aggregation <strong>Rolling one-hour median aligned to latest reading</strong></span>
+                <span>Native model resolution <strong>{forecast.native_model_resolution_minutes || 60} minutes</strong></span>
+                <span>Dashboard trajectory <strong>{forecast.display_resolution_minutes || 10} minutes · interpolated between native outputs</strong></span>
                 <span>Battery <strong><Battery size={14} /> {numberValue(prediction.context?.battery_voltage, 2)} V</strong></span>
               </div>
             </Panel>
           </div>
 
-          <Panel title="Predicted 1–6 hour score trajectory" subtitle="The +6-hour point is the reported future score. The lowest trajectory point supports conservative early warning.">
+          <Panel
+            title="Rolling current-to-+6-hour forecast trajectory"
+            subtitle="Native model outputs occur hourly. Intermediate ten-minute points make the chart easier to follow and are display interpolation, not separately trained predictions."
+          >
             <ForecastTrajectoryChart
-              data={forecast.trajectory}
+              data={forecast.display_trajectory || forecast.trajectory}
               currentScore={current.score}
               exactHorizon={forecast.horizon_hours || 6}
+              anchorTimestamp={forecast.forecast_anchor_timestamp}
+              targetTimestamp={forecast.exact_forecast_timestamp}
             />
           </Panel>
 
@@ -321,7 +362,7 @@ export function BroodIoTTab() {
             <div className="brood-alert success"><CheckCircle2 size={20} /><div><strong>No central-range transfer warning detected</strong><p>This still requires local sensor calibration and physical brood validation.</p></div></div>
           )}
 
-          <Panel title="Recent live health, exact forecast, stability and deterioration timeline" subtitle="All values are generated from the same hourly live history.">
+          <Panel title="Recent live health and rolling six-hour forecast timeline" subtitle="Observed BHSI/RoD describe past conditions; Forecast BHSI/RoD describe each predicted current-to-+6-hour path.">
             <LiveEarlyWarningTimeline data={prediction.history} />
           </Panel>
 

@@ -12,16 +12,16 @@ import {
 } from '../utils/broodHealth';
 
 const HEALTH_SEGMENTS = [
-  { start: 0, end: 40, label: 'Critical', color: '#dc2626' },
-  { start: 40, end: 60, label: 'Poor', color: '#d97706' },
-  { start: 60, end: 80, label: 'Good', color: '#2563eb' },
-  { start: 80, end: 100, label: 'Excellent', color: '#0f766e' },
+  { start: 0, end: 40, label: 'Critical', rangeLabel: '0–<40', color: '#dc2626' },
+  { start: 40, end: 60, label: 'Poor', rangeLabel: '40–<60', color: '#d97706' },
+  { start: 60, end: 80, label: 'Good', rangeLabel: '60–<80', color: '#2563eb' },
+  { start: 80, end: 100, label: 'Excellent', rangeLabel: '80–100', color: '#0f766e' },
 ];
 
 const STABILITY_SEGMENTS = [
-  { start: 0, end: 40, label: 'Low', color: '#dc2626' },
-  { start: 40, end: 70, label: 'Moderate', color: '#d97706' },
-  { start: 70, end: 100, label: 'High', color: '#0f766e' },
+  { start: 0, end: 40, label: 'Low', rangeLabel: '0–<40', color: '#dc2626' },
+  { start: 40, end: 70, label: 'Moderate', rangeLabel: '40–<70', color: '#d97706' },
+  { start: 70, end: 100, label: 'High', rangeLabel: '70–100', color: '#0f766e' },
 ];
 
 const HEALTH_COLORS = {
@@ -257,7 +257,7 @@ function SegmentLegend({ segments }) {
         <span key={segment.label}>
           <i style={{ background: segment.color }} />
           {segment.label}
-          <small>{segment.start}–{segment.end}</small>
+          <small>{segment.rangeLabel || `${segment.start}–${segment.end}`}</small>
         </span>
       ))}
     </div>
@@ -322,6 +322,8 @@ export function StabilityGauge({
   score,
   level,
   detail,
+  label = 'Brood Health Stability Index',
+  badge = 'Previous 6 hours',
 }) {
   const value = clamp(score, 0, 100);
   const resolvedLevel = stabilityLevelFromScore(value);
@@ -334,8 +336,8 @@ export function StabilityGauge({
       style={{ '--brood-gauge-accent': accent }}
     >
       <header>
-        <span><Activity size={17} /> Brood Health Stability Index</span>
-        <small>Previous 6 hours</small>
+        <span><Activity size={17} /> {label}</span>
+        <small>{badge}</small>
       </header>
 
       <SemicircleGauge
@@ -379,7 +381,13 @@ function rodTone(value) {
   return { label: 'Rapid Improving', tone: 'rapid-improve', color: '#0f766e' };
 }
 
-export function RoDMeter({ value, label }) {
+export function RoDMeter({
+  value,
+  label,
+  title = 'Rate of Deterioration',
+  badge = 'Score points/hour',
+  detail,
+}) {
   const numeric = Number.isFinite(Number(value)) ? Number(value) : 0;
   const clipped = clamp(numeric, -6, 6);
   const position = ((clipped + 6) / 12) * 100;
@@ -397,8 +405,8 @@ export function RoDMeter({ value, label }) {
       style={{ '--brood-gauge-accent': resolved.color }}
     >
       <header>
-        <span><DirectionIcon size={17} /> Rate of Deterioration</span>
-        <small>Score points/hour</small>
+        <span><DirectionIcon size={17} /> {title}</span>
+        <small>{badge}</small>
       </header>
 
       <div
@@ -450,7 +458,7 @@ export function RoDMeter({ value, label }) {
 
       <div className="brood-gauge-result">
         <strong>{displayLabel}</strong>
-        <p>Negative values indicate deterioration. Positive values indicate improvement.</p>
+        <p>{detail || 'Negative values indicate deterioration. Positive values indicate improvement.'}</p>
       </div>
     </article>
   );
