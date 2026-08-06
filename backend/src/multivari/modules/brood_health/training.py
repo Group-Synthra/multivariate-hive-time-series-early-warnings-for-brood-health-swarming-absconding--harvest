@@ -52,7 +52,6 @@ from .features import (
 from .scoring import (
     CODE_TO_LEVEL,
     HEALTH_LEVEL_ORDER,
-    BroodHealthScoreConfig,
     health_level_code,
     score_definition,
 )

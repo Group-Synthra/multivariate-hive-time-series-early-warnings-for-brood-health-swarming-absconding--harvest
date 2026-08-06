@@ -1,21 +1,25 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
+import joblib
 import matplotlib
 
 matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import joblib
 
 from .analyzer import HEALTH_LEVELS, compute_condition_history
 from .config import PATHS
 from .features import SENSORS, TARGET_COLUMN, normalise_historical
 from .scoring import BroodHealthScoreConfig, score_definition
+
+LOGGER = logging.getLogger(__name__)
 
 SENSOR_META = {
     "temperature_c": {"label": "Temperature", "unit": "°C"},
@@ -427,8 +431,12 @@ def _active_score_config() -> BroodHealthScoreConfig:
         try:
             bundle = joblib.load(PATHS.model_bundle)
             return BroodHealthScoreConfig.from_dict(bundle.get("score_config"))
-        except Exception:
-            pass
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.warning(
+                "Unable to load brood-health score configuration from %s: %s",
+                PATHS.model_bundle,
+                exc,
+            )
     return BroodHealthScoreConfig()
 
 

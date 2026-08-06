@@ -124,9 +124,11 @@ class BroodHealthPredictor:
             return []
         if float(value) < float(limits["p01"]) or float(value) > float(limits["p99"]):
             return [
+                (
                 f"24-hour relative weight change={float(value):.2f}% is outside the "
                 f"historical 1st–99th percentile range "
                 f"({float(limits['p01']):.2f}% to {float(limits['p99']):.2f}%)."
+                )
             ]
         return []
 

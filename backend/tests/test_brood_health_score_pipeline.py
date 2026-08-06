@@ -64,7 +64,7 @@ def test_future_rows_never_change_earlier_features():
 
 def test_group_split_never_places_one_hive_in_multiple_partitions():
     frame = make_frame(hives=10)
-    _, y, metadata, _ = build_supervised_dataset(frame, horizon_hours=6)
+    _, _y, metadata, _ = build_supervised_dataset(frame, horizon_hours=6)
     assignments = _assign_hive_splits(frame)
     split = metadata["hive_id"].astype(str).map(assignments)
     audit = pd.DataFrame({"hive_id": metadata["hive_id"], "split": split})

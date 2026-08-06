@@ -213,10 +213,12 @@ def build_warning_payload(
         "Good": [
             "Review the next readings and check any sensor moving away from its usual range."
         ],
-        "Poor": [
-            "Inspect the colony soon; verify brood temperature, humidity, ventilation, "
-            "CO₂ trend, relative weight change and sensor calibration."
-        ],
+      "Poor": [
+    (
+        "Inspect the colony soon; verify brood temperature, humidity, ventilation, "
+        "CO₂ trend, relative weight change and sensor calibration."
+    )
+],
         "Critical": [
             "Perform an immediate physical hive inspection and confirm brood condition directly."
         ],
