@@ -13,7 +13,7 @@ const MODULE_TABS = [
   },
   {
     id: 'live-early-warning',
-    label: 'Live Early Warning (IoT)',
+    label: "HUI Decision Support",
     icon: RadioTower,
   },
 ];

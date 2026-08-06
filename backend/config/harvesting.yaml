@@ -1,0 +1,620 @@
+dataset:
+  clean_data_path: data/processed/common_clean.parquet
+  split_manifest_path: data/manifests/common_split_manifest.parquet
+event:
+  source_column: honey_harvested_1
+  event_start_column: harvest_event_start_1
+  event_id_column: harvest_event_id
+target:
+  horizon_hours: 72
+  output_column: harvest_within_next_72h
+cross_validation:
+  minimum_training_events: 12
+  validation_events_per_fold: 6
+  purge_hours: 72
+output:
+  event_table_path: data/interim/harvest_events.parquet
+  model_dataset_path: data/processed/harvest_72h_dataset.parquet
+  report_directory: artifacts/reports/harvesting
+  cv_folds_path: artifacts/reports/harvesting/cv_folds.csv
+eda:
+  event_table_start_column: event_start
+  pre_event_hours: 168
+  post_event_hours: 72
+  lead_hours:
+  - 72
+  - 48
+  - 24
+  - 6
+  - 1
+  exclusion_hours_for_controls: 168
+  random_state: 42
+  maximum_individual_event_plots: 60
+  report_directory: artifacts/reports/harvesting/eda
+label_audit:
+  lookback_hours: 72
+  persistence_hours: 6
+  minimum_drop_kg: 2.0
+  mad_multiplier: 6.0
+  minimum_persistent_drop_kg: 1.5
+  aligned_tolerance_hours: 2
+  co2_flatline_std_threshold: 1.0
+  output_directory: artifacts/reports/harvesting/label_audit
+review:
+  audit_path: artifacts/reports/harvesting/label_audit/event_label_alignment_audit.csv
+  review_template_path: artifacts/reports/harvesting/label_audit/event_manual_review.csv
+  reviewed_events_csv_path: artifacts/reports/harvesting/label_audit/harvest_events_reviewed.csv
+  reviewed_events_parquet_path: data/interim/harvest_events_reviewed.parquet
+  review_summary_path: artifacts/reports/harvesting/label_audit/manual_review_summary.json
+reviewed:
+  event_table_path: data/interim/harvest_events_reviewed.parquet
+  model_dataset_path: data/processed/harvest_reviewed_72h_dataset.parquet
+  report_directory: artifacts/reports/harvesting/reviewed
+  cv_folds_path: artifacts/reports/harvesting/reviewed/cv_folds.csv
+  cv_summary_path: artifacts/reports/harvesting/reviewed/cv_summary.json
+reviewed_target:
+  output_column: harvest_within_next_72h_reviewed
+  event_start_indicator_column: harvest_reviewed_event_start_1
+  post_event_recovery_hours: 24
+reviewed_cross_validation:
+  minimum_training_events: 4
+  validation_events_per_fold: 2
+  purge_hours: 72
+reviewed_features:
+  source_dataset_path: data/processed/harvest_reviewed_72h_dataset.parquet
+  output_dataset_path: data/processed/harvest_reviewed_feature_dataset.parquet
+  feature_manifest_path: artifacts/reports/harvesting/reviewed/features/feature_manifest.csv
+  audit_path: artifacts/reports/harvesting/reviewed/features/feature_audit.json
+  minimum_history_hours: 168
+  weight_windows_hours:
+  - 6
+  - 24
+  - 72
+  - 168
+  environmental_windows_hours:
+  - 24
+  - 72
+  weight_delta_hours:
+  - 1
+  - 6
+  - 24
+  - 72
+  environmental_delta_hours:
+  - 1
+  - 6
+  - 24
+  weight_trend_hours:
+  - 6
+  - 24
+  - 72
+  environmental_trend_hours:
+  - 24
+  co2_flatline_std_threshold: 1.0
+reviewed_feature_eda:
+  event_table_path: data/interim/harvest_events_reviewed.parquet
+  feature_dataset_path: data/processed/harvest_reviewed_feature_dataset.parquet
+  feature_manifest_path: artifacts/reports/harvesting/reviewed/features/feature_manifest.csv
+  report_directory: artifacts/reports/harvesting/reviewed/feature_eda
+  lead_hours:
+  - 72
+  - 48
+  - 24
+  - 6
+  - 1
+  control_exclusion_hours: 168
+  random_state: 42
+  top_features_to_plot: 12
+grouped_hive_validation:
+  event_table_path: data/interim/harvest_events_reviewed.parquet
+  feature_dataset_path: data/processed/harvest_reviewed_feature_dataset.parquet
+  folds_path: artifacts/reports/harvesting/reviewed/grouped_hive_folds.csv
+  summary_path: artifacts/reports/harvesting/reviewed/grouped_hive_summary.json
+  minimum_training_positive_hives: 4
+research_model_comparison:
+  feature_dataset_path: data/processed/harvest_reviewed_feature_dataset.parquet
+  reviewed_events_path: data/interim/harvest_events_reviewed.parquet
+  feature_manifest_path: artifacts/reports/harvesting/reviewed/features/feature_manifest.csv
+  output_directory: artifacts/reports/harvesting/reviewed/research_models
+  model_directory: artifacts/models/harvesting/research_v2
+  target_column: harvest_within_next_72h_reviewed
+  horizon_hours: 72
+  session_gap_hours: 12
+  false_alert_gap_hours: 6
+  random_state: 42
+  maximum_negative_to_positive_ratio: 25
+  threshold_grid_points: 201
+  minimum_validation_event_recall: 1.0
+  feature_sets:
+    core:
+      include:
+      - weight_kg_current
+      - weight_delta_6h_kg
+      - weight_delta_24h_kg
+      - weight_delta_72h_kg
+      - weight_std_24h_kg
+      - weight_std_72h_kg
+      - weight_distance_from_max_72h_kg
+      - weight_relative_to_max_72h
+      - temperature_c_mean_24h
+      - temperature_c_std_24h
+      - co2_ppm_mean_24h
+      - co2_ppm_std_24h
+      - co2_flatline_24h_1
+      - hour_sin
+      - hour_cos
+    weight_only:
+      include_prefixes:
+      - weight_
+    no_humidity:
+      include_all: true
+      exclude_prefixes:
+      - humidity_
+    full:
+      include_all: true
+  models:
+    logistic_regression:
+      enabled: true
+      C: 0.1
+      l1_ratio: 0.1
+      max_iter: 3000
+    random_forest:
+      enabled: true
+      n_estimators: 300
+      max_depth: 6
+      min_samples_leaf: 50
+      max_features: sqrt
+      max_samples: 0.7
+    xgboost:
+      enabled: true
+      n_estimators: 350
+      learning_rate: 0.03
+      max_depth: 3
+      min_child_weight: 10
+      subsample: 0.7
+      colsample_bytree: 0.7
+      reg_alpha: 1.0
+      reg_lambda: 5.0
+    lightgbm:
+      enabled: true
+      n_estimators: 350
+      learning_rate: 0.03
+      num_leaves: 7
+      max_depth: 3
+      min_child_samples: 100
+      subsample: 0.7
+      colsample_bytree: 0.7
+      reg_alpha: 1.0
+      reg_lambda: 5.0
+alert_policy_refinement:
+  validation_predictions_path: artifacts/reports/harvesting/reviewed/research_models/selected_validation_predictions.parquet
+  test_predictions_path: artifacts/reports/harvesting/reviewed/research_models/selected_test_predictions.parquet
+  reviewed_events_path: artifacts/reports/harvesting/reviewed/research_models/reviewed_events_with_sessions.csv
+  output_directory: artifacts/reports/harvesting/reviewed/alert_policy
+  deployment_metadata_path: artifacts/models/harvesting/research_v2/alert_policy.json
+  target_column: harvest_within_next_72h_reviewed
+  probability_column: raw_probability
+  horizon_hours: 72
+  smoothing_windows_hours:
+  - 1
+  - 3
+  - 6
+  - 12
+  minimum_consecutive_hours:
+  - 1
+  - 2
+  - 3
+  - 4
+  threshold_grid_points: 101
+  minimum_validation_event_recall: 1.0
+  minimum_median_lead_hours: 12
+  false_alert_gap_hours: 6
+  readiness_gate:
+    minimum_false_alert_reduction_fraction: 0.5
+    minimum_precision_lift_over_prevalence: 2.0
+alert_policy_research_gate:
+  policy_sweep_path: artifacts/reports/harvesting/reviewed/alert_policy/alert_policy_sweep.csv
+  policy_summary_path: artifacts/reports/harvesting/reviewed/alert_policy/selected_alert_policy.json
+  validation_predictions_path: artifacts/reports/harvesting/reviewed/research_models/selected_validation_predictions.parquet
+  test_predictions_path: artifacts/reports/harvesting/reviewed/research_models/selected_test_predictions.parquet
+  reviewed_events_path: artifacts/reports/harvesting/reviewed/research_models/reviewed_events_with_sessions.csv
+  output_directory: artifacts/reports/harvesting/reviewed/alert_policy_gate
+  deployment_metadata_path: artifacts/models/harvesting/research_v2/research_gate_policy.json
+  target_column: harvest_within_next_72h_reviewed
+  probability_column: raw_probability
+  horizon_hours: 72
+  false_alert_gap_hours: 6
+  minimum_validation_event_recall: 1.0
+  minimum_median_lead_hours: 12
+  minimum_precision_lift_over_prevalence: 2.0
+  require_precision_at_least_baseline: true
+  require_false_positive_rows_no_worse_than_baseline: true
+  require_alert_fraction_no_worse_than_baseline: true
+weight_forecasting:
+  feature_dataset_path: data/processed/harvest_reviewed_feature_dataset.parquet
+  clean_data_path: data/processed/common_clean.parquet
+  split_manifest_path: data/manifests/common_split_manifest.parquet
+  feature_manifest_path: artifacts/reports/harvesting/reviewed/features/feature_manifest.csv
+  output_directory: artifacts/reports/harvesting/reviewed/weight_forecasting
+  model_directory: artifacts/models/harvesting/weight_forecasting
+  horizons_hours:
+  - 24
+  - 48
+  - 72
+  random_state: 42
+  maximum_training_rows: 100000
+  feature_sets:
+    weight_only:
+      include_prefixes:
+      - weight_
+    no_humidity:
+      include_all: true
+      exclude_prefixes:
+      - humidity_
+  models:
+    persistence:
+      enabled: true
+    recent_trend:
+      enabled: true
+      trend_feature: weight_trend_24h_kg_per_hour
+    ridge:
+      enabled: true
+      alpha: 10.0
+    random_forest:
+      enabled: true
+      n_estimators: 250
+      max_depth: 10
+      min_samples_leaf: 25
+      max_features: sqrt
+      max_samples: 0.7
+    xgboost:
+      enabled: true
+      n_estimators: 350
+      learning_rate: 0.03
+      max_depth: 4
+      min_child_weight: 10
+      subsample: 0.7
+      colsample_bytree: 0.7
+      reg_alpha: 1.0
+      reg_lambda: 5.0
+    lightgbm:
+      enabled: true
+      n_estimators: 350
+      learning_rate: 0.03
+      num_leaves: 15
+      max_depth: 5
+      min_child_samples: 100
+      subsample: 0.7
+      colsample_bytree: 0.7
+      reg_alpha: 1.0
+      reg_lambda: 5.0
+forecast_readiness:
+  comparison_path: artifacts/reports/harvesting/reviewed/robust_weight_forecasting/robust_weight_forecasting_comparison.csv
+  forecasting_summary_path: artifacts/reports/harvesting/reviewed/robust_weight_forecasting/robust_weight_forecasting_summary.json
+  feature_dataset_path: data/processed/harvest_reviewed_feature_dataset.parquet
+  forecaster_directory: artifacts/models/harvesting/robust_weight_forecasting
+  gate_output_path: artifacts/reports/harvesting/reviewed/robust_weight_forecasting/forecasting_research_gate.json
+  output_directory: artifacts/reports/harvesting/reviewed/forecast_readiness
+  deployment_metadata_path: artifacts/models/harvesting/weight_forecasting/provisional_readiness_metadata.json
+  horizons_hours:
+  - 24
+  - 48
+  - 72
+  research_gate:
+    minimum_validation_mae_improvement_fraction: 0.02
+    required_improved_horizons: 2
+    require_72h_not_worse_than_persistence: true
+    maximum_test_to_validation_mae_ratio: 2.0
+  normalization:
+    lower_quantile: 0.1
+    upper_quantile: 0.9
+    plateau_rate_quantile: 0.25
+  component_weights:
+    recent_accumulation: 0.15
+    weight_position: 0.2
+    forecast_plateau: 0.25
+    forecast_slowdown: 0.2
+    forecast_agreement: 0.1
+    environmental_stability: 0.1
+  stability_window_hours: 24
+  stability_minimum_periods: 6
+  rate_of_change_hours: 6
+  readiness_class_quantiles:
+    approaching: 0.5
+    ready: 0.75
+    high_priority: 0.9
+robust_weight_forecasting:
+  feature_dataset_path: data/processed/harvest_reviewed_feature_dataset.parquet
+  clean_data_path: data/processed/common_clean.parquet
+  split_manifest_path: data/manifests/common_split_manifest.parquet
+  feature_manifest_path: artifacts/reports/harvesting/reviewed/features/feature_manifest.csv
+  output_directory: artifacts/reports/harvesting/reviewed/robust_weight_forecasting
+  model_directory: artifacts/models/harvesting/robust_weight_forecasting
+  research_gate_path: artifacts/reports/harvesting/reviewed/robust_weight_forecasting/forecasting_research_gate.json
+  horizons_hours:
+  - 24
+  - 48
+  - 72
+  target_window_hours: 6
+  random_state: 42
+  maximum_training_rows: 100000
+  feature_sets:
+    weight_only:
+      include_prefixes:
+      - weight_
+    no_humidity:
+      include_all: true
+      exclude_prefixes:
+      - humidity_
+  models:
+    persistence:
+      enabled: true
+    recent_trend:
+      enabled: true
+      trend_feature: weight_trend_24h_kg_per_hour
+    ridge:
+      enabled: true
+      alpha: 10.0
+    random_forest:
+      enabled: true
+      n_estimators: 250
+      max_depth: 10
+      min_samples_leaf: 25
+      max_features: sqrt
+      max_samples: 0.7
+    xgboost:
+      enabled: true
+      n_estimators: 350
+      learning_rate: 0.03
+      max_depth: 4
+      min_child_weight: 10
+      subsample: 0.7
+      colsample_bytree: 0.7
+      reg_alpha: 1.0
+      reg_lambda: 5.0
+    lightgbm:
+      enabled: true
+      n_estimators: 350
+      learning_rate: 0.03
+      num_leaves: 15
+      max_depth: 5
+      min_child_samples: 100
+      subsample: 0.7
+      colsample_bytree: 0.7
+      reg_alpha: 1.0
+      reg_lambda: 5.0
+  research_gate:
+    minimum_validation_mae_improvement_fraction: 0.02
+    required_improved_horizons: 2
+    require_72h_not_worse_than_persistence: true
+    maximum_test_to_validation_mae_ratio: 2.0
+harvesting_research_status:
+  status: benchmark_only
+  readiness_enabled: false
+  calibration_enabled: false
+  hui_enabled: false
+  hrsi_enabled: false
+  hrroc_enabled: false
+  live_recommendation_enabled: false
+  exploratory_24h_forecast_enabled: true
+  classification_validation_gate_passed: true
+  classification_test_event_supported: false
+  decision_path: artifacts/reports/harvesting/reviewed/final_research_decision.json
+provisional_hui_regression:
+  feature_dataset_path: data/processed/harvest_reviewed_feature_dataset.parquet
+  feature_manifest_path: artifacts/reports/harvesting/reviewed/features/feature_manifest.csv
+  hui_dataset_path: data/processed/provisional_hui_dataset.parquet
+  output_directory: artifacts/reports/harvesting/reviewed/provisional_hui_regression
+  model_directory: artifacts/models/harvesting/provisional_hui_regression
+  frontend_output_path: ../frontend/public/data/harvesting-research/provisional-hui-dashboard.json
+  horizons_hours:
+  - 24
+  - 48
+  - 72
+  maximum_training_rows: 100000
+  random_state: 42
+  dashboard_rows_per_hive: 168
+  hui_components:
+    weight_position:
+      column: weight_relative_to_max_168h
+      direction: higher
+      weight: 0.3
+    recent_accumulation:
+      column: weight_delta_72h_kg
+      direction: higher
+      weight: 0.25
+      clip_lower: 0.0
+    weight_plateau:
+      column: weight_trend_72h_kg_per_hour
+      direction: lower_absolute
+      weight: 0.25
+    environmental_stability:
+      column: environmental_variability_72h
+      direction: lower
+      weight: 0.1
+    temperature_stability:
+      column: temperature_c_range_24h
+      direction: lower
+      weight: 0.1
+  normalization:
+    lower_quantile: 0.1
+    upper_quantile: 0.9
+  quality_columns:
+  - co2_flatline_24h_1
+  - co2_flatline_72h_1
+  quality_penalty_per_flag: 0.25
+  minimum_quality_factor: 0.5
+  classes:
+    not_ready_upper: 40.0
+    approaching_upper: 60.0
+    ready_upper: 80.0
+  feature_sets:
+    weight_only:
+      include_prefixes:
+      - weight_
+    no_humidity:
+      include_all: true
+      exclude_prefixes:
+      - humidity_
+  models:
+    persistence:
+      enabled: true
+    ridge:
+      enabled: true
+      alpha: 10.0
+    random_forest:
+      enabled: true
+      n_estimators: 250
+      max_depth: 12
+      min_samples_leaf: 20
+      max_features: sqrt
+      max_samples: 0.7
+    xgboost:
+      enabled: true
+      n_estimators: 350
+      learning_rate: 0.03
+      max_depth: 4
+      min_child_weight: 10
+      subsample: 0.7
+      colsample_bytree: 0.7
+      reg_alpha: 1.0
+      reg_lambda: 5.0
+    lightgbm:
+      enabled: true
+      n_estimators: 350
+      learning_rate: 0.03
+      num_leaves: 15
+      max_depth: 5
+      min_child_samples: 100
+      subsample: 0.7
+      colsample_bytree: 0.7
+      reg_alpha: 1.0
+      reg_lambda: 5.0
+  research_gate:
+    minimum_validation_mae_improvement_fraction: 0.05
+    required_improved_horizons: 2
+    maximum_test_to_validation_mae_ratio: 2.0
+probability_calibration:
+  feature_dataset_path: data/processed/harvest_reviewed_feature_dataset.parquet
+  reviewed_events_path: data/interim/harvest_events_reviewed.parquet
+  selected_model_path: artifacts/models/harvesting/research_v2/selected_model.joblib
+  selected_model_metadata_path: artifacts/models/harvesting/research_v2/model_metadata.json
+  selected_feature_columns_path: artifacts/models/harvesting/research_v2/selected_feature_columns.json
+  validation_predictions_path: artifacts/reports/harvesting/reviewed/research_models/selected_validation_predictions.parquet
+  test_predictions_path: artifacts/reports/harvesting/reviewed/research_models/selected_test_predictions.parquet
+  output_directory: artifacts/reports/harvesting/reviewed/probability_calibration
+  model_directory: artifacts/models/harvesting/probability_calibration
+  target_column: harvest_within_next_72h_reviewed
+  horizon_hours: 72
+  session_gap_hours: 12
+  grouped_oof_folds: 5
+  maximum_negative_to_positive_ratio: 25
+  random_state: 42
+  reliability_bins: 10
+  probability_clip_epsilon: 1.0e-06
+  methods:
+    identity:
+      enabled: true
+    platt:
+      enabled: true
+    isotonic:
+      enabled: true
+  research_gate:
+    minimum_validation_brier_improvement_fraction: 0.02
+    require_validation_ece_not_worse: true
+    maximum_test_brier_degradation_fraction: 0.1
+    minimum_positive_hives: 4
+classifier_derived_hui:
+  feature_dataset_path: data/processed/harvest_reviewed_feature_dataset.parquet
+  feature_manifest_path: artifacts/reports/harvesting/reviewed/features/feature_manifest.csv
+  hui_dataset_path: data/processed/classifier_derived_hui_dataset.parquet
+  output_directory: artifacts/reports/harvesting/reviewed/classifier_derived_hui
+  calibrated_prediction_paths:
+    train: artifacts/reports/harvesting/reviewed/probability_calibration/training_oof_calibrated_predictions.parquet
+    validation: artifacts/reports/harvesting/reviewed/probability_calibration/selected_validation_calibrated_predictions.parquet
+    test: artifacts/reports/harvesting/reviewed/probability_calibration/selected_test_calibrated_predictions.parquet
+  score_status: classifier_derived_provisional_research_index
+  calibration_status: research_gate_not_passed
+  horizons_hours:
+  - 24
+  - 48
+  - 72
+  hui_anchors:
+  - calibrated_score: 0.0
+    hui: 0.0
+    meaning: Minimum observed urgency evidence
+  - calibrated_score: 0.0008187403977683789
+    hui: 20.0
+    meaning: Median training out-of-fold score
+  - calibrated_score: 0.0034394735186074887
+    hui: 40.0
+    meaning: Exact Platt-adjusted alert-region boundary
+  - calibrated_score: 0.008824379298130958
+    hui: 60.0
+    meaning: Positive training out-of-fold lower quartile
+  - calibrated_score: 0.01943345880678582
+    hui: 70.0
+    meaning: Positive training out-of-fold median
+  - calibrated_score: 0.05090735328716948
+    hui: 80.0
+    meaning: Positive training out-of-fold upper quartile
+  - calibrated_score: 0.3637653093683719
+    hui: 100.0
+    meaning: Positive training out-of-fold 99th percentile
+  classes:
+    not_ready_upper: 40.0
+    approaching_upper: 60.0
+    ready_upper: 80.0
+  future_regression:
+    model_directory: artifacts/models/harvesting/classifier_derived_hui_regression
+    maximum_training_rows: 120000
+    random_state: 42
+    feature_sets:
+      hui_history_only:
+        include_hui_history: true
+      weight_hui:
+        include_hui_history: true
+        include_prefixes:
+        - weight_
+      no_humidity_hui:
+        include_hui_history: true
+        include_all_manifest: true
+        exclude_prefixes:
+        - humidity_
+    models:
+      persistence:
+        enabled: true
+      ridge:
+        enabled: true
+        alpha: 10.0
+      random_forest:
+        enabled: true
+        n_estimators: 250
+        max_depth: 12
+        min_samples_leaf: 20
+        max_features: sqrt
+        max_samples: 0.7
+      xgboost:
+        enabled: true
+        n_estimators: 350
+        learning_rate: 0.03
+        max_depth: 4
+        min_child_weight: 10
+        subsample: 0.7
+        colsample_bytree: 0.7
+        reg_alpha: 1.0
+        reg_lambda: 5.0
+      lightgbm:
+        enabled: true
+        n_estimators: 350
+        learning_rate: 0.03
+        num_leaves: 15
+        max_depth: 5
+        min_child_samples: 100
+        subsample: 0.7
+        colsample_bytree: 0.7
+        reg_alpha: 1.0
+        reg_lambda: 5.0
+    research_gate:
+      minimum_validation_mae_improvement_fraction: 0.05
+      required_improved_horizons: 2
+      maximum_test_to_validation_mae_ratio: 2.0
