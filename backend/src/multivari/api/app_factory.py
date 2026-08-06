@@ -8,6 +8,9 @@ from flask_cors import CORS
 
 from .eda_service import EDAService
 from .routes import create_api_blueprint
+from multivari.modules.swarming.iot.routes import iot_bp
+from multivari.modules.swarming.routes import swarming_live_bp
+from multivari.modules.swarming.training_routes import model_training_bp
 
 
 def _backend_root() -> Path:
@@ -40,6 +43,9 @@ def create_app() -> Flask:
 
     service = EDAService(backend_root=backend_root)
     app.register_blueprint(create_api_blueprint(service))
+    app.register_blueprint(swarming_live_bp)
+    app.register_blueprint(model_training_bp)
+    app.register_blueprint(iot_bp)
 
     @app.get("/")
     def index():
