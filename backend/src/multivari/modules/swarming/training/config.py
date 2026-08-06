@@ -27,10 +27,7 @@ os.makedirs(GRAPH_FOLDER, exist_ok=True)
 # Dataset
 # ----------------------------------------------------
 
-DATASET_PATH = os.path.join(
-    DATA_FOLDER,
-    "hive_data_with_features.csv"
-)
+DATASET_PATH = os.path.join(DATA_FOLDER, "hive_data_with_features.csv")
 
 # ----------------------------------------------------
 # Target Column
@@ -55,40 +52,21 @@ TIMESTAMP_COLUMN = "timestamp"
 # ----------------------------------------------------
 
 FEATURE_COLUMNS = [
-
     "internal_temperature_c",
-
     "internal_humidity_pct",
-
     "co2_ppm",
-
     "hive_weight_kg",
-
     "external_temperature_c",
-
     "external_humidity_pct",
-
     "rainfall_mm_hour",
-
-    "wind_speed_mps"
-
+    "wind_speed_mps",
 ]
 
 # ----------------------------------------------------
 # PELT Features
 # ----------------------------------------------------
 
-PELT_COLUMNS = [
-
-    "internal_temperature_c",
-
-    "internal_humidity_pct",
-
-    "co2_ppm",
-
-    "hive_weight_kg"
-
-]
+PELT_COLUMNS = ["internal_temperature_c", "internal_humidity_pct", "co2_ppm", "hive_weight_kg"]
 
 # ----------------------------------------------------
 # Random State

@@ -18,12 +18,8 @@ def add_time_features(df: pd.DataFrame) -> pd.DataFrame:
     result["is_weekend"] = (timestamp.dt.dayofweek >= 5).astype("int8")
     result["hour_sin"] = np.sin(2 * np.pi * result["hour"] / 24).astype("float32")
     result["hour_cos"] = np.cos(2 * np.pi * result["hour"] / 24).astype("float32")
-    result["day_of_year_sin"] = np.sin(
-        2 * np.pi * result["day_of_year"] / 365.25
-    ).astype("float32")
-    result["day_of_year_cos"] = np.cos(
-        2 * np.pi * result["day_of_year"] / 365.25
-    ).astype("float32")
+    result["day_of_year_sin"] = np.sin(2 * np.pi * result["day_of_year"] / 365.25).astype("float32")
+    result["day_of_year_cos"] = np.cos(2 * np.pi * result["day_of_year"] / 365.25).astype("float32")
     return result
 
 
@@ -45,9 +41,7 @@ def build_common_features(
             result[f"{sensor}_lag_{lag}h"] = grouped[sensor].shift(lag).astype("float32")
 
         for period in change_hours:
-            result[f"{sensor}_change_{period}h"] = grouped[sensor].diff(period).astype(
-                "float32"
-            )
+            result[f"{sensor}_change_{period}h"] = grouped[sensor].diff(period).astype("float32")
 
         for window in rolling_windows_hours:
             rolling = grouped[sensor].rolling(window=window, min_periods=window)

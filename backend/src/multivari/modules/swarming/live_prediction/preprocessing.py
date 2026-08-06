@@ -14,21 +14,21 @@ Responsibility:
 =========================================================
 """
 
-import numpy as np
 import joblib
+import numpy as np
 
 from .config import (
-    SCALER_PATH,
-    LABEL_ENCODER_PATH,
-    SEQUENCE_LENGTH,
     FEATURE_COLUMNS,
+    LABEL_ENCODER_PATH,
+    SCALER_PATH,
+    SEQUENCE_LENGTH,
 )
 from .pelt_live import generate_pelt_features
-
 
 # -------------------------------------------------------
 # Module-level singletons — loaded once at import time
 # -------------------------------------------------------
+
 
 def _load_scaler():
     """Load and return the saved StandardScaler."""
@@ -36,8 +36,7 @@ def _load_scaler():
         return joblib.load(SCALER_PATH)
     except FileNotFoundError:
         raise FileNotFoundError(
-            f"StandardScaler not found at: {SCALER_PATH}\n"
-            "Run the LSTM training pipeline first."
+            f"StandardScaler not found at: {SCALER_PATH}\nRun the LSTM training pipeline first."
         )
 
 
@@ -53,7 +52,7 @@ def _load_label_encoder():
 
 
 # Lazy-load on first call to avoid errors if files do not exist yet
-_scaler        = None
+_scaler = None
 _label_encoder = None
 
 
@@ -77,6 +76,7 @@ def get_label_encoder():
 # Public API
 # -------------------------------------------------------
 
+
 def build_sequence(readings: list) -> np.ndarray:
     """
     Convert raw sensor readings into a scaled LSTM input sequence.
@@ -98,8 +98,7 @@ def build_sequence(readings: list) -> np.ndarray:
 
     # Verify shape
     assert feature_df.shape == (SEQUENCE_LENGTH, len(FEATURE_COLUMNS)), (
-        f"Expected ({SEQUENCE_LENGTH}, {len(FEATURE_COLUMNS)}), "
-        f"got {feature_df.shape}"
+        f"Expected ({SEQUENCE_LENGTH}, {len(FEATURE_COLUMNS)}), got {feature_df.shape}"
     )
 
     # Step 2: Scale with the saved StandardScaler

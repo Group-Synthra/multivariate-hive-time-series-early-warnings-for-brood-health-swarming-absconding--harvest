@@ -14,23 +14,19 @@ Proof Methods:
 =========================================================
 """
 
-import os
 import json
+import os
+
+import joblib
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.metrics import (
-    confusion_matrix, 
-    roc_curve, 
-    auc, 
-    precision_recall_curve,
-    roc_auc_score
-)
-from scipy.stats import gaussian_kde
 from scipy.signal import find_peaks
-from .config import *
-import joblib
+from scipy.stats import gaussian_kde
+from sklearn.metrics import auc, confusion_matrix, roc_curve
 from tensorflow.keras.models import load_model
+
+from .config import *
 
 print("=" * 70)
 print("MATHEMATICAL VALIDATION OF RISK THRESHOLDS")
@@ -39,6 +35,7 @@ print("=" * 70)
 # -----------------------------------------------------
 # Helper function for JSON serialization
 # -----------------------------------------------------
+
 
 def convert_to_serializable(obj):
     """Convert numpy types to Python types for JSON serialization."""
@@ -57,11 +54,14 @@ def convert_to_serializable(obj):
     else:
         return obj
 
+
 # -----------------------------------------------------
 # Load paths
 # -----------------------------------------------------
 
-OUTPUT_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), "outputs", "model_training")
+OUTPUT_FOLDER = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "outputs", "model_training"
+)
 DATA_FILE = os.path.join(OUTPUT_FOLDER, "hive_data_with_pelt.csv")
 MODEL_FOLDER = os.path.join(OUTPUT_FOLDER, "models")
 GRAPH_FOLDER = os.path.join(OUTPUT_FOLDER, "graphs")
@@ -103,7 +103,7 @@ FEATURES = [
     "breakpoint",
     "days_since_breakpoint",
     "breakpoint_density",
-    "segment_duration"
+    "segment_duration",
 ]
 
 TARGET = "swarming_label_next_72h"
@@ -123,7 +123,7 @@ X_sequences = []
 y_sequences = []
 
 for i in range(SEQUENCE_LENGTH, len(X_scaled)):
-    X_sequences.append(X_scaled[i - SEQUENCE_LENGTH:i])
+    X_sequences.append(X_scaled[i - SEQUENCE_LENGTH : i])
     y_sequences.append(y[i])
 
 X_sequences = np.array(X_sequences)
@@ -147,11 +147,7 @@ print("\n" + "=" * 70)
 print("PROOF 1: Actual Swarming Rate by Risk Level")
 print("=" * 70)
 
-risk_levels = {
-    "LOW": (0, 0.30),
-    "MEDIUM": (0.30, 0.60),
-    "HIGH": (0.60, 1.0)
-}
+risk_levels = {"LOW": (0, 0.30), "MEDIUM": (0.30, 0.60), "HIGH": (0.60, 1.0)}
 
 print("\nRisk Level | Probability Range | Count | Actual Swarming Rate | Validation")
 print("-" * 80)
@@ -161,12 +157,12 @@ validation_results = {}
 for level, (low, high) in risk_levels.items():
     mask = (y_probability >= low) & (y_probability < high)
     count = np.sum(mask)
-    
+
     if count > 0:
         swarming_rate = np.mean(y_sequences[mask]) * 100
         min_rate = np.min(y_sequences[mask]) * 100
         max_rate = np.max(y_sequences[mask]) * 100
-        
+
         # Mathematical validation criteria
         if level == "LOW":
             valid = swarming_rate < 5
@@ -177,16 +173,18 @@ for level, (low, high) in risk_levels.items():
         else:  # HIGH
             valid = swarming_rate > 50
             status = "✅ VALID" if valid else "⚠️ CHECK"
-        
-        print(f"{level:>9} | {low*100:>3.0f}-{high*100:>3.0f}%      | {count:>7,} | {swarming_rate:>19.2f}% | {status}")
-        
+
+        print(
+            f"{level:>9} | {low * 100:>3.0f}-{high * 100:>3.0f}%      | {count:>7,} | {swarming_rate:>19.2f}% | {status}"
+        )
+
         validation_results[level] = {
-            "range": f"{low*100:.0f}-{high*100:.0f}%",
+            "range": f"{low * 100:.0f}-{high * 100:.0f}%",
             "count": int(count),
             "swarming_rate": round(float(swarming_rate), 2),
             "min_rate": round(float(min_rate), 2),
             "max_rate": round(float(max_rate), 2),
-            "valid": bool(valid)
+            "valid": bool(valid),
         }
 
 # -----------------------------------------------------
@@ -206,22 +204,26 @@ print("-" * 75)
 for thresh in thresholds:
     y_pred = (y_probability >= thresh).astype(int)
     tn, fp, fn, tp = confusion_matrix(y_sequences, y_pred).ravel()
-    
+
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0
     f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-    
-    f1_results.append({
-        "threshold": float(thresh),
-        "precision": float(precision),
-        "recall": float(recall),
-        "f1": float(f1),
-        "fn": int(fn),
-        "fp": int(fp)
-    })
-    
+
+    f1_results.append(
+        {
+            "threshold": float(thresh),
+            "precision": float(precision),
+            "recall": float(recall),
+            "f1": float(f1),
+            "fn": int(fn),
+            "fp": int(fp),
+        }
+    )
+
     marker = "⭐" if thresh in [0.30, 0.60, 0.70] else " "
-    print(f"{marker} {thresh:.2f}     | {precision:.4f}   | {recall:.4f}  | {f1:.4f}   | {fn:>8}   | {fp:>12}")
+    print(
+        f"{marker} {thresh:.2f}     | {precision:.4f}   | {recall:.4f}  | {f1:.4f}   | {fn:>8}   | {fp:>12}"
+    )
 
 # Find optimal F1 threshold
 f1_values = [r["f1"] for r in f1_results]
@@ -243,7 +245,9 @@ fpr, tpr, roc_thresholds = roc_curve(y_sequences, y_probability)
 roc_auc = auc(fpr, tpr)
 
 print(f"\nROC-AUC: {roc_auc:.4f}")
-print(f"Interpretation: {'Excellent' if roc_auc > 0.9 else 'Good' if roc_auc > 0.8 else 'Moderate'}")
+print(
+    f"Interpretation: {'Excellent' if roc_auc > 0.9 else 'Good' if roc_auc > 0.8 else 'Moderate'}"
+)
 
 # Find threshold where sensitivity and specificity are balanced
 optimal_idx = np.argmax(tpr - fpr)
@@ -275,9 +279,9 @@ std_no_swarm = np.std(prob_no_swarming)
 pooled_std = np.sqrt((std_no_swarm**2 + std_swarm**2) / 2)
 cohens_d = (mean_swarm - mean_no_swarm) / pooled_std if pooled_std > 0 else 0
 
-print(f"\nClass 0 (No Swarming):")
+print("\nClass 0 (No Swarming):")
 print(f"  Mean Probability: {mean_no_swarm:.4f} ± {std_no_swarm:.4f}")
-print(f"\nClass 1 (Swarming):")
+print("\nClass 1 (Swarming):")
 print(f"  Mean Probability: {mean_swarm:.4f} ± {std_swarm:.4f}")
 
 print(f"\nCohen's d: {cohens_d:.3f}")
@@ -301,10 +305,12 @@ print("=" * 70)
 FN_WEIGHT = 10
 FP_WEIGHT = 1
 
+
 def calculate_cost(y_true, y_prob, threshold, fn_weight=FN_WEIGHT, fp_weight=FP_WEIGHT):
     y_pred = (y_prob >= threshold).astype(int)
-    tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+    _tn, fp, fn, _tp = confusion_matrix(y_true, y_pred).ravel()
     return fn_weight * fn + fp_weight * fp
+
 
 cost_thresholds = np.arange(0.10, 0.90, 0.05)
 costs = []
@@ -369,31 +375,25 @@ print("FINAL MATHEMATICAL CONCLUSION")
 print("=" * 70)
 
 # Check all validation criteria
-valid_30 = (
-    validation_results["LOW"]["valid"] and
-    validation_results["LOW"]["swarming_rate"] < 5
-)
+valid_30 = validation_results["LOW"]["valid"] and validation_results["LOW"]["swarming_rate"] < 5
 
-valid_60 = (
-    validation_results["HIGH"]["valid"] and
-    validation_results["HIGH"]["swarming_rate"] > 50
-)
+valid_60 = validation_results["HIGH"]["valid"] and validation_results["HIGH"]["swarming_rate"] > 50
 
 print("\n" + "-" * 70)
 print("VALIDATION SUMMARY:")
 print("-" * 70)
 
-print(f"\n✅ 30% = LOW Risk:")
+print("\n✅ 30% = LOW Risk:")
 print(f"   → Actual swarming rate: {validation_results['LOW']['swarming_rate']:.2f}%")
-print(f"   → Criteria: Must be < 5%")
+print("   → Criteria: Must be < 5%")
 print(f"   → Status: {'✅ VALID' if valid_30 else '⚠️ CHECK'}")
 
-print(f"\n✅ 60% = HIGH Risk:")
+print("\n✅ 60% = HIGH Risk:")
 print(f"   → Actual swarming rate: {validation_results['HIGH']['swarming_rate']:.2f}%")
-print(f"   → Criteria: Must be > 50%")
+print("   → Criteria: Must be > 50%")
 print(f"   → Status: {'✅ VALID' if valid_60 else '⚠️ CHECK'}")
 
-print(f"\n✅ Decision Threshold (70%):")
+print("\n✅ Decision Threshold (70%):")
 print(f"   → F1-Score at 70%: {f1_results[thresholds.index(0.70)]['f1']:.4f}")
 print(f"   → Optimal F1 threshold: {best_f1_threshold:.2f}")
 print(f"   → Status: {'✅ OPTIMAL' if abs(0.70 - best_f1_threshold) < 0.05 else '⚠️ CHECK'}")
@@ -438,34 +438,36 @@ results_json = {
         "thresholds": [float(t) for t in thresholds],
         "f1_scores": [float(r["f1"]) for r in f1_results],
         "optimal_threshold": float(best_f1_threshold),
-        "max_f1": float(best_f1)
+        "max_f1": float(best_f1),
     },
     "roc_analysis": {
         "auc": float(roc_auc),
         "optimal_threshold": float(optimal_roc_threshold),
         "sensitivity": float(optimal_sensitivity),
-        "specificity": float(optimal_specificity)
+        "specificity": float(optimal_specificity),
     },
     "class_separation": {
         "cohens_d": float(cohens_d),
         "mean_swarming": float(mean_swarm),
         "mean_no_swarming": float(mean_no_swarm),
         "std_swarming": float(std_swarm),
-        "std_no_swarming": float(std_no_swarm)
+        "std_no_swarming": float(std_no_swarm),
     },
     "cost_analysis": {
         "cost_at_30": int(cost_30),
         "cost_at_60": int(cost_60),
         "optimal_threshold": float(optimal_cost_threshold),
-        "min_cost": int(min_cost)
+        "min_cost": int(min_cost),
     },
     "natural_breakpoints": [float(bp) for bp in natural_breakpoints],
     "conclusion": {
         "30_percent_valid": bool(valid_30),
         "60_percent_valid": bool(valid_60),
         "overall_valid": bool(all_valid),
-        "message": "Risk thresholds are mathematically validated" if all_valid else "Review thresholds"
-    }
+        "message": "Risk thresholds are mathematically validated"
+        if all_valid
+        else "Review thresholds",
+    },
 }
 
 # Convert to serializable and save
@@ -485,14 +487,16 @@ fig, axes = plt.subplots(2, 2, figsize=(14, 10))
 
 # Plot 1: F1-Score vs Threshold
 ax1 = axes[0, 0]
-ax1.plot(thresholds, [r["f1"] for r in f1_results], 'b-', linewidth=2, marker='o')
-ax1.axvline(x=0.30, color='orange', linestyle='--', label='30% (LOW-MEDIUM)')
-ax1.axvline(x=0.60, color='red', linestyle='--', label='60% (MEDIUM-HIGH)')
-ax1.axvline(x=0.70, color='green', linestyle='--', label='70% (Decision)')
-ax1.axvline(x=best_f1_threshold, color='purple', linestyle='-', label=f'Optimal F1: {best_f1_threshold:.2f}')
-ax1.set_xlabel('Threshold')
-ax1.set_ylabel('F1-Score')
-ax1.set_title('F1-Score vs Threshold')
+ax1.plot(thresholds, [r["f1"] for r in f1_results], "b-", linewidth=2, marker="o")
+ax1.axvline(x=0.30, color="orange", linestyle="--", label="30% (LOW-MEDIUM)")
+ax1.axvline(x=0.60, color="red", linestyle="--", label="60% (MEDIUM-HIGH)")
+ax1.axvline(x=0.70, color="green", linestyle="--", label="70% (Decision)")
+ax1.axvline(
+    x=best_f1_threshold, color="purple", linestyle="-", label=f"Optimal F1: {best_f1_threshold:.2f}"
+)
+ax1.set_xlabel("Threshold")
+ax1.set_ylabel("F1-Score")
+ax1.set_title("F1-Score vs Threshold")
 ax1.legend()
 ax1.grid(True, alpha=0.3)
 ax1.set_ylim(0, 1)
@@ -502,43 +506,48 @@ ax2 = axes[0, 1]
 kde_swarm = gaussian_kde(prob_swarming)
 kde_no_swarm = gaussian_kde(prob_no_swarming)
 x_plot = np.linspace(0, 1, 200)
-ax2.fill_between(x_plot, kde_no_swarm(x_plot), alpha=0.5, color='blue', label='No Swarming')
-ax2.fill_between(x_plot, kde_swarm(x_plot), alpha=0.5, color='red', label='Swarming')
-ax2.axvline(x=0.30, color='orange', linestyle='--', linewidth=2)
-ax2.axvline(x=0.60, color='red', linestyle='--', linewidth=2)
-ax2.axvline(x=0.70, color='green', linestyle='--', linewidth=2)
-ax2.set_xlabel('Probability')
-ax2.set_ylabel('Density')
-ax2.set_title('Probability Distribution by Class')
+ax2.fill_between(x_plot, kde_no_swarm(x_plot), alpha=0.5, color="blue", label="No Swarming")
+ax2.fill_between(x_plot, kde_swarm(x_plot), alpha=0.5, color="red", label="Swarming")
+ax2.axvline(x=0.30, color="orange", linestyle="--", linewidth=2)
+ax2.axvline(x=0.60, color="red", linestyle="--", linewidth=2)
+ax2.axvline(x=0.70, color="green", linestyle="--", linewidth=2)
+ax2.set_xlabel("Probability")
+ax2.set_ylabel("Density")
+ax2.set_title("Probability Distribution by Class")
 ax2.legend()
 ax2.grid(True, alpha=0.3)
 
 # Plot 3: ROC Curve
 ax3 = axes[1, 0]
-ax3.plot(fpr, tpr, 'b-', linewidth=2, label=f'AUC = {roc_auc:.4f}')
-ax3.plot([0, 1], [0, 1], 'k--', alpha=0.5)
-ax3.scatter(1 - optimal_specificity, optimal_sensitivity, color='red', s=100, label='Optimal point')
-ax3.set_xlabel('False Positive Rate (1 - Specificity)')
-ax3.set_ylabel('True Positive Rate (Sensitivity)')
-ax3.set_title(f'ROC Curve (AUC = {roc_auc:.4f})')
+ax3.plot(fpr, tpr, "b-", linewidth=2, label=f"AUC = {roc_auc:.4f}")
+ax3.plot([0, 1], [0, 1], "k--", alpha=0.5)
+ax3.scatter(1 - optimal_specificity, optimal_sensitivity, color="red", s=100, label="Optimal point")
+ax3.set_xlabel("False Positive Rate (1 - Specificity)")
+ax3.set_ylabel("True Positive Rate (Sensitivity)")
+ax3.set_title(f"ROC Curve (AUC = {roc_auc:.4f})")
 ax3.legend()
 ax3.grid(True, alpha=0.3)
 
 # Plot 4: Cost Analysis
 ax4 = axes[1, 1]
-ax4.plot(cost_thresholds, costs, 'g-', linewidth=2, marker='s')
-ax4.axvline(x=0.30, color='orange', linestyle='--', label='30%')
-ax4.axvline(x=0.60, color='red', linestyle='--', label='60%')
-ax4.axvline(x=optimal_cost_threshold, color='purple', linestyle='-', label=f'Optimal: {optimal_cost_threshold:.2f}')
-ax4.set_xlabel('Threshold')
-ax4.set_ylabel('Cost (FN×10 + FP×1)')
-ax4.set_title('Cost Analysis')
+ax4.plot(cost_thresholds, costs, "g-", linewidth=2, marker="s")
+ax4.axvline(x=0.30, color="orange", linestyle="--", label="30%")
+ax4.axvline(x=0.60, color="red", linestyle="--", label="60%")
+ax4.axvline(
+    x=optimal_cost_threshold,
+    color="purple",
+    linestyle="-",
+    label=f"Optimal: {optimal_cost_threshold:.2f}",
+)
+ax4.set_xlabel("Threshold")
+ax4.set_ylabel("Cost (FN×10 + FP×1)")
+ax4.set_title("Cost Analysis")
 ax4.legend()
 ax4.grid(True, alpha=0.3)
 
 plt.tight_layout()
 plot_path = os.path.join(GRAPH_FOLDER, "risk_threshold_validation.png")
-plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+plt.savefig(plot_path, dpi=300, bbox_inches="tight")
 plt.close()
 print(f"Saved: {plot_path}")
 

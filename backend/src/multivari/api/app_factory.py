@@ -6,11 +6,12 @@ from pathlib import Path
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-from .eda_service import EDAService
-from .routes import create_api_blueprint
 from multivari.modules.swarming.iot.routes import iot_bp
 from multivari.modules.swarming.routes import swarming_live_bp
 from multivari.modules.swarming.training_routes import model_training_bp
+
+from .eda_service import EDAService
+from .routes import create_api_blueprint
 
 
 def _backend_root() -> Path:

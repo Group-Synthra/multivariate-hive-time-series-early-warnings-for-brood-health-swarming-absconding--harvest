@@ -1892,9 +1892,9 @@ const SwarmPrediction = () => {
           borderRadius: "8px", padding: "8px 14px", marginBottom: "16px",
           fontSize: "0.8rem",
         }}>
-          <span>{modelHealth.all_ready ? "✅" : "❌"}</span>
+          {/* <span>{modelHealth.all_ready ? "✅" : "❌"}</span> */}
           <span style={{ color: modelHealth.all_ready ? "#22c55e" : "#ef4444", fontWeight: 600 }}>
-            {modelHealth.all_ready ? "LSTM model loaded & ready" : "Model files missing — run training first"}
+            {/* {modelHealth.all_ready ? "LSTM model loaded & ready" : "Model files missing — run training first"} */}
           </span>
           {modelHealth.all_ready && (
             <span style={{ color: "var(--text-muted)", marginLeft: "auto", fontSize: "0.72rem" }}>

@@ -540,32 +540,31 @@ XGBoost Training (UPDATED WITH FIXES)
 =========================================================
 """
 
-import os
 import json
-import glob
-import joblib
+import os
 import warnings
 
+import joblib
+import matplotlib
 import numpy as np
 import pandas as pd
 
-import matplotlib
 matplotlib.use("Agg")
+import sys
+
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-from xgboost import XGBClassifier
-
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
-    confusion_matrix,
-    classification_report
 )
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from xgboost import XGBClassifier
 
 from .config import *
 
@@ -641,7 +640,7 @@ FEATURES = [
     "breakpoint",
     "days_since_breakpoint",
     "breakpoint_density",
-    "segment_duration"
+    "segment_duration",
 ]
 
 TARGET = "swarming_label_next_72h"
@@ -665,10 +664,7 @@ print("\nEncoding Target Labels...")
 encoder = LabelEncoder()
 y = encoder.fit_transform(y)
 
-joblib.dump(
-    encoder,
-    os.path.join(MODEL_FOLDER, "label_encoder.pkl")
-)
+joblib.dump(encoder, os.path.join(MODEL_FOLDER, "label_encoder.pkl"))
 print("  Label Encoder Saved")
 
 # -----------------------------------------------------
@@ -696,13 +692,13 @@ print("=" * 70)
 class_0 = np.sum(y == 0)
 class_1 = np.sum(y == 1)
 
-print(f"  Class 0 (No Swarming): {class_0:,} ({class_0/len(y)*100:.2f}%)")
-print(f"  Class 1 (Swarming): {class_1:,} ({class_1/len(y)*100:.2f}%)")
+print(f"  Class 0 (No Swarming): {class_0:,} ({class_0 / len(y) * 100:.2f}%)")
+print(f"  Class 1 (Swarming): {class_1:,} ({class_1 / len(y) * 100:.2f}%)")
 
 if class_1 == 0:
     print("\n  ❌ CRITICAL: No swarming events in dataset!")
     print("     Cannot train a model without swarming examples.")
-    exit()
+    sys.exit()
 
 # =====================================================
 # TRAIN/TEST SPLIT (STRATIFIED RANDOM)
@@ -717,7 +713,7 @@ X_train, X_test, y_train, y_test = train_test_split(
     y,
     test_size=0.20,
     random_state=RANDOM_STATE,
-    stratify=y  # Maintains same class ratio in both sets
+    stratify=y,  # Maintains same class ratio in both sets
 )
 
 print(f"  Training Samples: {len(X_train):,}")
@@ -727,14 +723,14 @@ print(f"  Testing Samples: {len(X_test):,}")
 test_class_0 = np.sum(y_test == 0)
 test_class_1 = np.sum(y_test == 1)
 
-print(f"\n  Test Set Distribution:")
-print(f"    Class 0: {test_class_0:,} ({test_class_0/len(y_test)*100:.2f}%)")
-print(f"    Class 1: {test_class_1:,} ({test_class_1/len(y_test)*100:.2f}%)")
+print("\n  Test Set Distribution:")
+print(f"    Class 0: {test_class_0:,} ({test_class_0 / len(y_test) * 100:.2f}%)")
+print(f"    Class 1: {test_class_1:,} ({test_class_1 / len(y_test) * 100:.2f}%)")
 
 if test_class_1 == 0:
     print("\n  ❌ CRITICAL: Test set has ZERO swarming events!")
     print("     This will cause misleading accuracy.")
-    exit()
+    sys.exit()
 
 # =====================================================
 # SCALE FEATURES
@@ -746,10 +742,7 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-joblib.dump(
-    scaler,
-    os.path.join(MODEL_FOLDER, "scaler.pkl")
-)
+joblib.dump(scaler, os.path.join(MODEL_FOLDER, "scaler.pkl"))
 print("  Scaler Saved")
 
 print("\nData Preparation Completed")
@@ -789,7 +782,7 @@ xgb_model = XGBClassifier(
     eval_metric="logloss",
     random_state=RANDOM_STATE,
     scale_pos_weight=scale_pos_weight,
-    n_jobs=-1
+    n_jobs=-1,
 )
 
 print("\nTraining model...")
@@ -879,7 +872,7 @@ xgb_metrics = {
     "Train_Samples": len(X_train),
     "Test_Samples": len(X_test),
     "Swarming_Detected": int(pred_class_1),
-    "Actual_Swarming": int(np.sum(y_test == 1))
+    "Actual_Swarming": int(np.sum(y_test == 1)),
 }
 
 print("\nMetrics Dictionary Created")
@@ -921,7 +914,7 @@ plt.ylabel("Actual")
 
 CONFUSION_PATH = os.path.join(GRAPH_FOLDER, "xgb_confusion_matrix.png")
 plt.tight_layout()
-plt.savefig(CONFUSION_PATH, dpi=300, bbox_inches='tight')
+plt.savefig(CONFUSION_PATH, dpi=300, bbox_inches="tight")
 plt.close()
 
 print(f"  Confusion Matrix Saved: {CONFUSION_PATH}")
@@ -932,10 +925,7 @@ print(f"  Confusion Matrix Saved: {CONFUSION_PATH}")
 
 print("\nCreating Feature Importance Plot...")
 
-importance = pd.DataFrame({
-    "Feature": FEATURES,
-    "Importance": xgb_model.feature_importances_
-})
+importance = pd.DataFrame({"Feature": FEATURES, "Importance": xgb_model.feature_importances_})
 importance = importance.sort_values(by="Importance", ascending=False)
 
 # Print feature importance
@@ -951,7 +941,7 @@ plt.xlabel("Importance")
 
 FEATURE_PATH = os.path.join(GRAPH_FOLDER, "xgb_feature_importance.png")
 plt.tight_layout()
-plt.savefig(FEATURE_PATH, dpi=300, bbox_inches='tight')
+plt.savefig(FEATURE_PATH, dpi=300, bbox_inches="tight")
 plt.close()
 
 print(f"  Feature Importance Saved: {FEATURE_PATH}")
@@ -960,10 +950,7 @@ print(f"  Feature Importance Saved: {FEATURE_PATH}")
 # SAVE CSV FEATURE IMPORTANCE
 # =====================================================
 
-importance.to_csv(
-    os.path.join(OUTPUT_FOLDER, "xgb_feature_importance.csv"),
-    index=False
-)
+importance.to_csv(os.path.join(OUTPUT_FOLDER, "xgb_feature_importance.csv"), index=False)
 print("  Feature Importance CSV Saved")
 
 # =====================================================

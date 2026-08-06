@@ -111,16 +111,16 @@ MODEL_DIR = str(_BACKEND_DIR / "artifacts" / "models" / "swarming")
 # Saved Model Artifacts
 # -------------------------------------------------------
 
-LSTM_MODEL_PATH   = os.path.join(MODEL_DIR, "best_lstm.keras")
-SCALER_PATH       = os.path.join(MODEL_DIR, "lstm_scaler.pkl")
+LSTM_MODEL_PATH = os.path.join(MODEL_DIR, "best_lstm.keras")
+SCALER_PATH = os.path.join(MODEL_DIR, "lstm_scaler.pkl")
 LABEL_ENCODER_PATH = os.path.join(MODEL_DIR, "label_encoder.pkl")
 
 # -------------------------------------------------------
 # PELT Parameters  (must match training exactly)
 # -------------------------------------------------------
 
-PELT_MODEL   = "l2"   # ruptures cost model
-PELT_PEN     = 10     # penalty value used in predict()
+PELT_MODEL = "l2"  # ruptures cost model
+PELT_PEN = 10  # penalty value used in predict()
 
 # Columns used to build the multivariate PELT signal
 PELT_COLUMNS = [
@@ -134,7 +134,7 @@ PELT_COLUMNS = [
 # LSTM Sequence
 # -------------------------------------------------------
 
-SEQUENCE_LENGTH = 24   # sliding window of 24 readings
+SEQUENCE_LENGTH = 24  # sliding window of 24 readings
 
 # Optimal decision threshold found during training
 OPTIMAL_THRESHOLD = 0.70
@@ -164,7 +164,7 @@ FEATURE_COLUMNS = [
 # -------------------------------------------------------
 # These thresholds are used by the RiskClassifier to map
 # risk percentages to LOW, MEDIUM, HIGH risk levels.
-# 
+#
 # The RiskClassifier uses Softmax probability:
 # P(swarming | x) = e^(z_swarm) / (e^(z_swarm) + e^(z_non-swarm))
 #
@@ -176,13 +176,13 @@ FEATURE_COLUMNS = [
 #   61% – 100%  →  HIGH RISK
 # -------------------------------------------------------
 
-RISK_LOW_MAX    = 30
+RISK_LOW_MAX = 30
 RISK_MEDIUM_MAX = 60
 # above 60% → HIGH
 
 # Risk messages for each level
 RISK_MESSAGES = {
-    "LOW":    "Hive behaviour is normal. No immediate swarming risk detected.",
+    "LOW": "Hive behaviour is normal. No immediate swarming risk detected.",
     "MEDIUM": "Possible behavioural changes detected. Continue monitoring hive.",
-    "HIGH":   "High swarming probability detected. Immediate hive inspection recommended.",
+    "HIGH": "High swarming probability detected. Immediate hive inspection recommended.",
 }

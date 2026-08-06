@@ -5,36 +5,37 @@ LSTM Model Training (UPDATED WITH FIXES)
 =========================================================
 """
 
-import os
 import json
-import glob
+import os
 import warnings
+
 import joblib
+import matplotlib
 import numpy as np
 import pandas as pd
 
-import matplotlib
 matplotlib.use("Agg")
+import sys
+
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.model_selection import train_test_split
-from sklearn.utils.class_weight import compute_class_weight
 from sklearn.metrics import (
     accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
-    confusion_matrix,
-    classification_report
 )
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.utils.class_weight import compute_class_weight
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.metrics import Precision, Recall
+from tensorflow.keras.models import Sequential, load_model
 
 from .config import *
-from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
-from tensorflow.keras.metrics import Precision, Recall
 
 # Optional: For handling imbalanced data
 # from imblearn.over_sampling import SMOTE
@@ -119,7 +120,7 @@ FEATURES = [
     "breakpoint",
     "days_since_breakpoint",
     "breakpoint_density",
-    "segment_duration"
+    "segment_duration",
 ]
 
 TARGET = "swarming_label_next_72h"
@@ -140,10 +141,7 @@ print("=" * 70)
 encoder = LabelEncoder()
 df[TARGET] = encoder.fit_transform(df[TARGET])
 
-joblib.dump(
-    encoder,
-    os.path.join(MODEL_FOLDER, "label_encoder.pkl")
-)
+joblib.dump(encoder, os.path.join(MODEL_FOLDER, "label_encoder.pkl"))
 print("  Label Encoder Saved")
 
 # =====================================================
@@ -155,10 +153,7 @@ print("\nScaling Features...")
 scaler = StandardScaler()
 df[FEATURES] = scaler.fit_transform(df[FEATURES])
 
-joblib.dump(
-    scaler,
-    os.path.join(MODEL_FOLDER, "lstm_scaler.pkl")
-)
+joblib.dump(scaler, os.path.join(MODEL_FOLDER, "lstm_scaler.pkl"))
 print("  Feature Scaling Completed")
 
 # =====================================================
@@ -189,7 +184,7 @@ for hive in hives:
 
     # Create sequences for this hive
     for i in range(WINDOW_SIZE, len(hive_df)):
-        X_sequences.append(feature_values[i - WINDOW_SIZE:i])
+        X_sequences.append(feature_values[i - WINDOW_SIZE : i])
         y_sequences.append(target_values[i])
         total_sequences += 1
 
@@ -212,13 +207,13 @@ print("=" * 70)
 class_0 = np.sum(y_sequences == 0)
 class_1 = np.sum(y_sequences == 1)
 
-print(f"  Class 0 (No Swarming): {class_0:,} ({class_0/len(y_sequences)*100:.2f}%)")
-print(f"  Class 1 (Swarming): {class_1:,} ({class_1/len(y_sequences)*100:.2f}%)")
+print(f"  Class 0 (No Swarming): {class_0:,} ({class_0 / len(y_sequences) * 100:.2f}%)")
+print(f"  Class 1 (Swarming): {class_1:,} ({class_1 / len(y_sequences) * 100:.2f}%)")
 
 if class_1 == 0:
     print("\n  ❌ CRITICAL: No swarming events in sequences!")
     print("     Check your data or window size.")
-    exit()
+    sys.exit()
 
 # =====================================================
 # TRAIN/TEST SPLIT (STRATIFIED RANDOM)
@@ -234,7 +229,7 @@ X_train, X_test, y_train, y_test = train_test_split(
     y_sequences,
     test_size=0.20,
     random_state=RANDOM_STATE,
-    stratify=y_sequences  # Maintains same class ratio in both sets
+    stratify=y_sequences,  # Maintains same class ratio in both sets
 )
 
 print(f"  Training Samples: {len(X_train):,}")
@@ -244,14 +239,14 @@ print(f"  Testing Samples: {len(X_test):,}")
 test_class_0 = np.sum(y_test == 0)
 test_class_1 = np.sum(y_test == 1)
 
-print(f"\n  Test Set Distribution:")
-print(f"    Class 0: {test_class_0:,} ({test_class_0/len(y_test)*100:.2f}%)")
-print(f"    Class 1: {test_class_1:,} ({test_class_1/len(y_test)*100:.2f}%)")
+print("\n  Test Set Distribution:")
+print(f"    Class 0: {test_class_0:,} ({test_class_0 / len(y_test) * 100:.2f}%)")
+print(f"    Class 1: {test_class_1:,} ({test_class_1 / len(y_test) * 100:.2f}%)")
 
 if test_class_1 == 0:
     print("\n  ❌ CRITICAL: Test set has ZERO swarming events!")
     print("     This will cause misleading accuracy.")
-    exit()
+    sys.exit()
 
 # =====================================================
 # CALCULATE CLASS WEIGHTS
@@ -262,11 +257,7 @@ print("CALCULATING CLASS WEIGHTS")
 print("=" * 70)
 
 classes = np.unique(y_train)
-weights = compute_class_weight(
-    class_weight="balanced",
-    classes=classes,
-    y=y_train
-)
+weights = compute_class_weight(class_weight="balanced", classes=classes, y=y_train)
 class_weights = dict(zip(classes, weights))
 
 print("Class Weights:")
@@ -284,18 +275,11 @@ print("=" * 70)
 model = Sequential()
 
 # First LSTM Layer
-model.add(LSTM(
-    units=128,
-    return_sequences=True,
-    input_shape=(X_train.shape[1], X_train.shape[2])
-))
+model.add(LSTM(units=128, return_sequences=True, input_shape=(X_train.shape[1], X_train.shape[2])))
 model.add(Dropout(0.30))
 
 # Second LSTM Layer
-model.add(LSTM(
-    units=64,
-    return_sequences=False
-))
+model.add(LSTM(units=64, return_sequences=False))
 model.add(Dropout(0.20))
 
 # Dense Layers
@@ -310,11 +294,7 @@ model.add(Dense(1, activation="sigmoid"))
 model.compile(
     optimizer="adam",
     loss="binary_crossentropy",
-    metrics=[
-        "accuracy",
-        Precision(name="precision"),
-        Recall(name="recall")
-    ]
+    metrics=["accuracy", Precision(name="precision"), Recall(name="recall")],
 )
 
 print("\nModel Summary:")
@@ -328,26 +308,11 @@ print("\nCreating Callbacks...")
 
 checkpoint_path = os.path.join(MODEL_FOLDER, "best_lstm.keras")
 
-early_stop = EarlyStopping(
-    monitor="val_loss",
-    patience=8,
-    restore_best_weights=True,
-    verbose=1
-)
+early_stop = EarlyStopping(monitor="val_loss", patience=8, restore_best_weights=True, verbose=1)
 
-checkpoint = ModelCheckpoint(
-    checkpoint_path,
-    monitor="val_loss",
-    save_best_only=True,
-    verbose=1
-)
+checkpoint = ModelCheckpoint(checkpoint_path, monitor="val_loss", save_best_only=True, verbose=1)
 
-reduce_lr = ReduceLROnPlateau(
-    monitor="val_loss",
-    factor=0.5,
-    patience=3,
-    verbose=1
-)
+reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3, verbose=1)
 
 print("Callbacks Created")
 
@@ -368,7 +333,7 @@ history = model.fit(
     class_weight=class_weights,
     shuffle=False,
     callbacks=[early_stop, checkpoint, reduce_lr],
-    verbose=1
+    verbose=1,
 )
 
 print("\nTraining Completed")
@@ -405,11 +370,11 @@ for threshold in np.arange(0.30, 0.71, 0.05):
     # Use binary average for imbalanced data
     score = f1_score(y_test, pred, average="binary", zero_division=0)
     threshold_results.append([threshold, score])
-    
+
     if score > best_f1:
         best_f1 = score
         best_threshold = threshold
-    
+
     print(f"  Threshold: {threshold:.2f} → F1-Score: {score:.4f}")
 
 print(f"\n  ✅ BEST THRESHOLD: {best_threshold:.2f}")
@@ -506,7 +471,7 @@ metrics = {
     "Test_Sequences": len(X_test),
     "Test_Class_1_Ratio": float(np.sum(y_test == 1) / len(y_test)),
     "Swarming_Detected": int(pred_class_1),
-    "Actual_Swarming": int(np.sum(y_test == 1))
+    "Actual_Swarming": int(np.sum(y_test == 1)),
 }
 
 metrics_path = os.path.join(OUTPUT_FOLDER, "lstm_metrics.json")
@@ -537,7 +502,7 @@ plt.title(f"LSTM Confusion Matrix (Threshold={best_threshold:.2f})")
 
 cm_path = os.path.join(GRAPH_FOLDER, "lstm_confusion_matrix.png")
 plt.tight_layout()
-plt.savefig(cm_path, dpi=300, bbox_inches='tight')
+plt.savefig(cm_path, dpi=300, bbox_inches="tight")
 plt.close()
 print(f"  Confusion Matrix Saved: {cm_path}")
 
@@ -550,48 +515,48 @@ print("\nCreating Training History...")
 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(14, 10))
 
 # Loss
-ax1.plot(history.history['loss'], label='Training Loss')
-ax1.plot(history.history['val_loss'], label='Validation Loss')
-ax1.set_xlabel('Epochs')
-ax1.set_ylabel('Loss')
-ax1.set_title('Training and Validation Loss')
+ax1.plot(history.history["loss"], label="Training Loss")
+ax1.plot(history.history["val_loss"], label="Validation Loss")
+ax1.set_xlabel("Epochs")
+ax1.set_ylabel("Loss")
+ax1.set_title("Training and Validation Loss")
 ax1.legend()
 ax1.grid(True, alpha=0.3)
 
 # Accuracy
-ax2.plot(history.history['accuracy'], label='Training Accuracy')
-ax2.plot(history.history['val_accuracy'], label='Validation Accuracy')
-ax2.set_xlabel('Epochs')
-ax2.set_ylabel('Accuracy')
-ax2.set_title('Training and Validation Accuracy')
+ax2.plot(history.history["accuracy"], label="Training Accuracy")
+ax2.plot(history.history["val_accuracy"], label="Validation Accuracy")
+ax2.set_xlabel("Epochs")
+ax2.set_ylabel("Accuracy")
+ax2.set_title("Training and Validation Accuracy")
 ax2.legend()
 ax2.grid(True, alpha=0.3)
 
 # Precision
-if 'precision' in history.history:
-    ax3.plot(history.history['precision'], label='Training Precision')
-if 'val_precision' in history.history:
-    ax3.plot(history.history['val_precision'], label='Validation Precision')
-ax3.set_xlabel('Epochs')
-ax3.set_ylabel('Precision')
-ax3.set_title('Training and Validation Precision')
+if "precision" in history.history:
+    ax3.plot(history.history["precision"], label="Training Precision")
+if "val_precision" in history.history:
+    ax3.plot(history.history["val_precision"], label="Validation Precision")
+ax3.set_xlabel("Epochs")
+ax3.set_ylabel("Precision")
+ax3.set_title("Training and Validation Precision")
 ax3.legend()
 ax3.grid(True, alpha=0.3)
 
 # Recall
-if 'recall' in history.history:
-    ax4.plot(history.history['recall'], label='Training Recall')
-if 'val_recall' in history.history:
-    ax4.plot(history.history['val_recall'], label='Validation Recall')
-ax4.set_xlabel('Epochs')
-ax4.set_ylabel('Recall')
-ax4.set_title('Training and Validation Recall')
+if "recall" in history.history:
+    ax4.plot(history.history["recall"], label="Training Recall")
+if "val_recall" in history.history:
+    ax4.plot(history.history["val_recall"], label="Validation Recall")
+ax4.set_xlabel("Epochs")
+ax4.set_ylabel("Recall")
+ax4.set_title("Training and Validation Recall")
 ax4.legend()
 ax4.grid(True, alpha=0.3)
 
 history_path = os.path.join(GRAPH_FOLDER, "lstm_training_history.png")
 plt.tight_layout()
-plt.savefig(history_path, dpi=300, bbox_inches='tight')
+plt.savefig(history_path, dpi=300, bbox_inches="tight")
 plt.close()
 print(f"  Training History Saved: {history_path}")
 
@@ -602,16 +567,16 @@ print(f"  Training History Saved: {history_path}")
 print("\nCreating Threshold Selection Plot...")
 
 fig, ax = plt.subplots(figsize=(8, 5))
-ax.plot(threshold_df['Threshold'], threshold_df['F1-Score'], marker='o', linewidth=2)
-ax.axvline(x=best_threshold, color='red', linestyle='--', label=f'Best: {best_threshold:.2f}')
-ax.set_xlabel('Threshold')
-ax.set_ylabel('F1-Score (Binary)')
-ax.set_title('Threshold Selection for LSTM Model')
+ax.plot(threshold_df["Threshold"], threshold_df["F1-Score"], marker="o", linewidth=2)
+ax.axvline(x=best_threshold, color="red", linestyle="--", label=f"Best: {best_threshold:.2f}")
+ax.set_xlabel("Threshold")
+ax.set_ylabel("F1-Score (Binary)")
+ax.set_title("Threshold Selection for LSTM Model")
 ax.legend()
 ax.grid(True, alpha=0.3)
 
 threshold_plot_path = os.path.join(GRAPH_FOLDER, "lstm_threshold_selection.png")
-plt.savefig(threshold_plot_path, dpi=300, bbox_inches='tight')
+plt.savefig(threshold_plot_path, dpi=300, bbox_inches="tight")
 plt.close()
 print(f"  Threshold Plot Saved: {threshold_plot_path}")
 

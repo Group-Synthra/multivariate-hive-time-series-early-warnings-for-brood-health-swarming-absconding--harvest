@@ -47,8 +47,12 @@ def realtime():
         "humidity": _identifier(os.getenv("IOT_HUMIDITY_COLUMN", "internal_humidity")),
         "co2": _identifier(os.getenv("IOT_CO2_COLUMN", "internal_co2")),
         "weight": _identifier(os.getenv("IOT_WEIGHT_COLUMN", "total_weight")),
-        "external_temperature": _identifier(os.getenv("IOT_EXTERNAL_TEMPERATURE_COLUMN", "external_temp")),
-        "external_humidity": _identifier(os.getenv("IOT_EXTERNAL_HUMIDITY_COLUMN", "external_humidity")),
+        "external_temperature": _identifier(
+            os.getenv("IOT_EXTERNAL_TEMPERATURE_COLUMN", "external_temp")
+        ),
+        "external_humidity": _identifier(
+            os.getenv("IOT_EXTERNAL_HUMIDITY_COLUMN", "external_humidity")
+        ),
         "battery": _identifier(os.getenv("IOT_BATTERY_VOLTAGE_COLUMN", "battery_voltage")),
     }
     selected = ", ".join(columns[key] for key in columns if key != "hive")

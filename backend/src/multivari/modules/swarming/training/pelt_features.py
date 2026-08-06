@@ -128,7 +128,6 @@
 #     ].copy()
 
 
-
 #     # -------------------------------
 #     # Prepare signal
 #     # -------------------------------
@@ -139,12 +138,10 @@
 #     ].values
 
 
-
 #     if len(signal) < 50:
 
 #         print(f"  Skipping {hive}: Not enough data points ({len(signal)})")
 #         continue
-
 
 
 #     # -------------------------------
@@ -157,7 +154,6 @@
 #     signal_scaled = scaler.fit_transform(
 #         signal
 #     )
-
 
 
 #     # -------------------------------
@@ -186,9 +182,7 @@
 #         change_points = change_points[:-1]
 
 
-
 #     local_length = len(hive_data)
-
 
 
 #     # -------------------------------
@@ -209,12 +203,10 @@
 #             breakpoint_array[point] = 1
 
 
-
 #     df.loc[
 #         hive_indices,
 #         "breakpoint"
 #     ] = breakpoint_array
-
 
 
 #     # -------------------------------
@@ -227,7 +219,6 @@
 #     last_change = 0
 
 
-
 #     for i,value in enumerate(
 #         breakpoint_array
 #     ):
@@ -238,18 +229,15 @@
 #             last_change = i
 
 
-
 #         days_since.append(
 #             i-last_change
 #         )
-
 
 
 #     df.loc[
 #         hive_indices,
 #         "days_since_breakpoint"
 #     ] = days_since
-
 
 
 #     # -------------------------------
@@ -270,12 +258,10 @@
 #     )
 
 
-
 #     df.loc[
 #         hive_indices,
 #         "breakpoint_density"
 #     ] = density
-
 
 
 #     # -------------------------------
@@ -286,7 +272,6 @@
 #     duration=[]
 
 #     counter=0
-
 
 
 #     for value in breakpoint_array:
@@ -304,12 +289,10 @@
 #         )
 
 
-
 #     df.loc[
 #         hive_indices,
 #         "segment_duration"
 #     ] = duration
-
 
 
 # print("\nPELT processing completed")
@@ -336,13 +319,11 @@
 # )
 
 
-
 # print("\nSaved File:")
 
 # print(
 #     OUTPUT_FILE
 # )
-
 
 
 # print("\nGenerated PELT Features:")
@@ -355,7 +336,6 @@
 #         "segment_duration"
 #     ]
 # )
-
 
 
 # print("\nPreview:")
@@ -410,7 +390,6 @@
 # }
 
 
-
 # PELT_JSON = os.path.join(
 
 #     OUTPUT_FOLDER,
@@ -418,7 +397,6 @@
 #     "pelt_metrics.json"
 
 # )
-
 
 
 # with open(
@@ -596,11 +574,9 @@
 #     ].copy()
 
 
-
 #     if len(hive_data) < 50:
 #         print(f"  Skipping {hive}: Not enough data points ({len(hive_data)})")
 #         continue
-
 
 
 #     local_length = len(hive_data)
@@ -798,13 +774,11 @@
 # )
 
 
-
 # print("\nSaved File:")
 
 # print(
 #     OUTPUT_FILE
 # )
-
 
 
 # print("\nGenerated PELT Features:")
@@ -922,15 +896,15 @@ Purpose:
 =========================================================
 """
 
+import json
 import os
+
 import numpy as np
 import pandas as pd
 import ruptures as rpt
-import json
 from sklearn.preprocessing import StandardScaler
 
 from .config import *
-
 
 print("=" * 60)
 print("PELT FEATURE ENGINEERING (UPDATED)")
@@ -996,8 +970,14 @@ df["majority_aligned"] = 0
 df["alignment_ratio"] = 0.0
 
 # Pairwise alignments
-PAIRS = [("temp", "hum"), ("temp", "co2"), ("temp", "weight"),
-         ("hum", "co2"), ("hum", "weight"), ("co2", "weight")]
+PAIRS = [
+    ("temp", "hum"),
+    ("temp", "co2"),
+    ("temp", "weight"),
+    ("hum", "co2"),
+    ("hum", "weight"),
+    ("co2", "weight"),
+]
 
 for v1, v2 in PAIRS:
     df[f"aligned_{v1}_{v2}"] = 0
@@ -1012,7 +992,7 @@ hives = df[HIVE_COLUMN].unique()
 print("\nProcessing hives...")
 
 for index, hive in enumerate(hives):
-    print(f"{index+1}/{len(hives)} Processing {hive}")
+    print(f"{index + 1}/{len(hives)} Processing {hive}")
 
     hive_indices = df.index[df[HIVE_COLUMN] == hive]
     hive_data = df.loc[hive_indices].copy()
@@ -1071,12 +1051,7 @@ for index, hive in enumerate(hives):
     # Breakpoint density
     # -------------------------------
 
-    density = (
-        pd.Series(breakpoint_array)
-        .rolling(window=24, min_periods=1)
-        .sum()
-        .values
-    )
+    density = pd.Series(breakpoint_array).rolling(window=24, min_periods=1).sum().values
 
     df.loc[hive_indices, "breakpoint_density"] = density
 
@@ -1135,12 +1110,7 @@ for index, hive in enumerate(hives):
         df.loc[hive_indices, f"days_since_breakpoint_{var_short}"] = days_since_single
 
         # Density
-        density_single = (
-            pd.Series(bp_array_single)
-            .rolling(window=24, min_periods=1)
-            .sum()
-            .values
-        )
+        density_single = pd.Series(bp_array_single).rolling(window=24, min_periods=1).sum().values
 
         df.loc[hive_indices, f"breakpoint_density_{var_short}"] = density_single
 
@@ -1265,7 +1235,7 @@ print(
             "alignment_count",
             "all_aligned",
             "month",
-            "season"
+            "season",
         ]
     ].head(10)
 )
@@ -1277,36 +1247,23 @@ print(
 
 pelt_metrics = {
     "total_hives_processed": int(df[HIVE_COLUMN].nunique()),
-    "total_records": int(len(df)),
+    "total_records": len(df),
     "total_change_points": int(df["breakpoint"].sum()),
     "generated_features": {
         "existing": [
             "breakpoint",
             "days_since_breakpoint",
             "breakpoint_density",
-            "segment_duration"
+            "segment_duration",
         ],
-        "per_variable": [
-            f"breakpoint_{var}" for var in VARIABLE_NAMES
-        ] + [
-            f"days_since_breakpoint_{var}" for var in VARIABLE_NAMES
-        ] + [
-            f"breakpoint_density_{var}" for var in VARIABLE_NAMES
-        ],
-        "alignment": [
-            "alignment_count",
-            "all_aligned",
-            "majority_aligned",
-            "alignment_ratio"
-        ] + [
-            f"aligned_{v1}_{v2}" for v1, v2 in PAIRS
-        ],
-        "temporal": [
-            "month",
-            "season"
-        ]
+        "per_variable": [f"breakpoint_{var}" for var in VARIABLE_NAMES]
+        + [f"days_since_breakpoint_{var}" for var in VARIABLE_NAMES]
+        + [f"breakpoint_density_{var}" for var in VARIABLE_NAMES],
+        "alignment": ["alignment_count", "all_aligned", "majority_aligned", "alignment_ratio"]
+        + [f"aligned_{v1}_{v2}" for v1, v2 in PAIRS],
+        "temporal": ["month", "season"],
     },
-    "total_features": 4 + (3 * 4) + 4 + 6 + 2  # existing + per-var + alignment + temporal
+    "total_features": 4 + (3 * 4) + 4 + 6 + 2,  # existing + per-var + alignment + temporal
 }
 
 PELT_JSON = os.path.join(OUTPUT_FOLDER, "pelt_metrics.json")
