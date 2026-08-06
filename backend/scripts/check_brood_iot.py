@@ -7,8 +7,10 @@ from multivari.modules.brood_health.service import BroodHealthService
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Check Supabase/PostgreSQL brood-health IoT integration.")
-    parser.add_argument("--device-id", help="Optionally run a complete prediction for one device.")
+    parser = argparse.ArgumentParser(
+        description="Check PostgreSQL connectivity and the Brood Health v4 exact +6-hour predictor."
+    )
+    parser.add_argument("--device-id", help="Run a complete prediction for one live hive.")
     parser.add_argument("--lookback-hours", type=int, default=None)
     args = parser.parse_args()
 
@@ -18,11 +20,38 @@ def main() -> None:
 
     if not status.get("database", {}).get("connected"):
         raise SystemExit(
-            "Database check failed. Review backend/.env and the error shown above."
+            "Database check failed. Review backend/.env, install psycopg and inspect the error above."
         )
+    if not status.get("model", {}).get("ready"):
+        raise SystemExit(
+            "The Brood Health v4 model is not ready. Run scripts/train_brood_health.py first."
+        )
+
     if args.device_id:
-        result = service.predict_device(args.device_id, lookback_hours=args.lookback_hours)
-        print(json.dumps(result, indent=2))
+        result = service.predict_device(
+            args.device_id,
+            lookback_hours=args.lookback_hours,
+        )
+        concise = {
+            "device_id": result["device_id"],
+            "latest_timestamp": result["latest_timestamp"],
+            "forecast_timestamp": result["forecast_timestamp"],
+            "current_condition": result["current_condition"],
+            "exact_plus_6h_prediction": {
+                "score": result["prediction"]["exact_score"],
+                "level": result["prediction"]["exact_level"],
+                "interval_80": result["prediction"]["prediction_interval_80"],
+                "interval_90": result["prediction"]["prediction_interval_90"],
+            },
+            "secondary_safety_minimum": {
+                "score": result["prediction"]["safety_minimum_score"],
+                "level": result["prediction"]["safety_minimum_level"],
+            },
+            "warning": result["warning"],
+            "domain_shift_warnings": result.get("domain_shift_warnings", []),
+            "weight_conversion": result.get("database_weight_conversion", {}),
+        }
+        print(json.dumps(concise, indent=2))
     else:
         print(json.dumps(service.list_devices(), indent=2))
 

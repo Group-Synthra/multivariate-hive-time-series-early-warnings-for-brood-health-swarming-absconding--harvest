@@ -41,11 +41,11 @@ def test_score_range_and_level_boundaries():
     assert classify_health_level(80) == "Excellent"
 
 
-def test_future_target_is_a_continuous_future_window_minimum():
+def test_future_targets_are_exact_multi_horizon_scores_with_secondary_minimum():
     frame = make_frame(hives=1)
     x, y, metadata, columns = build_supervised_dataset(frame, horizon_hours=6)
     assert len(x) == len(y) == len(metadata)
-    assert y.between(1, 100).all()
+    assert y.apply(lambda column: column.between(1, 100).all()).all()
     assert (metadata["target_timestamp"] > metadata["timestamp"]).all()
     assert TARGET_COLUMN not in columns
     assert "hive_id" not in columns
@@ -65,7 +65,8 @@ def test_future_rows_never_change_earlier_features():
 def test_group_split_never_places_one_hive_in_multiple_partitions():
     frame = make_frame(hives=10)
     _, y, metadata, _ = build_supervised_dataset(frame, horizon_hours=6)
-    split = _assign_hive_splits(metadata, y)
+    assignments = _assign_hive_splits(frame)
+    split = metadata["hive_id"].astype(str).map(assignments)
     audit = pd.DataFrame({"hive_id": metadata["hive_id"], "split": split})
     assert audit.groupby("hive_id")["split"].nunique().max() == 1
     assert set(audit["split"].unique()) == {"train", "validation", "test"}

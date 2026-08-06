@@ -30,13 +30,17 @@ def test_condition_history_stays_in_range():
     assert result["bhsi"].between(0, 100).all()
 
 
-def test_high_unhealthy_probability_produces_critical_warning():
+def test_exact_and_safety_scores_produce_critical_warning():
     warning = build_warning_payload(
-        forecast_score=15,
+        exact_forecast_score=15,
+        safety_minimum_score=12,
         current_condition_score=30,
         bhsi=20,
-        rod_points_per_hour=-3,
-        unhealthy_probability=0.9,
+        rod_points_per_hour=-3.1,
+        exact_forecast_drop_points=15,
+        safety_drop_points=18,
+        domain_shift_warnings=[],
+        history_sufficient=True,
     )
     assert warning["level"] == "Critical"
     assert warning["requires_physical_confirmation"] is True

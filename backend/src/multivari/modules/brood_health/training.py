@@ -8,9 +8,6 @@ from pathlib import Path
 from typing import Any
 
 import joblib
-import matplotlib
-
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -26,30 +23,31 @@ from sklearn.inspection import permutation_importance
 from sklearn.linear_model import Ridge
 from sklearn.metrics import (
     accuracy_score,
-    average_precision_score,
     balanced_accuracy_score,
     confusion_matrix,
     f1_score,
     mean_absolute_error,
     mean_squared_error,
-    precision_recall_curve,
+    precision_score,
     r2_score,
     recall_score,
-    roc_auc_score,
-    roc_curve,
 )
 from sklearn.model_selection import GroupKFold
+from sklearn.multioutput import MultiOutputRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from .audit import binary_target_persistence_audit, feature_leakage_audit
+from .calibration import calibrate_component_weights
 from .config import PATHS
 from .features import (
     FEATURE_SCHEMA_VERSION,
+    MINIMUM_TRAINING_HISTORY_HOURS,
     SENSORS,
     TARGET_COLUMN,
     build_supervised_dataset,
     normalise_historical,
+    target_columns,
 )
 from .scoring import (
     CODE_TO_LEVEL,
@@ -76,75 +74,94 @@ def _load_frame(path: Path | None = None) -> pd.DataFrame:
     source = Path(path or PATHS.clean_data)
     if source.exists():
         if source.suffix.lower() in {".xlsx", ".xls"}:
-            return normalise_historical(pd.read_excel(source, sheet_name="Common_Dataset"))
+            return normalise_historical(
+                pd.read_excel(source, sheet_name="Common_Dataset")
+            )
         if source.suffix.lower() == ".csv":
             return normalise_historical(pd.read_csv(source))
         try:
             return normalise_historical(pd.read_parquet(source))
-        except ImportError:
+        except (ImportError, ValueError):
             pass
     if PATHS.raw_workbook.exists():
-        return normalise_historical(pd.read_excel(PATHS.raw_workbook, sheet_name="Common_Dataset"))
+        return normalise_historical(
+            pd.read_excel(PATHS.raw_workbook, sheet_name="Common_Dataset")
+        )
     raise FileNotFoundError("No common brood-health training dataset was found.")
 
 
-def _assign_hive_splits(metadata: pd.DataFrame, target: pd.Series, *, random_state: int = 42) -> pd.Series:
-    """Create an unseen-hive 60/20/20 split stratified by hive score profile.
+def _assign_hive_splits(
+    frame: pd.DataFrame,
+    *,
+    random_state: int = 42,
+) -> dict[str, str]:
+    """Assign complete hives to train/validation/test before score calibration."""
 
-    The deployment hives in Sri Lanka are not the historical hives. Holding out whole
-    hives is therefore a more honest primary evaluation than placing neighbouring rows
-    from every hive in both training and testing.
-    """
+    audit = frame[["hive_id"]].copy()
+    if TARGET_COLUMN in frame.columns:
+        audit["observed"] = pd.to_numeric(frame[TARGET_COLUMN], errors="coerce")
+    else:
+        audit["observed"] = np.nan
 
-    audit = metadata[["hive_id"]].copy()
-    audit["target_score"] = target.to_numpy()
     hive_stats = (
         audit.groupby("hive_id", observed=True)
-        .agg(mean_score=("target_score", "mean"), critical_rate=("target_score", lambda x: float((x < 40).mean())), rows=("target_score", "size"))
+        .agg(
+            observed_rate=("observed", "mean"),
+            rows=("hive_id", "size"),
+        )
         .reset_index()
     )
+    hive_stats["observed_rate"] = hive_stats["observed_rate"].fillna(0.5)
     if len(hive_stats) < 5:
-        raise ValueError("At least five hives are required for group-held-out evaluation")
+        raise ValueError("At least five hives are required for held-out evaluation")
 
-    quantiles = min(5, max(2, int(hive_stats["mean_score"].nunique())))
+    quantiles = min(5, max(2, int(hive_stats["observed_rate"].nunique())))
     try:
-        hive_stats["stratum"] = pd.qcut(hive_stats["mean_score"], q=quantiles, duplicates="drop")
+        hive_stats["stratum"] = pd.qcut(
+            hive_stats["observed_rate"], q=quantiles, duplicates="drop"
+        )
     except ValueError:
         hive_stats["stratum"] = "all"
 
     rng = np.random.default_rng(random_state)
     assignments: dict[str, str] = {}
     pattern = ("test", "validation", "train", "train", "train")
-    for stratum_index, (_, group) in enumerate(hive_stats.groupby("stratum", observed=True, sort=False)):
+    for stratum_index, (_, group) in enumerate(
+        hive_stats.groupby("stratum", observed=True, sort=False)
+    ):
         hives = group["hive_id"].astype(str).tolist()
         rng.shuffle(hives)
         for position, hive_id in enumerate(hives):
             assignments[hive_id] = pattern[(position + stratum_index) % len(pattern)]
 
-    # Repair tiny edge cases without moving rows between hives.
-    for required_split in ("train", "validation", "test"):
-        if required_split not in assignments.values():
+    for required in ("train", "validation", "test"):
+        if required not in assignments.values():
             donor = max(
-                (name for name in ("train", "validation", "test") if list(assignments.values()).count(name) > 1),
+                ("train", "validation", "test"),
                 key=lambda name: list(assignments.values()).count(name),
             )
-            candidate = next(hive for hive, split in assignments.items() if split == donor)
-            assignments[candidate] = required_split
-
-    return metadata["hive_id"].astype(str).map(assignments).astype("string")
+            candidate = next(
+                hive for hive, split in assignments.items() if split == donor
+            )
+            assignments[candidate] = required
+    return assignments
 
 
 def _candidate_models(*, fast_mode: bool) -> dict[str, Pipeline]:
-    tree_count = 12 if fast_mode else 180
+    tree_count = 24 if fast_mode else 220
+    hgb_iterations = 90 if fast_mode else 360
     models: dict[str, Pipeline] = {
         "Dummy Median": Pipeline(
-            [("imputer", SimpleImputer(strategy="median")), ("regressor", DummyRegressor(strategy="median"))]
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("regressor", DummyRegressor(strategy="median")),
+            ]
         ),
         "Ridge Regression": Pipeline(
             [
                 ("imputer", SimpleImputer(strategy="median")),
                 ("scaler", StandardScaler()),
-                ("regressor", Ridge(alpha=12.0)),
+                ("regressor", Ridge(alpha=15.0)),
             ]
         ),
         "Histogram Gradient Boosting": Pipeline(
@@ -152,13 +169,16 @@ def _candidate_models(*, fast_mode: bool) -> dict[str, Pipeline]:
                 ("imputer", SimpleImputer(strategy="median")),
                 (
                     "regressor",
-                    HistGradientBoostingRegressor(
-                        learning_rate=0.06,
-                        max_iter=70 if fast_mode else 320,
-                        max_leaf_nodes=19,
-                        min_samples_leaf=45,
-                        l2_regularization=1.0,
-                        random_state=42,
+                    MultiOutputRegressor(
+                        HistGradientBoostingRegressor(
+                            learning_rate=0.05,
+                            max_iter=hgb_iterations,
+                            max_leaf_nodes=19,
+                            min_samples_leaf=60,
+                            l2_regularization=2.0,
+                            random_state=42,
+                        ),
+                        n_jobs=-1,
                     ),
                 ),
             ]
@@ -171,10 +191,10 @@ def _candidate_models(*, fast_mode: bool) -> dict[str, Pipeline]:
                     RandomForestRegressor(
                         n_estimators=tree_count,
                         max_depth=14,
-                        min_samples_leaf=8,
-                        max_features=0.55,
+                        min_samples_leaf=10,
+                        max_features=0.50,
                         bootstrap=True,
-                        max_samples=0.40 if fast_mode else 0.68,
+                        max_samples=0.45 if fast_mode else 0.70,
                         random_state=42,
                         n_jobs=-1,
                     ),
@@ -188,11 +208,11 @@ def _candidate_models(*, fast_mode: bool) -> dict[str, Pipeline]:
                     "regressor",
                     ExtraTreesRegressor(
                         n_estimators=tree_count,
-                        max_depth=18,
-                        min_samples_leaf=6,
-                        max_features=0.60,
+                        max_depth=16,
+                        min_samples_leaf=8,
+                        max_features=0.55,
                         bootstrap=True,
-                        max_samples=0.40 if fast_mode else 0.68,
+                        max_samples=0.45 if fast_mode else 0.70,
                         random_state=42,
                         n_jobs=-1,
                     ),
@@ -206,17 +226,20 @@ def _candidate_models(*, fast_mode: bool) -> dict[str, Pipeline]:
                 ("imputer", SimpleImputer(strategy="median")),
                 (
                     "regressor",
-                    XGBRegressor(
-                        n_estimators=420,
-                        max_depth=6,
-                        learning_rate=0.05,
-                        subsample=0.80,
-                        colsample_bytree=0.75,
-                        objective="reg:squarederror",
-                        eval_metric="mae",
-                        random_state=42,
+                    MultiOutputRegressor(
+                        XGBRegressor(
+                            n_estimators=420,
+                            max_depth=6,
+                            learning_rate=0.04,
+                            subsample=0.80,
+                            colsample_bytree=0.75,
+                            objective="reg:squarederror",
+                            eval_metric="mae",
+                            random_state=42,
+                            n_jobs=-1,
+                            tree_method="hist",
+                        ),
                         n_jobs=-1,
-                        tree_method="hist",
                     ),
                 ),
             ]
@@ -226,24 +249,36 @@ def _candidate_models(*, fast_mode: bool) -> dict[str, Pipeline]:
 
 def _systematic_cap(
     x: pd.DataFrame,
-    y: pd.Series,
+    y: pd.DataFrame,
     metadata: pd.DataFrame,
     maximum: int,
-) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if len(x) <= maximum:
-        return x.reset_index(drop=True), y.reset_index(drop=True), metadata.reset_index(drop=True)
-    # Preserve every hive and the temporal ordering within it.
+        return (
+            x.reset_index(drop=True),
+            y.reset_index(drop=True),
+            metadata.reset_index(drop=True),
+        )
+
     selected: list[int] = []
     proportions = metadata["hive_id"].value_counts(normalize=True)
     for hive_id, proportion in proportions.items():
         positions = np.flatnonzero(metadata["hive_id"].eq(hive_id).to_numpy())
-        quota = max(20, round(maximum * float(proportion)))
+        quota = max(30, round(maximum * float(proportion)))
         if len(positions) > quota:
-            positions = positions[np.linspace(0, len(positions) - 1, quota, dtype=int)]
+            positions = positions[
+                np.linspace(0, len(positions) - 1, quota, dtype=int)
+            ]
         selected.extend(positions.tolist())
     selected = sorted(set(selected))
     if len(selected) > maximum:
-        selected = np.asarray(selected)[np.linspace(0, len(selected) - 1, maximum, dtype=int)].tolist()
+        selected = (
+            np.asarray(selected)[
+                np.linspace(0, len(selected) - 1, maximum, dtype=int)
+            ]
+            .astype(int)
+            .tolist()
+        )
     return (
         x.iloc[selected].reset_index(drop=True),
         y.iloc[selected].reset_index(drop=True),
@@ -251,207 +286,369 @@ def _systematic_cap(
     )
 
 
-def _clip_scores(values: np.ndarray | pd.Series) -> np.ndarray:
-    return np.clip(np.asarray(values, dtype=float), 1.0, 100.0)
+def _clip_predictions(values: np.ndarray, horizon: int) -> np.ndarray:
+    array = np.asarray(values, dtype=float)
+    if array.ndim == 1:
+        array = np.repeat(array[:, None], horizon, axis=1)
+    return np.clip(array, 1.0, 100.0)
 
 
-def _safe_roc_auc(y_true: np.ndarray, score: np.ndarray) -> float | None:
-    if np.unique(y_true).size < 2:
-        return None
-    return float(roc_auc_score(y_true, score))
-
-
-def _safe_average_precision(y_true: np.ndarray, score: np.ndarray) -> float | None:
-    if np.unique(y_true).size < 2:
-        return None
-    return float(average_precision_score(y_true, score))
+def _classification_metrics(
+    actual_score: np.ndarray,
+    predicted_score: np.ndarray,
+) -> dict[str, Any]:
+    actual_level = health_level_code(actual_score)
+    predicted_level = health_level_code(predicted_score)
+    critical_true = actual_level == 0
+    critical_predicted = predicted_level == 0
+    return {
+        "health_level_accuracy": float(
+            accuracy_score(actual_level, predicted_level)
+        ),
+        "balanced_accuracy": float(
+            balanced_accuracy_score(actual_level, predicted_level)
+        ),
+        "macro_f1": float(
+            f1_score(
+                actual_level,
+                predicted_level,
+                average="macro",
+                zero_division=0,
+            )
+        ),
+        "critical_recall": float(
+            recall_score(critical_true, critical_predicted, zero_division=0)
+        ),
+        "confusion_matrix": confusion_matrix(
+            actual_level,
+            predicted_level,
+            labels=[0, 1, 2, 3],
+        )
+        .astype(int)
+        .tolist(),
+        "level_labels": list(HEALTH_LEVEL_ORDER),
+    }
 
 
 def _score_metrics(
-    y_true: pd.Series,
-    predicted_score: np.ndarray,
+    y_true: pd.DataFrame,
+    predicted: np.ndarray,
     metadata: pd.DataFrame,
 ) -> dict[str, Any]:
-    actual = _clip_scores(y_true)
-    predicted = _clip_scores(predicted_score)
-    actual_level = health_level_code(actual)
-    predicted_level = health_level_code(predicted)
+    horizon = y_true.shape[1]
+    actual_matrix = np.clip(y_true.to_numpy(dtype=float), 1.0, 100.0)
+    predicted_matrix = _clip_predictions(predicted, horizon)
 
-    critical_true = actual_level == 0
-    critical_predicted = predicted_level == 0
-    transition_mask = metadata["transition_window"].fillna(False).to_numpy(dtype=bool)
-    observed_healthy = metadata["future_observed_healthy"].to_numpy(dtype=int)
-    predicted_observed_healthy = (predicted >= 60.0).astype(int)
+    exact_actual = actual_matrix[:, -1]
+    exact_predicted = predicted_matrix[:, -1]
+    minimum_actual = actual_matrix.min(axis=1)
+    minimum_predicted = predicted_matrix.min(axis=1)
+    current = metadata["current_score"].to_numpy(dtype=float)
 
-    result: dict[str, Any] = {
-        "test_mae": float(mean_absolute_error(actual, predicted)),
-        "test_rmse": float(math.sqrt(mean_squared_error(actual, predicted))),
-        "test_r2": float(r2_score(actual, predicted)),
-        "health_level_accuracy": float(accuracy_score(actual_level, predicted_level)),
-        "accuracy": float(accuracy_score(actual_level, predicted_level)),
-        "balanced_accuracy": float(balanced_accuracy_score(actual_level, predicted_level)),
-        "macro_f1": float(f1_score(actual_level, predicted_level, average="macro", zero_division=0)),
-        "critical_recall": float(recall_score(critical_true, critical_predicted, zero_division=0)),
-        "unhealthy_recall": float(
-            recall_score(observed_healthy == 0, predicted_observed_healthy == 0, zero_division=0)
+    exact = {
+        "mae": float(mean_absolute_error(exact_actual, exact_predicted)),
+        "mse": float(mean_squared_error(exact_actual, exact_predicted)),
+        "rmse": float(
+            math.sqrt(mean_squared_error(exact_actual, exact_predicted))
         ),
-        "observed_binary_accuracy": float(accuracy_score(observed_healthy, predicted_observed_healthy)),
-        "observed_binary_balanced_accuracy": float(
-            balanced_accuracy_score(observed_healthy, predicted_observed_healthy)
+        "r2": float(r2_score(exact_actual, exact_predicted)),
+        **_classification_metrics(exact_actual, exact_predicted),
+    }
+    safety = {
+        "mae": float(mean_absolute_error(minimum_actual, minimum_predicted)),
+        "mse": float(mean_squared_error(minimum_actual, minimum_predicted)),
+        "rmse": float(
+            math.sqrt(mean_squared_error(minimum_actual, minimum_predicted))
         ),
-        "roc_auc": _safe_roc_auc(observed_healthy, predicted / 100.0),
-        "pr_auc": _safe_average_precision(observed_healthy, predicted / 100.0),
-        "confusion_matrix": confusion_matrix(actual_level, predicted_level, labels=[0, 1, 2, 3]).astype(int).tolist(),
-        "level_labels": list(HEALTH_LEVEL_ORDER),
-        "actual_score_mean": float(np.mean(actual)),
-        "predicted_score_mean": float(np.mean(predicted)),
+        "r2": float(r2_score(minimum_actual, minimum_predicted)),
+        **_classification_metrics(minimum_actual, minimum_predicted),
     }
 
+    per_horizon: list[dict[str, Any]] = []
+    for index in range(horizon):
+        actual = actual_matrix[:, index]
+        forecast = predicted_matrix[:, index]
+        per_horizon.append(
+            {
+                "horizon_hours": index + 1,
+                "mae": float(mean_absolute_error(actual, forecast)),
+                "mse": float(mean_squared_error(actual, forecast)),
+                "rmse": float(
+                    math.sqrt(mean_squared_error(actual, forecast))
+                ),
+                "r2": float(r2_score(actual, forecast)),
+                "health_level_accuracy": float(
+                    accuracy_score(
+                        health_level_code(actual),
+                        health_level_code(forecast),
+                    )
+                ),
+            }
+        )
+
+    transition_mask = metadata["transition_window"].fillna(False).to_numpy(bool)
+    deterioration_true = metadata["deterioration_event"].fillna(False).to_numpy(bool)
+    predicted_deterioration = (
+        (health_level_code(exact_predicted) < health_level_code(current))
+        | ((current - exact_predicted) >= 10.0)
+    )
+
+    transition_metrics: dict[str, Any]
     if transition_mask.any():
-        transition_actual = actual[transition_mask]
-        transition_predicted = predicted[transition_mask]
-        transition_actual_level = actual_level[transition_mask]
-        transition_predicted_level = predicted_level[transition_mask]
-        transition_critical_true = transition_actual_level == 0
-        transition_critical_predicted = transition_predicted_level == 0
-        result.update(
-            {
-                "transition_rows": int(transition_mask.sum()),
-                "transition_mae": float(mean_absolute_error(transition_actual, transition_predicted)),
-                "transition_rmse": float(math.sqrt(mean_squared_error(transition_actual, transition_predicted))),
-                "transition_level_accuracy": float(
-                    accuracy_score(transition_actual_level, transition_predicted_level)
-                ),
-                "transition_balanced_accuracy": float(
-                    balanced_accuracy_score(transition_actual_level, transition_predicted_level)
-                ),
-                "transition_critical_recall": float(
-                    recall_score(transition_critical_true, transition_critical_predicted, zero_division=0)
-                ),
-            }
-        )
+        transition_actual = exact_actual[transition_mask]
+        transition_predicted = exact_predicted[transition_mask]
+        transition_metrics = {
+            "rows": int(transition_mask.sum()),
+            "mae": float(
+                mean_absolute_error(transition_actual, transition_predicted)
+            ),
+            "rmse": float(
+                math.sqrt(
+                    mean_squared_error(transition_actual, transition_predicted)
+                )
+            ),
+            **_classification_metrics(
+                transition_actual,
+                transition_predicted,
+            ),
+        }
     else:
-        result.update(
-            {
-                "transition_rows": 0,
-                "transition_mae": None,
-                "transition_rmse": None,
-                "transition_level_accuracy": None,
-                "transition_balanced_accuracy": None,
-                "transition_critical_recall": None,
-            }
-        )
-    return result
+        transition_metrics = {
+            "rows": 0,
+            "mae": None,
+            "rmse": None,
+            "health_level_accuracy": None,
+            "balanced_accuracy": None,
+            "macro_f1": None,
+            "critical_recall": None,
+            "confusion_matrix": [],
+            "level_labels": list(HEALTH_LEVEL_ORDER),
+        }
+
+    deterioration = {
+        "events": int(deterioration_true.sum()),
+        "recall": float(
+            recall_score(
+                deterioration_true,
+                predicted_deterioration,
+                zero_division=0,
+            )
+        ),
+        "precision": float(
+            precision_score(
+                deterioration_true,
+                predicted_deterioration,
+                zero_division=0,
+            )
+        ),
+        "f1": float(
+            f1_score(
+                deterioration_true,
+                predicted_deterioration,
+                zero_division=0,
+            )
+        ),
+    }
+
+    return {
+        "multi_horizon_mae": float(
+            mean_absolute_error(actual_matrix, predicted_matrix)
+        ),
+        "exact_horizon": exact,
+        "safety_minimum": safety,
+        "transition": transition_metrics,
+        "deterioration": deterioration,
+        "per_horizon": per_horizon,
+        # Compatibility aliases used by the current frontend and report.
+        "test_mae": exact["mae"],
+        "test_mse": exact["mse"],
+        "test_rmse": exact["rmse"],
+        "test_r2": exact["r2"],
+        "health_level_accuracy": exact["health_level_accuracy"],
+        "balanced_accuracy": exact["balanced_accuracy"],
+        "macro_f1": exact["macro_f1"],
+        "critical_recall": exact["critical_recall"],
+        "transition_mae": transition_metrics["mae"],
+        "transition_rmse": transition_metrics["rmse"],
+        "transition_level_accuracy": transition_metrics[
+            "health_level_accuracy"
+        ],
+        "transition_critical_recall": transition_metrics["critical_recall"],
+        "confusion_matrix": exact["confusion_matrix"],
+        "level_labels": exact["level_labels"],
+    }
 
 
-def _persistence_metrics(y_true: pd.Series, metadata: pd.DataFrame) -> dict[str, Any]:
-    return _score_metrics(y_true, metadata["current_score"].to_numpy(), metadata)
+def _persistence_predictions(
+    metadata: pd.DataFrame,
+    horizon: int,
+) -> np.ndarray:
+    current = metadata["current_score"].to_numpy(dtype=float)
+    return np.repeat(current[:, None], horizon, axis=1)
 
 
-def _group_cv_mae(
+def _group_cv_exact_mae(
     estimator: Pipeline,
     x: pd.DataFrame,
-    y: pd.Series,
+    y: pd.DataFrame,
     groups: pd.Series,
     *,
     fast_mode: bool,
 ) -> tuple[float | None, float | None, int]:
-    unique_groups = pd.Series(groups).nunique()
-    splits = min(2 if fast_mode else 3, int(unique_groups))
-    if splits < 2:
+    unique_groups = int(pd.Series(groups).nunique())
+    folds = min(2 if fast_mode else 3, unique_groups)
+    if folds < 2:
         return None, None, 0
 
-    maximum = 8_000 if fast_mode else 60_000
-    metadata = pd.DataFrame({"hive_id": groups.astype(str).to_numpy()})
-    x_cv, y_cv, meta_cv = _systematic_cap(x, y, metadata, maximum)
-    splitter = GroupKFold(n_splits=splits)
+    maximum = 8_000 if fast_mode else 50_000
+    meta = pd.DataFrame({"hive_id": groups.astype(str).to_numpy()})
+    x_cv, y_cv, meta_cv = _systematic_cap(x, y, meta, maximum)
+    splitter = GroupKFold(n_splits=folds)
     errors: list[float] = []
-    for train_positions, test_positions in splitter.split(x_cv, y_cv, groups=meta_cv["hive_id"]):
+    for train_positions, test_positions in splitter.split(
+        x_cv,
+        y_cv,
+        groups=meta_cv["hive_id"],
+    ):
         fold_model = clone(estimator)
         fold_model.fit(x_cv.iloc[train_positions], y_cv.iloc[train_positions])
-        predicted = _clip_scores(fold_model.predict(x_cv.iloc[test_positions]))
-        errors.append(float(mean_absolute_error(y_cv.iloc[test_positions], predicted)))
-    return float(np.mean(errors)), float(np.std(errors, ddof=0)), splits
+        forecast = _clip_predictions(
+            fold_model.predict(x_cv.iloc[test_positions]),
+            y_cv.shape[1],
+        )
+        errors.append(
+            float(
+                mean_absolute_error(
+                    y_cv.iloc[test_positions, -1],
+                    forecast[:, -1],
+                )
+            )
+        )
+    return float(np.mean(errors)), float(np.std(errors, ddof=0)), folds
 
 
-def _selection_key(metrics: dict[str, Any]) -> tuple[float, float, float, float, float]:
-    critical_gate = 1.0 if float(metrics.get("transition_critical_recall") or 0.0) >= 0.70 else 0.0
-    transition_accuracy = float(metrics.get("transition_level_accuracy") or 0.0)
-    transition_mae = float(metrics.get("transition_mae") or 999.0)
+def _selection_key(
+    validation: dict[str, Any],
+    persistence: dict[str, Any],
+) -> tuple[float, float, float, float, float, float]:
+    exact = validation["exact_horizon"]
+    transition = validation["transition"]
+    beats_persistence = float(
+        exact["mae"] < persistence["exact_horizon"]["mae"]
+    )
+    transition_accuracy = float(transition.get("health_level_accuracy") or 0.0)
+    deterioration_recall = float(validation["deterioration"]["recall"])
+    critical_recall = float(exact["critical_recall"])
     return (
-        critical_gate,
+        beats_persistence,
         transition_accuracy,
-        -transition_mae,
-        -float(metrics["test_mae"]),
-        float(metrics["test_r2"]),
+        deterioration_recall,
+        critical_recall,
+        -float(exact["mae"]),
+        -float(validation["multi_horizon_mae"]),
     )
 
 
 def _feature_group(feature: str) -> str:
     if feature.startswith("temperature"):
-        return "temperature_c"
+        return "temperature"
     if feature.startswith("humidity"):
-        return "humidity_pct"
+        return "humidity"
     if feature.startswith("co2"):
-        return "co2_ppm"
+        return "co2"
     if feature.startswith("weight"):
-        return "weight_kg"
+        return "weight_stability"
     return "time_and_interactions"
 
 
 def _feature_importance(
     model: Pipeline,
     x_test: pd.DataFrame,
-    y_test: pd.Series,
+    y_test: pd.DataFrame,
     feature_columns: list[str],
 ) -> pd.DataFrame:
     regressor = model.named_steps["regressor"]
+    values: np.ndarray | None = None
+
     if hasattr(regressor, "feature_importances_"):
         values = np.asarray(regressor.feature_importances_, dtype=float)
     elif hasattr(regressor, "coef_"):
-        values = np.abs(np.asarray(regressor.coef_)).reshape(-1)
-    else:
-        size = min(350, len(x_test))
+        coefficients = np.asarray(regressor.coef_, dtype=float)
+        values = np.abs(coefficients).mean(axis=0)
+    elif hasattr(regressor, "estimators_"):
+        child_values = []
+        for estimator in regressor.estimators_:
+            if hasattr(estimator, "feature_importances_"):
+                child_values.append(
+                    np.asarray(estimator.feature_importances_, dtype=float)
+                )
+            elif hasattr(estimator, "coef_"):
+                child_values.append(
+                    np.abs(np.asarray(estimator.coef_, dtype=float)).reshape(-1)
+                )
+        if child_values:
+            values = np.vstack(child_values).mean(axis=0)
+
+    if values is None or len(values) != len(feature_columns):
+        size = min(400, len(x_test))
         positions = np.linspace(0, len(x_test) - 1, size, dtype=int)
         permutation = permutation_importance(
             model,
             x_test.iloc[positions],
             y_test.iloc[positions],
             scoring="neg_mean_absolute_error",
-            n_repeats=1,
+            n_repeats=2,
             random_state=42,
             n_jobs=1,
         )
         values = np.asarray(permutation.importances_mean, dtype=float)
-    importance = pd.DataFrame({"feature": feature_columns, "importance": values})
-    importance["importance"] = importance["importance"].clip(lower=0.0)
+
+    importance = pd.DataFrame(
+        {"feature": feature_columns, "importance": np.clip(values, 0.0, None)}
+    )
     total = float(importance["importance"].sum())
     importance["importance_percentage"] = (
         importance["importance"] / total * 100.0 if total > 0 else 0.0
     )
     importance["sensor_group"] = importance["feature"].map(_feature_group)
-    return importance.sort_values("importance", ascending=False).reset_index(drop=True)
+    return importance.sort_values(
+        "importance",
+        ascending=False,
+    ).reset_index(drop=True)
 
 
-def _sensor_reference(frame: pd.DataFrame) -> dict[str, dict[str, float]]:
+def _training_reference(
+    frame: pd.DataFrame,
+) -> dict[str, dict[str, float]]:
     reference: dict[str, dict[str, float]] = {}
-    for sensor in SENSORS:
+    for sensor in ("temperature_c", "humidity_pct", "co2_ppm", "weight_kg"):
         values = pd.to_numeric(frame[sensor], errors="coerce").dropna()
         reference[sensor] = {
-            "minimum": float(values.min()),
             "p01": float(values.quantile(0.01)),
             "p05": float(values.quantile(0.05)),
             "median": float(values.median()),
             "p95": float(values.quantile(0.95)),
             "p99": float(values.quantile(0.99)),
-            "maximum": float(values.max()),
         }
+
+    ordered = frame.sort_values(["hive_id", "timestamp"])
+    weight = pd.to_numeric(ordered["weight_kg"], errors="coerce")
+    previous = weight.groupby(ordered["hive_id"], sort=False).shift(24)
+    change = ((weight - previous) / previous.abs().clip(lower=1.0)) * 100.0
+    change = change.dropna()
+    reference["weight_change_pct_24h"] = {
+        "p01": float(change.quantile(0.01)),
+        "p05": float(change.quantile(0.05)),
+        "median": float(change.median()),
+        "p95": float(change.quantile(0.95)),
+        "p99": float(change.quantile(0.99)),
+    }
     return reference
 
 
-def _save_training_reports(
+def _save_reports(
     summary: dict[str, Any],
-    y_test: pd.Series,
+    y_test: pd.DataFrame,
     predicted: np.ndarray,
     metadata: pd.DataFrame,
     importance: pd.DataFrame,
@@ -464,91 +661,95 @@ def _save_training_reports(
         fig.tight_layout()
         fig.savefig(directory / filename, dpi=180, bbox_inches="tight")
         plt.close(fig)
-        images.append({"filename": filename, "title": title, "url": f"/api/brood-health/reports/{filename}"})
+        images.append(
+            {
+                "filename": filename,
+                "title": title,
+                "url": f"/api/brood-health/reports/{filename}",
+            }
+        )
 
-    models = [item for item in summary["all_models"] if item.get("status") == "ok"]
-    fig, ax = plt.subplots(figsize=(10, 5.5))
-    ax.barh([item["model"] for item in models], [item["test"]["test_mae"] for item in models])
-    ax.set_xlabel("Unseen-hive test MAE (score points; lower is better)")
-    ax.set_title("Brood Health Score model comparison")
-    ax.invert_yaxis()
-    save(fig, "model_mae_comparison.png", "Model MAE comparison")
+    successful = [
+        row for row in summary["all_models"] if row.get("status") == "ok"
+    ]
+    names = [row["model"] for row in successful]
+    exact_mae = [row["test"]["exact_horizon"]["mae"] for row in successful]
+    transition_accuracy = [
+        100.0
+        * float(
+            row["test"]["transition"].get("health_level_accuracy") or 0.0
+        )
+        for row in successful
+    ]
 
-    fig, ax = plt.subplots(figsize=(10, 5.5))
-    ax.barh(
-        [item["model"] for item in models],
-        [100.0 * float(item["test"].get("transition_level_accuracy") or 0.0) for item in models],
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.bar(names, exact_mae)
+    ax.set_ylabel("Exact +6 h MAE (score points)")
+    ax.set_title("Model comparison: exact forecast error")
+    ax.tick_params(axis="x", rotation=25)
+    save(fig, "model_exact_mae_comparison.png", "Exact-horizon MAE comparison")
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.bar(names, transition_accuracy)
+    ax.set_ylabel("Transition level accuracy (%)")
+    ax.set_ylim(0, 100)
+    ax.set_title("Model comparison during health transitions")
+    ax.tick_params(axis="x", rotation=25)
+    save(
+        fig,
+        "model_transition_accuracy.png",
+        "Transition-level accuracy comparison",
     )
-    ax.set_xlabel("Transition-window level accuracy (%)")
-    ax.set_title("Early-warning accuracy around deterioration and level changes")
-    ax.invert_yaxis()
-    save(fig, "transition_accuracy_comparison.png", "Transition-window accuracy")
 
-    matrix = np.asarray(summary["best_metrics"]["confusion_matrix"])
-    fig, ax = plt.subplots(figsize=(7, 6))
-    image = ax.imshow(matrix)
-    ax.set_xticks(range(4), HEALTH_LEVEL_ORDER, rotation=20)
-    ax.set_yticks(range(4), HEALTH_LEVEL_ORDER)
-    ax.set_xlabel("Predicted future level")
-    ax.set_ylabel("Actual future level")
-    ax.set_title("Unseen-hive four-level confusion matrix")
-    threshold = matrix.max() * 0.55 if matrix.size else 0
-    for row in range(4):
-        for column in range(4):
-            ax.text(
-                column,
-                row,
-                str(int(matrix[row, column])),
-                ha="center",
-                va="center",
-                color="white" if matrix[row, column] > threshold else "black",
-            )
-    fig.colorbar(image, ax=ax)
-    save(fig, "score_level_confusion_matrix.png", "Four-level confusion matrix")
-
-    actual = _clip_scores(y_test)
-    predicted_clipped = _clip_scores(predicted)
-    sample_positions = np.linspace(0, len(actual) - 1, min(5_000, len(actual)), dtype=int)
-    fig, ax = plt.subplots(figsize=(6.5, 6))
-    ax.scatter(actual[sample_positions], predicted_clipped[sample_positions], s=8, alpha=0.25)
+    actual = y_test.iloc[:, -1].to_numpy(dtype=float)
+    forecast = _clip_predictions(predicted, y_test.shape[1])[:, -1]
+    positions = np.linspace(0, len(actual) - 1, min(5_000, len(actual)), dtype=int)
+    fig, ax = plt.subplots(figsize=(7, 7))
+    ax.scatter(actual[positions], forecast[positions], s=9, alpha=0.25)
     ax.plot([1, 100], [1, 100], linestyle="--")
     ax.set_xlim(1, 100)
     ax.set_ylim(1, 100)
-    ax.set_xlabel("Actual future minimum score")
-    ax.set_ylabel("Predicted future minimum score")
-    ax.set_title("Actual versus predicted Brood Health Score")
-    save(fig, "actual_vs_predicted_score.png", "Actual versus predicted score")
+    ax.set_xlabel("Actual score at +6 h")
+    ax.set_ylabel("Predicted score at +6 h")
+    ax.set_title("Actual versus predicted exact forecast")
+    save(
+        fig,
+        "actual_vs_predicted_exact_6h.png",
+        "Actual versus predicted exact +6 h score",
+    )
 
-    residual = predicted_clipped - actual
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.hist(residual, bins=60)
-    ax.axvline(0, linestyle="--")
-    ax.set_xlabel("Prediction error (predicted − actual score)")
-    ax.set_ylabel("Rows")
-    ax.set_title("Unseen-hive test residual distribution")
-    save(fig, "score_residual_distribution.png", "Residual distribution")
+    matrix = np.asarray(summary["best_metrics"]["confusion_matrix"], dtype=int)
+    fig, ax = plt.subplots(figsize=(6.5, 5.5))
+    image = ax.imshow(matrix)
+    ax.set_xticks(range(4), HEALTH_LEVEL_ORDER, rotation=20)
+    ax.set_yticks(range(4), HEALTH_LEVEL_ORDER)
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    ax.set_title("Exact +6 h health-level confusion matrix")
+    for row in range(4):
+        for column in range(4):
+            ax.text(column, row, str(matrix[row, column]), ha="center", va="center")
+    fig.colorbar(image, ax=ax)
+    save(
+        fig,
+        "exact_6h_confusion_matrix.png",
+        "Exact +6 h health-level confusion matrix",
+    )
 
     top = importance.head(20).sort_values("importance_percentage")
     fig, ax = plt.subplots(figsize=(9, 7))
     ax.barh(top["feature"], top["importance_percentage"])
     ax.set_xlabel("Relative importance (%)")
     ax.set_title("Top causal predictive features")
-    save(fig, "feature_importance.png", "Feature importance")
+    save(fig, "feature_importance_v4.png", "Feature importance")
 
-    transition = metadata["transition_window"].to_numpy(dtype=bool)
-    if transition.any():
-        fig, ax = plt.subplots(figsize=(6.5, 6))
-        positions = np.flatnonzero(transition)
-        if len(positions) > 4_000:
-            positions = positions[np.linspace(0, len(positions) - 1, 4_000, dtype=int)]
-        ax.scatter(actual[positions], predicted_clipped[positions], s=10, alpha=0.30)
-        ax.plot([1, 100], [1, 100], linestyle="--")
-        ax.set_xlim(1, 100)
-        ax.set_ylim(1, 100)
-        ax.set_xlabel("Actual score during transition windows")
-        ax.set_ylabel("Predicted score")
-        ax.set_title("Transition-window predictions")
-        save(fig, "transition_window_predictions.png", "Transition-window predictions")
+    per_horizon = pd.DataFrame(summary["best_metrics"]["per_horizon"])
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    ax.plot(per_horizon["horizon_hours"], per_horizon["mae"], marker="o")
+    ax.set_xlabel("Forecast horizon (hours)")
+    ax.set_ylabel("MAE (score points)")
+    ax.set_title("Forecast error across the 1–6 hour trajectory")
+    save(fig, "horizon_mae_curve.png", "Forecast error by horizon")
 
     return images
 
@@ -573,36 +774,69 @@ def _serialisable(value: Any) -> Any:
 def run_training(
     *,
     data_path: Path | None = None,
-    manifest_path: Path | None = None,  # Kept for API compatibility; group holdout is primary.
+    manifest_path: Path | None = None,  # Retained for API compatibility.
     horizon_hours: int = 6,
     fast_mode: bool = False,
     progress_callback: ProgressCallback | None = None,
 ) -> dict[str, Any]:
     horizon = int(horizon_hours)
-    if not 1 <= horizon <= 168:
-        raise ValueError("horizon_hours must be between 1 and 168")
-    for directory in (PATHS.model_dir, PATHS.metrics_dir, PATHS.report_dir / "model"):
-        directory.mkdir(parents=True, exist_ok=True)
+    if not 1 <= horizon <= 24:
+        raise ValueError("horizon_hours must be between 1 and 24")
 
-    _notify(progress_callback, "loading", progress=3, message="Loading common cleaned historical data")
-    frame = _load_frame(data_path)
-    training_reference = _sensor_reference(frame)
-    binary_target_audit = binary_target_persistence_audit(frame, horizons=(1, horizon, 24))
+    for directory in (
+        PATHS.model_dir,
+        PATHS.metrics_dir,
+        PATHS.report_dir / "model",
+    ):
+        directory.mkdir(parents=True, exist_ok=True)
 
     _notify(
         progress_callback,
-        "module_preprocessing",
-        progress=7,
-        message="Applying brood-specific range checks and causal short-gap handling",
+        "loading",
+        progress=3,
+        message="Loading the common cleaned historical data",
     )
+    frame = _load_frame(data_path)
+    hive_assignments = _assign_hive_splits(frame)
+    training_hives = {
+        hive for hive, split in hive_assignments.items() if split == "train"
+    }
+
+    _notify(
+        progress_callback,
+        "weight_calibration",
+        progress=7,
+        message="Calibrating score weights on training hives only",
+    )
+    calibration = calibrate_component_weights(
+        frame,
+        training_hives=training_hives,
+    )
+    score_config = calibration.config
+    if not calibration.comparison.empty:
+        calibration.comparison.to_csv(PATHS.weight_sensitivity, index=False)
+
+    binary_target_audit = binary_target_persistence_audit(
+        frame,
+        horizons=(1, horizon, 24),
+    )
+
     _notify(
         progress_callback,
         "features",
-        progress=10,
-        message="Building past-only sensor, lag, rolling, trend and interaction features",
+        progress=11,
+        message=(
+            "Building causal features and exact 1–6 hour future score targets"
+        ),
     )
-    x, y, metadata, feature_columns = build_supervised_dataset(frame, horizon_hours=horizon)
-    metadata["split"] = _assign_hive_splits(metadata, y)
+    x, y, metadata, feature_columns = build_supervised_dataset(
+        frame,
+        horizon_hours=horizon,
+        score_config=score_config,
+    )
+    metadata["split"] = (
+        metadata["hive_id"].astype(str).map(hive_assignments).astype("string")
+    )
     schema_audit = feature_leakage_audit(feature_columns)
     if not schema_audit["passed"]:
         raise RuntimeError(f"Feature-schema leakage audit failed: {schema_audit}")
@@ -610,25 +844,58 @@ def run_training(
     train_mask = metadata["split"].eq("train")
     validation_mask = metadata["split"].eq("validation")
     test_mask = metadata["split"].eq("test")
-    x_train, y_train, meta_train = x.loc[train_mask], y.loc[train_mask], metadata.loc[train_mask]
+    x_train, y_train, meta_train = (
+        x.loc[train_mask],
+        y.loc[train_mask],
+        metadata.loc[train_mask],
+    )
     x_validation, y_validation, meta_validation = (
         x.loc[validation_mask],
         y.loc[validation_mask],
         metadata.loc[validation_mask],
     )
-    x_test, y_test, meta_test = x.loc[test_mask], y.loc[test_mask], metadata.loc[test_mask]
-    if min(len(x_train), len(x_validation), len(x_test)) == 0:
-        raise ValueError("The group-held-out split produced an empty train, validation or test partition")
-
-    limits = (20_000, 8_000, 8_000) if fast_mode else (170_000, 60_000, 60_000)
-    x_train, y_train, meta_train = _systematic_cap(x_train, y_train, meta_train, limits[0])
-    x_validation, y_validation, meta_validation = _systematic_cap(
-        x_validation, y_validation, meta_validation, limits[1]
+    x_test, y_test, meta_test = (
+        x.loc[test_mask],
+        y.loc[test_mask],
+        metadata.loc[test_mask],
     )
-    x_test, y_test, meta_test = _systematic_cap(x_test, y_test, meta_test, limits[2])
+    if min(len(x_train), len(x_validation), len(x_test)) == 0:
+        raise ValueError("Train, validation or test partition is empty")
 
-    persistence_validation = _persistence_metrics(y_validation, meta_validation)
-    persistence_test = _persistence_metrics(y_test, meta_test)
+    limits = (
+        (18_000, 7_000, 7_000)
+        if fast_mode
+        else (160_000, 55_000, 55_000)
+    )
+    x_train, y_train, meta_train = _systematic_cap(
+        x_train,
+        y_train,
+        meta_train,
+        limits[0],
+    )
+    x_validation, y_validation, meta_validation = _systematic_cap(
+        x_validation,
+        y_validation,
+        meta_validation,
+        limits[1],
+    )
+    x_test, y_test, meta_test = _systematic_cap(
+        x_test,
+        y_test,
+        meta_test,
+        limits[2],
+    )
+
+    persistence_validation = _score_metrics(
+        y_validation,
+        _persistence_predictions(meta_validation, horizon),
+        meta_validation,
+    )
+    persistence_test = _score_metrics(
+        y_test,
+        _persistence_predictions(meta_test, horizon),
+        meta_test,
+    )
 
     candidates = _candidate_models(fast_mode=fast_mode)
     comparison: list[dict[str, Any]] = []
@@ -637,44 +904,44 @@ def run_training(
 
     for index, (name, estimator) in enumerate(candidates.items()):
         started = time.perf_counter()
-        progress = 15 + int(index / max(len(candidates), 1) * 67)
-        _notify(progress_callback, "model_start", progress=progress, model=name, message=f"Training {name}")
+        progress = 15 + int(index / max(len(candidates), 1) * 65)
+        _notify(
+            progress_callback,
+            "model_start",
+            progress=progress,
+            model=name,
+            message=f"Training {name}",
+        )
         try:
             model = clone(estimator)
             model.fit(x_train, y_train)
-            validation_prediction = _clip_scores(model.predict(x_validation))
-            validation_metrics = _score_metrics(y_validation, validation_prediction, meta_validation)
-            test_prediction = _clip_scores(model.predict(x_test))
-            test_metrics = _score_metrics(y_test, test_prediction, meta_test)
+            validation_prediction = _clip_predictions(
+                model.predict(x_validation),
+                horizon,
+            )
+            validation_metrics = _score_metrics(
+                y_validation,
+                validation_prediction,
+                meta_validation,
+            )
+            test_prediction = _clip_predictions(model.predict(x_test), horizon)
+            test_metrics = _score_metrics(
+                y_test,
+                test_prediction,
+                meta_test,
+            )
 
-            cv_mean, cv_std, cv_folds = _group_cv_mae(
+            cv_mean, cv_std, cv_folds = _group_cv_exact_mae(
                 estimator,
                 x_train,
                 y_train,
                 meta_train["hive_id"],
                 fast_mode=fast_mode,
             )
-            test_metrics["cv_mae_mean"] = cv_mean
-            test_metrics["cv_mae_std"] = cv_std
-            test_metrics["cv_folds"] = cv_folds
-            validation_metrics["cv_mae_mean"] = cv_mean
-            validation_metrics["cv_mae_std"] = cv_std
-            validation_metrics["cv_folds"] = cv_folds
-
-            test_metrics["mae_improvement_over_persistence"] = (
-                persistence_test["test_mae"] - test_metrics["test_mae"]
-            )
-            test_metrics["transition_mae_improvement_over_persistence"] = (
-                float(persistence_test.get("transition_mae") or 0.0)
-                - float(test_metrics.get("transition_mae") or 0.0)
-            )
-            validation_metrics["mae_improvement_over_persistence"] = (
-                persistence_validation["test_mae"] - validation_metrics["test_mae"]
-            )
-            validation_metrics["transition_mae_improvement_over_persistence"] = (
-                float(persistence_validation.get("transition_mae") or 0.0)
-                - float(validation_metrics.get("transition_mae") or 0.0)
-            )
+            for metrics in (validation_metrics, test_metrics):
+                metrics["cv_mae_mean"] = cv_mean
+                metrics["cv_mae_std"] = cv_std
+                metrics["cv_folds"] = cv_folds
 
             result = {
                 "model": name,
@@ -689,161 +956,234 @@ def run_training(
             _notify(
                 progress_callback,
                 "model_end",
-                progress=min(progress + 10, 87),
+                progress=min(progress + 10, 86),
                 model=name,
                 message=(
-                    f"{name}: test MAE {test_metrics['test_mae']:.2f}; "
-                    f"transition level accuracy {100 * float(test_metrics.get('transition_level_accuracy') or 0):.2f}%"
+                    f"{name}: exact +{horizon} h MAE "
+                    f"{test_metrics['exact_horizon']['mae']:.2f}; transition accuracy "
+                    f"{100 * float(test_metrics['transition'].get('health_level_accuracy') or 0):.2f}%"
                 ),
             )
-        # Model comparison is fault-tolerant: one estimator failure must not abort the run.
         except Exception as exc:  # noqa: BLE001
-            comparison.append({"model": name, "status": "failed", "error": str(exc)})
+            comparison.append(
+                {"model": name, "status": "failed", "error": str(exc)}
+            )
             _notify(
                 progress_callback,
                 "model_end",
-                progress=min(progress + 10, 87),
+                progress=min(progress + 10, 86),
                 model=name,
                 message=f"{name} failed: {exc}",
             )
 
-    successful = [item for item in comparison if item.get("status") == "ok" and item["model"] != "Dummy Median"]
+    successful = [
+        item
+        for item in comparison
+        if item.get("status") == "ok" and item["model"] != "Dummy Median"
+    ]
     if not successful:
         raise RuntimeError("Every non-baseline brood-health regressor failed")
-    best_result = max(successful, key=lambda item: _selection_key(item["validation"]))
+
+    best_result = max(
+        successful,
+        key=lambda item: _selection_key(
+            item["validation"],
+            persistence_validation,
+        ),
+    )
     best_name = best_result["model"]
     evaluation_model = fitted[best_name]
     evaluation_prediction = test_predictions[best_name]
 
-    _notify(progress_callback, "importance", progress=89, message="Calculating selected-model feature importance")
-    importance = _feature_importance(evaluation_model, x_test, y_test, feature_columns)
+    _notify(
+        progress_callback,
+        "importance",
+        progress=88,
+        message="Calculating selected-model feature importance",
+    )
+    importance = _feature_importance(
+        evaluation_model,
+        x_test,
+        y_test,
+        feature_columns,
+    )
     importance.to_csv(PATHS.feature_importance, index=False)
 
-    # Refit the selected deployment model on every non-test hive after model selection.
-    deployment_model = clone(candidates[best_name])
-    x_deployment = pd.concat([x_train, x_validation], ignore_index=True)
-    y_deployment = pd.concat([y_train, y_validation], ignore_index=True)
-    deployment_model.fit(x_deployment, y_deployment)
+    # Residual interval is estimated only on validation hives.
+    validation_prediction = _clip_predictions(
+        fitted[best_name].predict(x_validation),
+        horizon,
+    )
+    validation_exact_residual = np.abs(
+        y_validation.iloc[:, -1].to_numpy(dtype=float)
+        - validation_prediction[:, -1]
+    )
+    interval_80 = float(np.quantile(validation_exact_residual, 0.80))
+    interval_90 = float(np.quantile(validation_exact_residual, 0.90))
 
-    score_config = BroodHealthScoreConfig()
+    deployment_model = clone(candidates[best_name])
+    deployment_model.fit(
+        pd.concat([x_train, x_validation], ignore_index=True),
+        pd.concat([y_train, y_validation], ignore_index=True),
+    )
+
+    reference_frame = frame.loc[
+        frame["hive_id"].astype(str).isin(
+            {
+                hive
+                for hive, split in hive_assignments.items()
+                if split in {"train", "validation"}
+            }
+        )
+    ]
     bundle = {
         "model": deployment_model,
         "model_name": best_name,
         "feature_columns": feature_columns,
         "feature_schema_version": FEATURE_SCHEMA_VERSION,
         "horizon_hours": horizon,
-        "target_column": "future_minimum_brood_health_score",
-        "target_kind": "continuous_future_window_minimum_score",
+        "target_columns": target_columns(horizon),
+        "primary_target": f"brood_health_score_t_plus_{horizon}h",
+        "target_kind": "multi_horizon_exact_score_trajectory",
         "target_range": [1.0, 100.0],
         "score_config": score_config.to_dict(),
         "level_order": list(HEALTH_LEVEL_ORDER),
         "trained_at_utc": pd.Timestamp.now(tz="UTC").isoformat(),
-        "training_sensor_reference": training_reference,
+        "training_sensor_reference": _training_reference(reference_frame),
         "prediction_inputs": list(SENSORS),
+        "prediction_interval_absolute_error": {
+            "80_percent": interval_80,
+            "90_percent": interval_90,
+        },
+        "weight_calibration": calibration.method,
+        "weight_transfer_strategy": "relative_change_and_stability_only",
         "model_limitations": [
-            "The 1–100 Brood Health Score is a transparent sensor-derived research index, not a direct biological measurement.",
-            "The model predicts the minimum score expected within the configured future window, not a guaranteed exact value at one timestamp.",
-            "Unseen-hive historical evaluation is more realistic than a random row split but cannot guarantee Sri Lankan field performance.",
-            "Live sensor calibration and distribution shift must be checked continuously.",
-            "Physical brood inspection is required to confirm every Poor or Critical alert.",
+            "The 1–100 Brood Health Score is a transparent sensor-derived research index, not a direct veterinary measurement.",
+            f"The primary forecast is the exact score at +{horizon} hours. The minimum across the predicted trajectory is a secondary safety indicator.",
+            "Historical evaluation holds out complete hives, but Sri Lankan field performance must be verified against physical brood inspections.",
+            "No accuracy value is capped or deliberately reduced. Transition and deterioration metrics must be interpreted alongside overall accuracy.",
+            "External temperature and humidity are shown as context unless equivalent historical training variables are available.",
         ],
     }
     joblib.dump(bundle, PATHS.model_bundle)
 
+    exact_actual = y_test.iloc[:, -1].to_numpy(dtype=float)
+    exact_predicted = evaluation_prediction[:, -1]
+    safety_actual = y_test.min(axis=1).to_numpy(dtype=float)
+    safety_predicted = evaluation_prediction.min(axis=1)
     prediction_table = meta_test[
         [
             "hive_id",
             "timestamp",
             "target_timestamp",
             "current_score",
-            "future_observed_healthy",
             "transition_window",
+            "deterioration_event",
         ]
     ].copy()
-    prediction_table["actual_future_minimum_score"] = y_test.to_numpy()
-    prediction_table["predicted_future_minimum_score"] = evaluation_prediction
-    prediction_table["actual_level"] = [CODE_TO_LEVEL[int(code)] for code in health_level_code(y_test)]
-    prediction_table["predicted_level"] = [CODE_TO_LEVEL[int(code)] for code in health_level_code(evaluation_prediction)]
+    prediction_table["actual_exact_score"] = exact_actual
+    prediction_table["predicted_exact_score"] = exact_predicted
+    prediction_table["actual_safety_minimum"] = safety_actual
+    prediction_table["predicted_safety_minimum"] = safety_predicted
+    prediction_table["actual_level"] = [
+        CODE_TO_LEVEL[int(code)] for code in health_level_code(exact_actual)
+    ]
+    prediction_table["predicted_level"] = [
+        CODE_TO_LEVEL[int(code)] for code in health_level_code(exact_predicted)
+    ]
     prediction_table.to_csv(PATHS.test_predictions, index=False)
 
+    comparison_rows = []
+    for item in comparison:
+        if item.get("status") != "ok":
+            comparison_rows.append(
+                {"model": item["model"], "status": "failed", "error": item["error"]}
+            )
+            continue
+        exact = item["test"]["exact_horizon"]
+        transition = item["test"]["transition"]
+        comparison_rows.append(
+            {
+                "model": item["model"],
+                "status": "ok",
+                "mae": exact["mae"],
+                "mse": exact["mse"],
+                "rmse": exact["rmse"],
+                "r2": exact["r2"],
+                "health_level_accuracy": exact["health_level_accuracy"],
+                "critical_recall": exact["critical_recall"],
+                "transition_level_accuracy": transition.get(
+                    "health_level_accuracy"
+                ),
+                "transition_mae": transition.get("mae"),
+                "deterioration_recall": item["test"]["deterioration"]["recall"],
+                "cv_mae_mean": item["test"].get("cv_mae_mean"),
+            }
+        )
+    pd.DataFrame(comparison_rows).to_csv(PATHS.model_comparison, index=False)
+
     grouped_importance = (
-        importance.groupby("sensor_group", observed=True)["importance_percentage"]
+        importance.groupby("sensor_group", observed=True)[
+            "importance_percentage"
+        ]
         .sum()
         .sort_values(ascending=False)
         .reset_index()
         .to_dict(orient="records")
     )
 
-    observed_healthy = meta_test["future_observed_healthy"].to_numpy(dtype=int)
-    probability_like_score = evaluation_prediction / 100.0
-    if np.unique(observed_healthy).size >= 2:
-        false_positive_rate, true_positive_rate, _ = roc_curve(observed_healthy, probability_like_score)
-        precision_curve, recall_curve, _ = precision_recall_curve(observed_healthy, probability_like_score)
-        roc_positions = np.linspace(0, len(false_positive_rate) - 1, min(180, len(false_positive_rate)), dtype=int)
-        pr_positions = np.linspace(0, len(precision_curve) - 1, min(180, len(precision_curve)), dtype=int)
-        curves = {
-            "roc": [
-                {
-                    "false_positive_rate": float(false_positive_rate[position]),
-                    "true_positive_rate": float(true_positive_rate[position]),
-                }
-                for position in roc_positions
-            ],
-            "precision_recall": [
-                {"recall": float(recall_curve[position]), "precision": float(precision_curve[position])}
-                for position in pr_positions
-            ],
-        }
-    else:
-        curves = {"roc": [], "precision_recall": []}
-
-    sample_positions = np.linspace(0, len(y_test) - 1, min(500, len(y_test)), dtype=int)
+    sample_positions = np.linspace(
+        0,
+        len(y_test) - 1,
+        min(500, len(y_test)),
+        dtype=int,
+    )
     prediction_sample = [
         {
-            "actual": float(y_test.iloc[position]),
-            "predicted": float(evaluation_prediction[position]),
+            "actual": float(exact_actual[position]),
+            "predicted": float(exact_predicted[position]),
+            "safety_actual": float(safety_actual[position]),
+            "safety_predicted": float(safety_predicted[position]),
             "transition": bool(meta_test.iloc[position]["transition_window"]),
         }
         for position in sample_positions
     ]
 
     best_metrics = best_result["test"]
-    horizon_audit = next(
-        (row for row in binary_target_audit["horizons"] if row["horizon_hours"] == horizon),
-        None,
-    )
-    persistence_percent = (
-        100.0 * float(horizon_audit["persistence_accuracy"])
-        if horizon_audit and horizon_audit.get("persistence_accuracy") is not None
-        else None
-    )
     summary: dict[str, Any] = {
+        "version": "4.0",
         "trained": True,
         "best_model": best_name,
         "horizon_hours": horizon,
-        "target": "future_minimum_brood_health_score",
-        "target_description": (
-            f"Minimum sensor-derived Brood Health Score expected during the next {horizon} hours."
+        "primary_target": f"brood_health_score_t_plus_{horizon}h",
+        "primary_target_description": (
+            f"Brood Health Score exactly {horizon} hours after the latest observation."
         ),
-        "target_formulation": {
-            "current_output": "Current Brood Health Score (1–100) calculated transparently from live sensor conditions.",
-            "future_output": f"Predicted minimum Brood Health Score within the next {horizon} hours.",
-            "why_changed": (
-                f"At the {horizon}-hour horizon, the historical binary status remains unchanged for "
-                f"{persistence_percent:.2f}% of comparable rows. Very high binary accuracy therefore mostly "
-                "measured persistence rather than useful advance warning."
-                if persistence_percent is not None
-                else "The previous nearby-future binary target was dominated by status persistence rather than useful advance warning."
+        "secondary_safety_target": f"minimum_predicted_score_within_next_{horizon}h",
+        "secondary_target_description": (
+            f"Minimum of the model's predicted 1–{horizon} hour trajectory; used only as a safety early-warning indicator."
+        ),
+        "forecast_strategy": {
+            "type": "multi-horizon direct regression",
+            "horizons": list(range(1, horizon + 1)),
+            "primary_output": f"exact +{horizon} hour score",
+            "secondary_output": f"minimum predicted score within 1–{horizon} hours",
+            "reason": (
+                "This provides the exact requested future score while retaining a worst-case "
+                "trajectory indicator for earlier intervention."
             ),
-            "observed_binary_label_role": (
-                f"{TARGET_COLUMN} is retained for EDA and secondary biological alignment metrics, but is never an input feature."
-            ),
-            "score_definition": score_definition(score_config),
         },
+        "score_definition": score_definition(score_config),
+        "weight_calibration": calibration.method,
+        "weight_sensitivity_top": (
+            calibration.comparison.head(20).to_dict(orient="records")
+            if not calibration.comparison.empty
+            else []
+        ),
         "selection_rule": (
-            "Select on held-out validation hives: require transition critical recall of at least 0.70 when possible, "
-            "then maximize transition-window level accuracy, minimize transition MAE and overall MAE. The test hives "
-            "remain untouched until final reporting."
+            "Select using validation hives only: first prefer models that beat current-score "
+            "persistence on exact-horizon MAE, then maximize transition accuracy, deterioration "
+            "recall and Critical recall, and minimize exact and multi-horizon MAE."
         ),
         "best_metrics": best_metrics,
         "best_validation_metrics": best_result["validation"],
@@ -855,35 +1195,48 @@ def run_training(
         "top_features": importance.head(30).to_dict(orient="records"),
         "grouped_feature_importance": grouped_importance,
         "split_summary": {
-            "strategy": "stratified group holdout by hive",
+            "strategy": "complete-hive 60/20/20 group holdout",
             "train_rows": len(x_train),
             "validation_rows": len(x_validation),
             "test_rows": len(x_test),
             "train_hives": int(meta_train["hive_id"].nunique()),
             "validation_hives": int(meta_validation["hive_id"].nunique()),
             "test_hives": int(meta_test["hive_id"].nunique()),
-            "train_hive_ids": sorted(meta_train["hive_id"].astype(str).unique().tolist()),
-            "validation_hive_ids": sorted(meta_validation["hive_id"].astype(str).unique().tolist()),
-            "test_hive_ids": sorted(meta_test["hive_id"].astype(str).unique().tolist()),
-            "minimum_history_hours": 72,
+            "train_hive_ids": sorted(
+                meta_train["hive_id"].astype(str).unique().tolist()
+            ),
+            "validation_hive_ids": sorted(
+                meta_validation["hive_id"].astype(str).unique().tolist()
+            ),
+            "test_hive_ids": sorted(
+                meta_test["hive_id"].astype(str).unique().tolist()
+            ),
+            "minimum_history_hours": MINIMUM_TRAINING_HISTORY_HOURS,
             "future_target_uses_only_later_rows": True,
+            "score_weights_calibrated_on_training_hives_only": True,
         },
         "accuracy_interpretation": {
-            "primary_early_warning_metric": "transition_level_accuracy",
-            "primary_early_warning_accuracy_percent": float(
-                100.0 * float(best_metrics.get("transition_level_accuracy") or 0.0)
+            "overall_level_accuracy_percent": float(
+                100.0 * best_metrics["exact_horizon"]["health_level_accuracy"]
             ),
-            "overall_level_accuracy_percent": float(100.0 * best_metrics["health_level_accuracy"]),
-            "persistence_overall_level_accuracy_percent": float(
-                100.0 * persistence_test["health_level_accuracy"]
+            "transition_level_accuracy_percent": float(
+                100.0
+                * float(
+                    best_metrics["transition"].get("health_level_accuracy")
+                    or 0.0
+                )
             ),
-            "persistence_transition_level_accuracy_percent": float(
-                100.0 * float(persistence_test.get("transition_level_accuracy") or 0.0)
+            "deterioration_recall_percent": float(
+                100.0 * best_metrics["deterioration"]["recall"]
             ),
+            "persistence_exact_mae": float(
+                persistence_test["exact_horizon"]["mae"]
+            ),
+            "model_exact_mae": float(best_metrics["exact_horizon"]["mae"]),
             "explanation": (
-                "Overall level accuracy can remain above 90% because most hive hours are stable. The transition-window "
-                "metric measures the difficult rows where the score drops by at least 10 points or crosses a health level, "
-                "and is the more relevant early-warning accuracy. No metric is capped or deliberately degraded."
+                "Overall accuracy may be high because most hours are stable. Transition-level "
+                "accuracy and deterioration recall are the primary early-warning evidence. "
+                "The implementation never forces accuracy into a desired range."
             ),
         },
         "leakage_audit": {
@@ -891,17 +1244,25 @@ def run_training(
             "rolling_features_shifted_before_aggregation": True,
             "whole_hives_held_out": True,
             "test_hives_used_for_model_selection": False,
+            "observed_health_label_used_as_model_feature": False,
+            "absolute_hive_weight_used_as_model_feature": False,
+            "absolute_date_used_as_model_feature": False,
+        },
+        "prediction_interval": {
+            "method": "absolute residual quantiles on validation hives",
+            "80_percent_half_width": interval_80,
+            "90_percent_half_width": interval_90,
         },
         "metrics_note": (
-            "MAE, RMSE, R², health-level accuracy, critical recall and group-CV MAE are the requested model-comparison "
-            "metrics. Transition MAE and transition-level accuracy are added because stable rows otherwise make accuracy misleading."
+            "MAE, MSE, RMSE, R², health-level accuracy, Critical recall and group-CV "
+            "MAE are reported for the exact +6-hour score. Transition and deterioration "
+            "metrics are added because stable observations can inflate overall accuracy."
         ),
-        "curves": curves,
         "prediction_sample": prediction_sample,
         "trained_at_utc": bundle["trained_at_utc"],
         "model_limitations": bundle["model_limitations"],
     }
-    summary["generated_images"] = _save_training_reports(
+    summary["generated_images"] = _save_reports(
         summary,
         y_test,
         evaluation_prediction,
@@ -909,6 +1270,14 @@ def run_training(
         importance,
     )
     summary = _serialisable(summary)
-    PATHS.training_summary.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    _notify(progress_callback, "complete", progress=100, message=f"Training complete. Best model: {best_name}")
+    PATHS.training_summary.write_text(
+        json.dumps(summary, indent=2),
+        encoding="utf-8",
+    )
+    _notify(
+        progress_callback,
+        "complete",
+        progress=100,
+        message=f"Training complete. Best model: {best_name}",
+    )
     return summary

@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 import numpy as np
 import pandas as pd
 
-from .scoring import compute_score_components, health_level_code
+from .scoring import BroodHealthScoreConfig, compute_score_components, health_level_code
 
-FEATURE_SCHEMA_VERSION = "brood-score-v3.0"
+FEATURE_SCHEMA_VERSION = "brood-score-v4.0"
 TARGET_COLUMN = "brood_health_healthy_1"
 SENSORS = ("temperature_c", "humidity_pct", "co2_ppm", "weight_kg")
 ENVIRONMENT_SENSORS = ("temperature_c", "humidity_pct", "co2_ppm")
-LAGS = (1, 6, 12, 24, 48, 72)
-ROLLING_WINDOWS = (6, 12, 24, 72)
-CHANGES = (1, 6, 12, 24)
+LAGS = (1, 3, 6, 12, 24, 48, 72)
+ROLLING_WINDOWS = (3, 6, 12, 24, 72)
+CHANGES = (1, 3, 6, 12, 24)
 MINIMUM_TRAINING_HISTORY_HOURS = 72
 
 PHYSICAL_RANGES = {
@@ -47,17 +47,15 @@ def _coerce_and_validate_ranges(frame: pd.DataFrame) -> pd.DataFrame:
             continue
         out[column] = pd.to_numeric(out[column], errors="coerce")
         invalid = ~out[column].between(minimum, maximum) & out[column].notna()
-        if invalid.any():
-            out.loc[invalid, column] = np.nan
+        out.loc[invalid, column] = np.nan
     return out
 
 
 def normalise_historical(frame: pd.DataFrame) -> pd.DataFrame:
-    """Module-specific preprocessing applied after the common clean dataset.
+    """Apply brood-specific preprocessing after the shared common pipeline.
 
-    It keeps the common pipeline as the shared first phase, then adds brood-specific
-    range validation, causal short-gap filling and consistent hourly ordering. Only
-    forward filling is used so later readings never leak into earlier features.
+    The common clean table remains unchanged. This function applies only brood-health
+    range validation, timestamp standardisation and causal short-gap forward filling.
     """
 
     required = {"hive_id", "timestamp", *SENSORS}
@@ -69,6 +67,7 @@ def normalise_historical(frame: pd.DataFrame) -> pd.DataFrame:
     out["hive_id"] = out["hive_id"].astype("string").str.strip()
     out["timestamp"] = pd.to_datetime(out["timestamp"], errors="coerce", utc=True)
     out = _coerce_and_validate_ranges(out)
+
     if TARGET_COLUMN in out.columns:
         out[TARGET_COLUMN] = pd.to_numeric(out[TARGET_COLUMN], errors="coerce")
         out.loc[~out[TARGET_COLUMN].isin([0, 1]), TARGET_COLUMN] = np.nan
@@ -79,9 +78,9 @@ def normalise_historical(frame: pd.DataFrame) -> pd.DataFrame:
         .drop_duplicates(["hive_id", "timestamp"], keep="last")
         .reset_index(drop=True)
     )
-
     for sensor in SENSORS:
-        out[f"{sensor}_was_missing"] = out[sensor].isna().astype(int)
+        out[f"{sensor}_was_missing"] = out[sensor].isna().astype("int8")
+    # Forward-only, maximum two hourly gaps. No future interpolation is used.
     out[list(SENSORS)] = out.groupby("hive_id", sort=False)[list(SENSORS)].ffill(limit=2)
     return out
 
@@ -90,22 +89,32 @@ def map_iot_frame(
     raw: pd.DataFrame,
     *,
     column_mapping: Mapping[str, str] | None = None,
+    weight_scale_factor: float = 1.0,
+    weight_offset_kg: float = 0.0,
 ) -> pd.DataFrame:
     mapping = dict(column_mapping or CANONICAL_IOT_MAPPING)
-    available_mapping = {source: target for source, target in mapping.items() if source in raw.columns}
+    available_mapping = {
+        source: target for source, target in mapping.items() if source in raw.columns
+    }
     out = raw.rename(columns=available_mapping).copy()
     required = {"hive_id", "timestamp", *SENSORS}
     missing = sorted(required.difference(out.columns))
     if missing:
         raise ValueError(f"Live IoT data are missing required mapped columns: {missing}")
+
+    out["weight_kg"] = (
+        pd.to_numeric(out["weight_kg"], errors="coerce") * float(weight_scale_factor)
+        + float(weight_offset_kg)
+    )
     return normalise_historical(out)
 
 
 def aggregate_live_hourly(frame: pd.DataFrame, *, frequency: str = "1h") -> pd.DataFrame:
-    """Aggregate approximately 10-minute IoT readings to the hourly training schema."""
+    """Aggregate approximately ten-minute readings to the hourly training schema."""
 
     if frame.empty:
         return frame.copy()
+
     numeric = [
         column
         for column in (*SENSORS, "external_temp", "external_humidity", "battery_voltage")
@@ -118,158 +127,244 @@ def aggregate_live_hourly(frame: pd.DataFrame, *, frequency: str = "1h") -> pd.D
         hourly["raw_reading_count"] = indexed[numeric[0]].resample(frequency).count()
         hourly["hive_id"] = hive_id
         pieces.append(hourly.reset_index())
+
     result = pd.concat(pieces, ignore_index=True)
-    return normalise_historical(result)
+    optional = [
+        column
+        for column in ("external_temp", "external_humidity", "battery_voltage", "raw_reading_count")
+        if column in result.columns
+    ]
+    normalised = normalise_historical(result)
+    for column in optional:
+        normalised[column] = result.loc[normalised.index, column].to_numpy()
+    return normalised
 
 
-def _rolling_feature(series: pd.Series, groups: pd.Series, window: int, statistic: str) -> pd.Series:
-    # Shift first: every rolling statistic contains only observations strictly before t.
-    shifted = series.groupby(groups, sort=False).shift(1)
-    grouped = shifted.groupby(groups, sort=False)
+def _rolling_from_shifted(
+    shifted: pd.Series,
+    group_codes: pd.Series,
+    window: int,
+    statistic: str,
+) -> pd.Series:
+    """Efficient grouped rolling statistic for already shifted values."""
+
     min_periods = max(3, window // 3)
+    rolling = shifted.groupby(group_codes, sort=False).rolling(
+        window,
+        min_periods=min_periods,
+    )
     if statistic == "mean":
-        return grouped.transform(lambda values: values.rolling(window, min_periods=min_periods).mean())
-    if statistic == "std":
-        return grouped.transform(lambda values: values.rolling(window, min_periods=min_periods).std(ddof=0))
-    if statistic == "minimum":
-        return grouped.transform(lambda values: values.rolling(window, min_periods=min_periods).min())
-    if statistic == "maximum":
-        return grouped.transform(lambda values: values.rolling(window, min_periods=min_periods).max())
-    if statistic == "median":
-        return grouped.transform(lambda values: values.rolling(window, min_periods=min_periods).median())
-    raise ValueError(f"Unsupported rolling statistic: {statistic}")
+        result = rolling.mean()
+    elif statistic == "std":
+        result = rolling.std(ddof=0)
+    elif statistic == "minimum":
+        result = rolling.min()
+    elif statistic == "maximum":
+        result = rolling.max()
+    elif statistic == "median":
+        result = rolling.median()
+    else:
+        raise ValueError(f"Unsupported rolling statistic: {statistic}")
+    return result.reset_index(level=0, drop=True).reindex(shifted.index)
 
 
 def build_feature_frame(frame: pd.DataFrame) -> pd.DataFrame:
-    """Build causal brood-health features without target, hive ID or absolute date."""
+    """Build causal features without labels, IDs, absolute date or future values.
+
+    Columns are accumulated in a dictionary and concatenated once. This avoids
+    DataFrame fragmentation during full-dataset feature generation.
+    """
 
     data = normalise_historical(frame)
     hive = data["hive_id"]
-    features = pd.DataFrame(index=data.index)
+    group_codes = pd.Series(pd.factorize(hive, sort=False)[0], index=data.index)
+    columns: dict[str, pd.Series | np.ndarray] = {}
 
     for sensor in ENVIRONMENT_SENSORS:
         values = pd.to_numeric(data[sensor], errors="coerce")
-        features[sensor] = values
-        features[f"{sensor}_missing"] = data.get(f"{sensor}_was_missing", values.isna()).astype(float)
-        grouped = values.groupby(hive, sort=False)
-        for lag in LAGS:
-            features[f"{sensor}_lag_{lag}h"] = grouped.shift(lag)
-        for window in ROLLING_WINDOWS:
-            features[f"{sensor}_mean_{window}h"] = _rolling_feature(values, hive, window, "mean")
-            features[f"{sensor}_std_{window}h"] = _rolling_feature(values, hive, window, "std")
-            if window in (24, 72):
-                features[f"{sensor}_min_{window}h"] = _rolling_feature(values, hive, window, "minimum")
-                features[f"{sensor}_max_{window}h"] = _rolling_feature(values, hive, window, "maximum")
-        for change in CHANGES:
-            features[f"{sensor}_change_{change}h"] = values - grouped.shift(change)
+        columns[sensor] = values
+        columns[f"{sensor}_missing"] = data.get(
+            f"{sensor}_was_missing", values.isna()
+        ).astype(float)
+        grouped = values.groupby(group_codes, sort=False)
+        shifted = grouped.shift(1)
 
-    # Absolute hive weight can identify a colony and transfer poorly to unseen hives.
-    # Brood-specific weight features therefore represent relative change and stability.
+        for lag in LAGS:
+            columns[f"{sensor}_lag_{lag}h"] = grouped.shift(lag)
+        for window in ROLLING_WINDOWS:
+            columns[f"{sensor}_mean_{window}h"] = _rolling_from_shifted(
+                shifted, group_codes, window, "mean"
+            )
+            columns[f"{sensor}_std_{window}h"] = _rolling_from_shifted(
+                shifted, group_codes, window, "std"
+            )
+            if window in (24, 72):
+                columns[f"{sensor}_min_{window}h"] = _rolling_from_shifted(
+                    shifted, group_codes, window, "minimum"
+                )
+                columns[f"{sensor}_max_{window}h"] = _rolling_from_shifted(
+                    shifted, group_codes, window, "maximum"
+                )
+        for change in CHANGES:
+            columns[f"{sensor}_change_{change}h"] = values - grouped.shift(change)
+
+    # Absolute weight is deliberately excluded. Only scale-invariant movement and
+    # stability are used so different hive construction and tare weight transfer better.
     weight = pd.to_numeric(data["weight_kg"], errors="coerce")
-    weight_group = weight.groupby(hive, sort=False)
-    features["weight_missing"] = data.get("weight_kg_was_missing", weight.isna()).astype(float)
-    for lag in (1, 6, 24, 72):
+    weight_group = weight.groupby(group_codes, sort=False)
+    weight_shifted = weight_group.shift(1)
+    columns["weight_missing"] = data.get(
+        "weight_kg_was_missing", weight.isna()
+    ).astype(float)
+    for lag in (1, 3, 6, 12, 24, 48, 72):
         previous = weight_group.shift(lag)
-        features[f"weight_change_{lag}h"] = weight - previous
-        features[f"weight_change_pct_{lag}h"] = (weight - previous) / previous.abs().clip(lower=1.0)
+        columns[f"weight_change_pct_{lag}h"] = (
+            (weight - previous) / previous.abs().clip(lower=1.0)
+        )
     for window in ROLLING_WINDOWS:
-        median = _rolling_feature(weight, hive, window, "median")
-        std = _rolling_feature(weight, hive, window, "std")
-        features[f"weight_relative_to_median_{window}h"] = (weight - median) / median.abs().clip(lower=1.0)
-        features[f"weight_cv_{window}h"] = std / median.abs().clip(lower=1.0)
+        median = _rolling_from_shifted(
+            weight_shifted, group_codes, window, "median"
+        )
+        std = _rolling_from_shifted(
+            weight_shifted, group_codes, window, "std"
+        )
+        columns[f"weight_relative_to_median_{window}h"] = (
+            (weight - median) / median.abs().clip(lower=1.0)
+        )
+        columns[f"weight_cv_{window}h"] = (
+            std / median.abs().clip(lower=1.0)
+        )
 
     hour = data["timestamp"].dt.hour.astype(float)
-    features["hour_sin"] = np.sin(2 * np.pi * hour / 24.0)
-    features["hour_cos"] = np.cos(2 * np.pi * hour / 24.0)
-    features["is_night"] = ((hour < 6) | (hour >= 18)).astype(int)
+    columns["hour_sin"] = np.sin(2.0 * np.pi * hour / 24.0)
+    columns["hour_cos"] = np.cos(2.0 * np.pi * hour / 24.0)
+    columns["is_night"] = ((hour < 6) | (hour >= 18)).astype("int8")
 
-    features["temperature_deviation_35"] = (data["temperature_c"] - 35.0).abs()
-    features["humidity_deviation_65"] = (data["humidity_pct"] - 65.0).abs()
-    features["co2_log1p"] = np.log1p(data["co2_ppm"].clip(lower=0.0))
-    features["temperature_humidity_interaction"] = data["temperature_c"] * data["humidity_pct"]
-    features["temperature_co2_interaction"] = data["temperature_c"] * features["co2_log1p"]
-    features["history_hours"] = data.groupby("hive_id", sort=False).cumcount().astype(float)
+    columns["temperature_deviation_35"] = (
+        data["temperature_c"] - 35.0
+    ).abs()
+    columns["humidity_deviation_65"] = (
+        data["humidity_pct"] - 65.0
+    ).abs()
+    columns["co2_log1p"] = np.log1p(data["co2_ppm"].clip(lower=0.0))
+    columns["temperature_humidity_interaction"] = (
+        data["temperature_c"] * data["humidity_pct"]
+    )
+    columns["temperature_co2_interaction"] = (
+        data["temperature_c"] * columns["co2_log1p"]
+    )
+    columns["history_hours"] = (
+        data.groupby("hive_id", sort=False).cumcount().astype(float)
+    )
 
-    # Deliberately absent: brood_health_healthy_1, hive_id, full date/day-of-year and
-    # future readings. This prevents direct label leakage and date/hive memorisation.
+    features = pd.DataFrame(columns, index=data.index)
     return features.replace([np.inf, -np.inf], np.nan)
 
-
-def _future_window_minimum(series: pd.Series, groups: pd.Series, horizon_hours: int) -> pd.Series:
-    shifted = [series.groupby(groups, sort=False).shift(-offset) for offset in range(1, horizon_hours + 1)]
-    return pd.concat(shifted, axis=1).min(axis=1, skipna=False)
+def target_columns(horizon_hours: int) -> list[str]:
+    return [f"score_t_plus_{hour}h" for hour in range(1, int(horizon_hours) + 1)]
 
 
 def build_supervised_dataset(
     frame: pd.DataFrame,
     *,
     horizon_hours: int = 6,
-) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, list[str]]:
-    """Create the early-warning regression task.
+    score_config: BroodHealthScoreConfig | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, list[str]]:
+    """Create a multi-horizon regression task.
 
-    Target: the *minimum* Brood Health Score observed in the next forecast window.
-    This avoids the trivial question "will the stable binary label remain unchanged?"
-    and focuses the model on upcoming deterioration.
+    Primary research output: exact Brood Health Score at t + horizon.
+    Secondary safety output: minimum of the predicted 1..horizon trajectory.
     """
 
     horizon = int(horizon_hours)
-    if not 1 <= horizon <= 168:
-        raise ValueError("horizon_hours must be between 1 and 168")
+    if not 1 <= horizon <= 24:
+        raise ValueError("horizon_hours must be between 1 and 24")
+
     data = normalise_historical(frame)
-    if TARGET_COLUMN not in data.columns:
-        raise ValueError(f"Training data do not contain {TARGET_COLUMN}")
-
-    scored = compute_score_components(data)
+    scored = compute_score_components(data, config=score_config)
     features = build_feature_frame(data)
-    future_score = _future_window_minimum(scored["brood_health_score"], data["hive_id"], horizon)
-    target_timestamp = data["timestamp"].groupby(data["hive_id"], sort=False).shift(-horizon)
+    groups = data["hive_id"]
 
-    future_binary = _future_window_minimum(
-        pd.to_numeric(data[TARGET_COLUMN], errors="coerce"), data["hive_id"], horizon
-    )
+    targets = pd.DataFrame(index=data.index)
+    for hour in range(1, horizon + 1):
+        targets[f"score_t_plus_{hour}h"] = scored["brood_health_score"].groupby(
+            groups, sort=False
+        ).shift(-hour)
+
+    target_timestamp = data["timestamp"].groupby(groups, sort=False).shift(-horizon)
     current_score = scored["brood_health_score"]
-    current_level = health_level_code(current_score)
-    future_level = health_level_code(future_score.fillna(current_score))
-    score_drop = current_score - future_score
+    exact_future_score = targets[f"score_t_plus_{horizon}h"]
+    minimum_future_score = targets.min(axis=1, skipna=False)
 
     metadata = data[["hive_id", "timestamp"]].copy()
     metadata["target_timestamp"] = target_timestamp
     metadata["current_score"] = current_score
-    metadata["current_level_code"] = current_level
-    metadata["future_level_code"] = future_level
-    metadata["future_observed_healthy"] = future_binary
-    metadata["score_drop"] = score_drop
+    metadata["current_level_code"] = health_level_code(current_score)
+    metadata["exact_future_score"] = exact_future_score
+    metadata["exact_future_level_code"] = health_level_code(
+        exact_future_score.fillna(current_score)
+    )
+    metadata["minimum_future_score"] = minimum_future_score
+    metadata["minimum_future_level_code"] = health_level_code(
+        minimum_future_score.fillna(current_score)
+    )
+    metadata["exact_score_drop"] = current_score - exact_future_score
+    metadata["minimum_score_drop"] = current_score - minimum_future_score
     metadata["transition_window"] = (
-        (metadata["current_level_code"] != metadata["future_level_code"])
-        | (metadata["score_drop"] >= 10.0)
+        (metadata["current_level_code"] != metadata["exact_future_level_code"])
+        | (metadata["exact_score_drop"].abs() >= 10.0)
+    )
+    metadata["deterioration_event"] = (
+        (metadata["exact_future_level_code"] < metadata["current_level_code"])
+        | (metadata["exact_score_drop"] >= 10.0)
     )
     metadata["history_hours"] = data.groupby("hive_id", sort=False).cumcount()
 
+    if TARGET_COLUMN in data.columns:
+        metadata["observed_health_at_horizon"] = pd.to_numeric(
+            data[TARGET_COLUMN], errors="coerce"
+        ).groupby(groups, sort=False).shift(-horizon)
+    else:
+        metadata["observed_health_at_horizon"] = np.nan
+
     keep = (
-        future_score.notna()
+        targets.notna().all(axis=1)
         & metadata["target_timestamp"].notna()
-        & metadata["future_observed_healthy"].notna()
         & (metadata["history_hours"] >= MINIMUM_TRAINING_HISTORY_HOURS)
     )
     x = features.loc[keep].reset_index(drop=True)
-    y = future_score.loc[keep].astype(float).reset_index(drop=True)
+    y = targets.loc[keep].astype(float).reset_index(drop=True)
     meta = metadata.loc[keep].reset_index(drop=True)
-    columns = list(x.columns)
-    forbidden = {TARGET_COLUMN, "hive_id", "timestamp", "target_timestamp"}
-    leaked = forbidden.intersection(columns)
+
+    feature_columns = list(x.columns)
+    forbidden_fragments = (
+        "brood_health",
+        "healthy_1",
+        "target",
+        "future_score",
+        "hive_id",
+        "timestamp",
+    )
+    leaked = [
+        column
+        for column in feature_columns
+        if any(fragment in column.lower() for fragment in forbidden_fragments)
+    ]
     if leaked:
-        raise RuntimeError(f"Forbidden columns entered the brood-health feature matrix: {sorted(leaked)}")
-    return x, y, meta, columns
+        raise RuntimeError(
+            f"Forbidden columns entered the brood-health feature matrix: {sorted(leaked)}"
+        )
+    return x, y, meta, feature_columns
 
 
-def build_latest_inference_row(
+def build_latest_inference_rows(
     frame: pd.DataFrame,
-    feature_columns: list[str],
+    feature_columns: Sequence[str],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     data = normalise_historical(frame)
     features = build_feature_frame(data)
     latest_positions = data.groupby("hive_id", sort=False)["timestamp"].idxmax()
     latest_meta = data.loc[latest_positions, ["hive_id", "timestamp", *SENSORS]].copy()
-    latest_features = features.loc[latest_positions].reindex(columns=feature_columns)
+    latest_features = features.loc[latest_positions].reindex(columns=list(feature_columns))
     latest_features.index = latest_meta.index
     return latest_features.reset_index(drop=True), latest_meta.reset_index(drop=True)

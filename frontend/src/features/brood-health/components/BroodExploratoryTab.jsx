@@ -44,6 +44,30 @@ function SensorStatisticsTable({ rows }) {
   );
 }
 
+
+function ScoreDefinitionPanel({ definition, components }) {
+  const weights = definition?.weights || {};
+  const componentLookup = new Map((components || []).map((row) => [row.component, row]));
+  const rows = [
+    ['Temperature', 'temperature_component', weights.temperature],
+    ['Humidity', 'humidity_component', weights.humidity],
+    ['CO₂', 'co2_component', weights.co2],
+    ['Relative weight stability', 'weight_component', weights.weight_stability],
+  ];
+  return (
+    <div>
+      <div className="table-scroll">
+        <table><thead><tr><th>Current-score component</th><th>Calibrated weight</th><th>Mean component score</th><th>Median</th><th>Range</th></tr></thead>
+          <tbody>{rows.map(([label, key, weight]) => { const item = componentLookup.get(key) || {}; return (
+            <tr key={key}><td><strong>{label}</strong></td><td>{percentValue(Number(weight || 0) * 100, 0)}</td><td>{numberValue(item.mean, 2)}</td><td>{numberValue(item.median, 2)}</td><td>{numberValue(item.minimum, 1)}–{numberValue(item.maximum, 1)}</td></tr>
+          ); })}</tbody>
+        </table>
+      </div>
+      <p className="chart-footnote">The weights are calibrated on training hives only and are treated as research coefficients, not universal biological percentages. Absolute hive weight is not transferred as a forecast feature.</p>
+    </div>
+  );
+}
+
 export function BroodExploratoryTab() {
   const resource = useBroodEDA(true);
   const [sensor, setSensor] = useState('temperature_c');
@@ -92,6 +116,10 @@ export function BroodExploratoryTab() {
         </Panel>
         <Panel title="Current Brood Health Score levels" subtitle="Transparent 1–100 score categories used for the current and future module outputs."><ConditionLevelChart data={data.condition_level_balance} /></Panel>
       </div>
+
+      <Panel title="Transparent current-score definition" subtitle="Component distributions and calibrated coefficients used to calculate the present 1–100 Brood Health Score.">
+        <ScoreDefinitionPanel definition={data.score_definition} components={data.score_component_summary} />
+      </Panel>
 
       <Panel title="Between-hive variation" subtitle="Per-hive observed healthy rate identifies persistent differences and supports group-aware interpretation."><HiveHealthyRateChart data={data.hive_profiles} /></Panel>
 

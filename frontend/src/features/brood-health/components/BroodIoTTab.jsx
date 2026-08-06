@@ -8,6 +8,7 @@ import {
   Droplets,
   RefreshCw,
   Scale,
+  ShieldCheck,
   Thermometer,
   Wifi,
   WifiOff,
@@ -17,37 +18,71 @@ import {
 import { Panel } from '../../../components/common/Panel';
 import { StatCard } from '../../../components/common/StatCard';
 import { useBroodIoT } from '../hooks/useBroodHealthData';
-import { numberValue, timestampValue } from '../utils/broodHealth';
-import { HealthScoreComparisonChart, LiveEarlyWarningTimeline } from './BroodHealthCharts';
-import { HealthScoreGauge } from './HealthScoreGauge';
+import {
+  freshnessLabel,
+  numberValue,
+  signedNumber,
+  timestampValue,
+} from '../utils/broodHealth';
+import {
+  ForecastTrajectoryChart,
+  HealthScoreComparisonChart,
+  LiveEarlyWarningTimeline,
+} from './BroodHealthCharts';
+import {
+  HealthScoreGauge,
+  RoDMeter,
+  StabilityGauge,
+} from './HealthScoreGauge';
 
 const DEFAULT_REFRESH_SECONDS = 600;
 
 const SENSOR_CARDS = [
-  ['temperature_c', 'Internal Temperature', '°C', Thermometer],
-  ['humidity_pct', 'Internal Humidity', '% RH', Droplets],
+  ['temperature_c', 'Internal temperature', '°C', Thermometer],
+  ['humidity_pct', 'Internal humidity', '% RH', Droplets],
   ['co2_ppm', 'Internal CO₂', 'ppm', Wind],
-  ['weight_kg', 'Total Hive Weight', 'kg', Scale],
-  ['external_temp', 'External Temperature', '°C', Thermometer],
-  ['external_humidity', 'External Humidity', '% RH', Droplets],
+  ['weight_kg', 'Hive weight', 'kg', Scale],
+  ['external_temp', 'External temperature', '°C', Thermometer],
+  ['external_humidity', 'External humidity', '% RH', Droplets],
 ];
 
-function RoDCard({ value, label }) {
-  const numeric = Number(value || 0);
-  const maximum = 6;
-  const position = Math.max(0, Math.min(100, ((numeric + maximum) / (maximum * 2)) * 100));
+function WarningPanel({ warning, disclaimer }) {
+  const level = String(warning?.level || 'Good').toLowerCase();
   return (
-    <article className="health-gauge-card">
-      <div className="health-gauge-title">Rate of Development (RoD)</div>
-      <div style={{ padding: '2.4rem 1rem 1.1rem' }}>
-        <div style={{ height: 14, borderRadius: 999, background: 'linear-gradient(90deg,#dc2626,#f59e0b,#94a3b8,#34d399,#0f766e)', position: 'relative' }}>
-          <span style={{ position: 'absolute', left: `${position}%`, top: -13, width: 4, height: 40, borderRadius: 4, background: '#0f172a', transform: 'translateX(-50%)', transition: 'left .8s ease' }} />
+    <section className={`brood-warning-panel ${level}`}>
+      <Zap size={31} />
+      <div>
+        <span>BROOD HEALTH EARLY-WARNING STATUS</span>
+        <h3>{warning?.title || `${warning?.level || 'Good'} brood-health warning`}</h3>
+        <p>{warning?.summary || disclaimer}</p>
+        <div className="brood-warning-columns">
+          <div>
+            <strong>Why this warning was generated</strong>
+            <ul>{(warning?.reasons || ['No negative warning rule was triggered.']).map((reason) => <li key={reason}>{reason}</li>)}</ul>
+          </div>
+          <div>
+            <strong>Recommended beekeeper action</strong>
+            <ol>{(warning?.recommended_actions || ['Continue routine monitoring.']).map((action) => <li key={action}>{action}</li>)}</ol>
+          </div>
         </div>
-        <strong style={{ display: 'block', marginTop: 22, fontSize: '1.8rem', color: numeric < -0.5 ? '#dc2626' : numeric > 0.5 ? '#0f766e' : '#475569' }}>{numberValue(numeric, 2)}</strong>
-        <span style={{ color: 'var(--muted)', fontSize: '.75rem' }}>score points per hour</span>
       </div>
-      <div className="health-gauge-level">{label || 'Stable'}</div>
-    </article>
+    </section>
+  );
+}
+
+function IntervalCard({ interval80, interval90, score }) {
+  return (
+    <div className="brood-interval-card">
+      <ShieldCheck size={22} />
+      <div>
+        <span>Forecast uncertainty around exact +6 h score</span>
+        <strong>{numberValue(score, 1)} / 100</strong>
+        <p>
+          80% residual interval: <b>{numberValue(interval80?.[0], 1)}–{numberValue(interval80?.[1], 1)}</b><br />
+          90% residual interval: <b>{numberValue(interval90?.[0], 1)}–{numberValue(interval90?.[1], 1)}</b>
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -64,7 +99,11 @@ export function BroodIoTTab() {
   const current = prediction?.current_condition || {};
   const forecast = prediction?.prediction || {};
   const warning = prediction?.warning || {};
-  const refreshSeconds = Number(iot.devices.data?.refresh_seconds || health?.database?.refresh_seconds || DEFAULT_REFRESH_SECONDS);
+  const refreshSeconds = Number(
+    iot.devices.data?.refresh_seconds
+      || health?.database?.refresh_seconds
+      || DEFAULT_REFRESH_SECONDS,
+  );
   const refreshMs = Math.max(30, refreshSeconds) * 1000;
 
   useEffect(() => {
@@ -86,20 +125,36 @@ export function BroodIoTTab() {
     return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
   }, [lastRefresh, now, refreshMs]);
 
-  const latestSensors = { ...(prediction?.latest_sensors || {}), ...(prediction?.context || {}) };
-  const scoreChange = Number(forecast.forecast_change_points || 0);
+  const latestSensors = {
+    ...(prediction?.latest_sensors || {}),
+    ...(prediction?.context || {}),
+  };
+  const conversion = prediction?.database_weight_conversion || {};
+  const contextWarnings = [
+    ...(prediction?.domain_shift_warnings || []),
+    ...(prediction?.context_warnings || []),
+  ];
 
   return (
     <div className="page-stack">
       <div className="brood-section-heading">
         <div>
           <span className="eyebrow">SRI LANKAN HIVE IOT DEPLOYMENT</span>
-          <h3>Live current score, future score, BHSI and RoD</h3>
-          <p>Supabase/PostgreSQL readings are mapped from your configured columns, aggregated from approximately 10-minute intervals to hourly medians, transformed with the saved feature schema and passed to the selected score-forecasting model.</p>
+          <h3>Live current condition, exact +6-hour forecast, BHSI and RoD</h3>
+          <p>
+            Approximately ten-minute PostgreSQL readings are mapped to the historical schema,
+            converted when required, aggregated to hourly medians and passed through the same saved
+            causal feature pipeline used during model training.
+          </p>
         </div>
         <div className="brood-action-group">
-          <label className="brood-switch"><input type="checkbox" checked={autoRefresh} onChange={(event) => setAutoRefresh(event.target.checked)} /><span /> Auto refresh</label>
-          <button className="button button-outline" onClick={async () => { await iot.refresh(); setLastRefresh(Date.now()); }}><RefreshCw size={16} /> Refresh</button>
+          <label className="brood-switch">
+            <input type="checkbox" checked={autoRefresh} onChange={(event) => setAutoRefresh(event.target.checked)} />
+            <span /> Auto refresh
+          </label>
+          <button className="button button-outline" onClick={async () => { await iot.refresh(); setLastRefresh(Date.now()); }}>
+            <RefreshCw size={16} /> Refresh
+          </button>
         </div>
       </div>
 
@@ -107,24 +162,43 @@ export function BroodIoTTab() {
         {databaseReady ? <Wifi size={24} /> : <WifiOff size={24} />}
         <div>
           <strong>{databaseReady ? 'Live PostgreSQL connection active' : 'Live PostgreSQL connection unavailable'}</strong>
-          <p>{databaseReady ? `Source: ${health.database.schema}.${health.database.table} · Latest stored reading: ${timestampValue(health.database.latest_recorded_at)}` : health?.database?.error}</p>
+          <p>
+            {databaseReady
+              ? `Source: ${health.database.schema}.${health.database.table} · Latest stored reading: ${timestampValue(health.database.latest_recorded_at)}`
+              : health?.database?.error}
+          </p>
         </div>
         <Database size={22} />
       </div>
 
-      {!modelReady && <div className="brood-alert danger"><AlertTriangle size={20} /><div><strong>The corrected score-forecasting model is not available</strong><p>{health?.model?.error || 'Retrain the brood-health model after applying the corrected files.'}</p></div></div>}
-
-      <Panel title="Live hive selection" subtitle="Devices are discovered directly from the configured IoT table." action={
-        <div className="brood-device-actions">
-          <select className="brood-select" value={iot.selectedDevice} onChange={(event) => iot.setSelectedDevice(event.target.value)}>
-            <option value="">Select hive</option>
-            {(iot.devices.data?.devices || []).map((item) => <option key={item.device_id} value={item.device_id}>{item.device_id}</option>)}
-          </select>
-          <button className="button" disabled={!iot.selectedDevice || iot.prediction.loading || !modelReady} onClick={async () => { await iot.loadPrediction(); setLastRefresh(Date.now()); }}>
-            {iot.prediction.loading ? 'Predicting…' : 'Run live prediction'}
-          </button>
+      {!modelReady && (
+        <div className="brood-alert danger">
+          <AlertTriangle size={20} />
+          <div><strong>The Brood Health v4 model is not available</strong><p>{health?.model?.error || 'Delete the old model artifacts and retrain.'}</p></div>
         </div>
-      }>
+      )}
+
+      <Panel
+        title="Live hive selection"
+        subtitle="Devices are discovered directly from the configured PostgreSQL table."
+        action={(
+          <div className="brood-device-actions">
+            <select className="brood-select" value={iot.selectedDevice} onChange={(event) => iot.setSelectedDevice(event.target.value)}>
+              <option value="">Select hive</option>
+              {(iot.devices.data?.devices || []).map((item) => (
+                <option key={item.device_id} value={item.device_id}>{item.device_id}</option>
+              ))}
+            </select>
+            <button
+              className="button"
+              disabled={!iot.selectedDevice || iot.prediction.loading || !modelReady}
+              onClick={async () => { await iot.loadPrediction(); setLastRefresh(Date.now()); }}
+            >
+              {iot.prediction.loading ? 'Predicting…' : 'Run live prediction'}
+            </button>
+          </div>
+        )}
+      >
         <div className="brood-live-meta">
           <span><Clock3 size={15} /> Next refresh: {countdown}</span>
           <span>Latest sensor: {timestampValue(prediction?.latest_timestamp)}</span>
@@ -133,68 +207,130 @@ export function BroodIoTTab() {
         </div>
       </Panel>
 
-      {iot.prediction.error && <div className="brood-alert danger"><AlertTriangle size={20} /><div><strong>Live prediction failed</strong><p>{iot.prediction.error.message}</p></div></div>}
+      {iot.prediction.error && (
+        <div className="brood-alert danger"><AlertTriangle size={20} /><div><strong>Live prediction failed</strong><p>{iot.prediction.error.message}</p></div></div>
+      )}
 
-      {prediction && <>
-        <div className={`brood-warning-panel ${String(warning.level || 'good').toLowerCase()}`}>
-          <Zap size={31} />
-          <div>
-            <span>BROOD HEALTH EARLY-WARNING STATUS</span>
-            <h3>{warning.title || warning.level || forecast.forecast_level}</h3>
-            <p>{warning.summary || prediction.disclaimer}</p>
-            <div className="brood-warning-columns">
-              <div><strong>Why this warning was generated</strong><ul>{(warning.reasons || []).map((reason) => <li key={reason}>{reason}</li>)}</ul></div>
-              <div><strong>Recommended beekeeper action</strong><ol>{(warning.recommended_actions || []).map((action) => <li key={action}>{action}</li>)}</ol></div>
-            </div>
+      {prediction && (
+        <>
+          <WarningPanel warning={warning} disclaimer={prediction.disclaimer} />
+
+          <div className="brood-four-gauge-grid">
+            <HealthScoreGauge
+              score={current.score}
+              level={current.level}
+              label="Current Brood Health Score"
+              badge="Now"
+              detail="Transparent 1–100 score calculated from the latest internal conditions."
+            />
+            <HealthScoreGauge
+              score={forecast.exact_score}
+              level={forecast.exact_level}
+              label={`Exact Brood Health Score at +${forecast.horizon_hours || 6} h`}
+              badge={timestampValue(forecast.exact_forecast_timestamp)}
+              detail={`Selected model: ${prediction.model?.model_name || health?.model?.model_name || 'trained model'}`}
+            />
+            <StabilityGauge score={current.bhsi} level={current.stability_level} />
+            <RoDMeter value={current.rod_points_per_hour} label={current.trend_label} />
           </div>
-        </div>
 
-        <div className="brood-four-gauge-grid">
-          <HealthScoreGauge score={current.score} level={current.level} label="Current Brood Health Score" detail="Transparent 1–100 score from the latest live sensor history." />
-          <HealthScoreGauge score={forecast.forecast_score} level={forecast.forecast_level} label={`Predicted Minimum (${forecast.horizon_hours || 6} h)`} detail={`Selected model: ${prediction.model?.model_name || health?.model?.model_name || 'trained model'}`} />
-          <HealthScoreGauge score={current.bhsi} level={current.stability_level} label="BHSI" detail="Stability of the recent Brood Health Score trajectory." />
-          <RoDCard value={current.rod_points_per_hour} label={current.trend_label} />
-        </div>
+          <div className="stats-grid stats-grid-six">
+            <StatCard label="Exact score change" value={signedNumber(forecast.exact_change_points, 1)} unit="points" note="+6 h forecast minus current" />
+            <StatCard label="Exact forecast drop" value={numberValue(forecast.exact_drop_points, 1)} unit="points" note="Zero when no decline is forecast" />
+            <StatCard label="Safety minimum" value={numberValue(forecast.safety_minimum_score, 1)} unit="/100" note={`${forecast.safety_minimum_level || '—'} · lowest predicted 1–6 h point`} />
+            <StatCard label="Feature completeness" value={numberValue(prediction.feature_completeness_percentage, 1)} unit="%" />
+            <StatCard label="History sufficiency" value={prediction.history_sufficiency || '—'} note={`Recommended: ${prediction.minimum_recommended_history_hours || 72} h`} />
+            <StatCard label="Data freshness" value={freshnessLabel(prediction.data_freshness_minutes)} note={`${numberValue(prediction.data_freshness_minutes, 0)} minutes`} />
+          </div>
 
-        <div className="stats-grid stats-grid-six">
-          <StatCard label="Expected score change" value={`${scoreChange >= 0 ? '+' : ''}${numberValue(scoreChange, 1)}`} unit="points" note="Predicted minimum minus current" />
-          <StatCard label="Forecast drop" value={numberValue(forecast.forecast_drop_points, 1)} unit="points" note="Zero when no decline is forecast" />
-          <StatCard label="Risk index" value={numberValue(forecast.risk_index, 1)} unit="/100" note="100 minus forecast score; not a probability" />
-          <StatCard label="Feature completeness" value={numberValue(prediction.feature_completeness_percentage, 1)} unit="%" />
-          <StatCard label="History sufficiency" value={prediction.history_sufficiency || '—'} note={`Recommended: ${prediction.minimum_recommended_history_hours || 72} h`} />
-          <StatCard label="Data freshness" value={numberValue(prediction.data_freshness_minutes, 0)} unit="min" />
-        </div>
+          <div className="two-column-grid">
+            <Panel
+              title="Current and Predicted Health Comparison"
+              subtitle={`Current score compared with the exact +${forecast.horizon_hours || 6}-hour forecast across the Critical, Poor, Good and Excellent ranges.`}
+            >
+              <HealthScoreComparisonChart
+                currentScore={current.score}
+                exactScore={forecast.exact_score}
+                safetyScore={forecast.safety_minimum_score}
+                forecastHorizonHours={forecast.horizon_hours || 6}
+              />
+            </Panel>
+            <Panel title="Prediction interval and deployment information" subtitle="Residual uncertainty is estimated on validation hives and transferred with the saved model.">
+              <IntervalCard
+                interval80={forecast.prediction_interval_80}
+                interval90={forecast.prediction_interval_90}
+                score={forecast.exact_score}
+              />
+              <div className="brood-info-list">
+                <span>Selected model <strong>{prediction.model?.model_name || '—'}</strong></span>
+                <span>Primary target <strong>Exact score at +{forecast.horizon_hours || 6} hours</strong></span>
+                <span>Secondary target <strong>Minimum predicted score in 1–6 hours</strong></span>
+                <span>Forecast time <strong>{timestampValue(forecast.exact_forecast_timestamp)}</strong></span>
+                <span>Aggregation <strong>Hourly median</strong></span>
+                <span>Battery <strong><Battery size={14} /> {numberValue(prediction.context?.battery_voltage, 2)} V</strong></span>
+              </div>
+            </Panel>
+          </div>
 
-        <div className="two-column-grid">
-          <Panel title="Current versus predicted minimum score" subtitle="The future value is the minimum score expected anywhere inside the forecast window, not an exact measurement at one future timestamp.">
-            <HealthScoreComparisonChart currentScore={current.score} predictedScore={forecast.forecast_score} />
+          <Panel title="Predicted 1–6 hour score trajectory" subtitle="The +6-hour point is the reported future score. The lowest trajectory point supports conservative early warning.">
+            <ForecastTrajectoryChart
+              data={forecast.trajectory}
+              currentScore={current.score}
+              exactHorizon={forecast.horizon_hours || 6}
+            />
           </Panel>
-          <Panel title="Deployment information" subtitle="Saved model, source mapping and live-data readiness.">
-            <div className="brood-info-list">
-              <span>Selected model <strong>{prediction.model?.model_name || '—'}</strong></span>
-              <span>Prediction target <strong>Future-window minimum score</strong></span>
-              <span>Prediction horizon <strong>{forecast.horizon_hours || 6} hours</strong></span>
-              <span>Latest sensor time <strong>{timestampValue(prediction.latest_timestamp)}</strong></span>
-              <span>Hourly aggregation <strong>Median of raw readings</strong></span>
-              <span>Battery voltage <strong><Battery size={14} /> {numberValue(prediction.context?.battery_voltage, 2)} V</strong></span>
+
+          <section>
+            <div className="brood-section-heading compact">
+              <div><h3>Latest live sensor inputs</h3><p>External readings are contextual unless the saved model explicitly lists them as features.</p></div>
             </div>
+            <div className="stats-grid stats-grid-six">
+              {SENSOR_CARDS.map(([key, label, unit, Icon]) => (
+                <StatCard
+                  key={key}
+                  label={label}
+                  value={numberValue(latestSensors[key], key === 'co2_ppm' ? 0 : 2)}
+                  unit={unit}
+                  icon={Icon}
+                />
+              ))}
+            </div>
+          </section>
+
+          <div className="two-column-grid">
+            <Panel title="Current score component evidence" subtitle="The current score remains explainable even when the forecast model is complex.">
+              <div className="brood-component-grid">
+                {Object.entries(prediction.score_components || {}).map(([key, value]) => (
+                  <div key={key}><span>{key.replaceAll('_', ' ')}</span><strong>{numberValue(value, 1)}</strong><div><i style={{ width: `${Math.max(0, Math.min(100, Number(value || 0)))}%` }} /></div></div>
+                ))}
+              </div>
+            </Panel>
+            <Panel title="Weight transfer and unit handling" subtitle="The model excludes absolute hive weight and uses relative weight changes and stability.">
+              <div className="brood-info-list">
+                <span>Live scale factor <strong>{numberValue(conversion.scale_factor ?? 1, 4)}</strong></span>
+                <span>Live offset <strong>{numberValue(conversion.offset_kg ?? 0, 3)} kg</strong></span>
+                <span>Forecast feature strategy <strong>Relative change and coefficient of variation</strong></span>
+                <span>Absolute weight <strong>Display and context only</strong></span>
+              </div>
+            </Panel>
+          </div>
+
+          {contextWarnings.length > 0 ? (
+            <div className="brood-alert warning"><AlertTriangle size={20} /><div><strong>Transfer or historical-domain warning</strong><ul>{contextWarnings.map((item) => <li key={item}>{item}</li>)}</ul></div></div>
+          ) : (
+            <div className="brood-alert success"><CheckCircle2 size={20} /><div><strong>No central-range transfer warning detected</strong><p>This still requires local sensor calibration and physical brood validation.</p></div></div>
+          )}
+
+          <Panel title="Recent live health, exact forecast, stability and deterioration timeline" subtitle="All values are generated from the same hourly live history.">
+            <LiveEarlyWarningTimeline data={prediction.history} />
           </Panel>
-        </div>
 
-        <div className="stats-grid stats-grid-six">
-          {SENSOR_CARDS.map(([key, label, unit, Icon]) => <StatCard key={key} label={label} value={numberValue(latestSensors[key], key === 'co2_ppm' ? 0 : 2)} unit={unit} icon={Icon} />)}
-        </div>
-
-        {prediction.domain_shift_warnings?.length > 0
-          ? <div className="brood-alert warning"><AlertTriangle size={20} /><div><strong>Live readings outside the historical training range</strong><ul>{prediction.domain_shift_warnings.map((item) => <li key={item}>{item}</li>)}</ul></div></div>
-          : <div className="brood-alert success"><CheckCircle2 size={20} /><div><strong>No central-range domain-shift warning detected</strong><p>This does not replace sensor calibration or field validation.</p></div></div>}
-
-        <Panel title="Recent live score and warning timeline" subtitle="Current score, predicted minimum score, BHSI and RoD generated from the same hourly history.">
-          <LiveEarlyWarningTimeline data={prediction.history} />
-        </Panel>
-
-        <div className="brood-alert info"><AlertTriangle size={19} /><div><strong>Interpretation boundary</strong><p>{prediction.disclaimer} The risk index is a score transformation, not a calibrated disease probability.</p></div></div>
-      </>}
+          <div className="brood-alert info">
+            <AlertTriangle size={19} />
+            <div><strong>Decision-support boundary</strong><p>{prediction.disclaimer}</p></div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

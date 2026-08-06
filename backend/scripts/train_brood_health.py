@@ -10,20 +10,21 @@ from multivari.modules.brood_health.training import run_training
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
-            "Train and evaluate the future-window Brood Health Score regressor "
-            "using unseen-hive validation and test partitions."
+            "Train and evaluate the Brood Health v4 multi-horizon regressor. "
+            "Primary output: exact score at +6 hours. Secondary output: minimum "
+            "predicted score inside the 1–6 hour trajectory."
         )
     )
     parser.add_argument("--horizon-hours", type=int, default=6)
     parser.add_argument(
         "--fast",
         action="store_true",
-        help="Use smaller estimators and capped partitions for a quick development comparison.",
+        help="Use smaller estimators and capped partitions for development.",
     )
     parser.add_argument(
         "--eda-only",
         action="store_true",
-        help="Regenerate brood-health EDA JSON and report images without training.",
+        help="Regenerate brood-health EDA without training.",
     )
     args = parser.parse_args()
 
@@ -42,8 +43,11 @@ def main() -> None:
         return
 
     def progress(event: str, payload: dict) -> None:
-        progress_value = payload.get("progress", 0)
-        print(f"[{progress_value:>3}%] {event}: {payload.get('message', '')}", flush=True)
+        value = payload.get("progress", 0)
+        print(
+            f"[{value:>3}%] {event}: {payload.get('message', '')}",
+            flush=True,
+        )
 
     summary = run_training(
         horizon_hours=args.horizon_hours,
@@ -51,20 +55,28 @@ def main() -> None:
         progress_callback=progress,
     )
     metrics = summary["best_metrics"]
-    interpretation = summary["accuracy_interpretation"]
+    exact = metrics["exact_horizon"]
+    transition = metrics["transition"]
     print(
         json.dumps(
             {
+                "version": summary["version"],
                 "best_model": summary["best_model"],
-                "test_mae_score_points": metrics["test_mae"],
-                "test_rmse_score_points": metrics["test_rmse"],
-                "test_r2": metrics["test_r2"],
-                "overall_level_accuracy_percent": interpretation["overall_level_accuracy_percent"],
-                "transition_level_accuracy_percent": interpretation["primary_early_warning_accuracy_percent"],
-                "critical_recall": metrics["critical_recall"],
-                "persistence_transition_accuracy_percent": interpretation[
-                    "persistence_transition_level_accuracy_percent"
-                ],
+                "primary_target": summary["primary_target"],
+                "test_mae_score_points": exact["mae"],
+                "test_mse": exact["mse"],
+                "test_rmse_score_points": exact["rmse"],
+                "test_r2": exact["r2"],
+                "overall_level_accuracy_percent": 100
+                * exact["health_level_accuracy"],
+                "transition_level_accuracy_percent": 100
+                * float(transition.get("health_level_accuracy") or 0.0),
+                "critical_recall_percent": 100 * exact["critical_recall"],
+                "deterioration_recall_percent": 100
+                * metrics["deterioration"]["recall"],
+                "selected_score_weights": summary["weight_calibration"].get(
+                    "selected_weights"
+                ),
             },
             indent=2,
         )

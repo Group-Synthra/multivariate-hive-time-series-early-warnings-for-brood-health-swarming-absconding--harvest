@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import {
   Area,
   AreaChart,
@@ -189,89 +190,104 @@ export function RelationshipScatterChart({ data, xSensor, ySensor }) {
 }
 
 export function ModelComparisonChart({ data }) {
-  const chartData = (data || []).filter((row) => row.status === 'ok').map((row) => ({
-    model: row.model,
-    transitionAccuracy: Number(row.test?.transition_level_accuracy || 0) * 100,
-    overallAccuracy: Number(row.test?.health_level_accuracy || 0) * 100,
-    criticalRecall: Number(row.test?.critical_recall || 0) * 100,
-  }));
+  const chartData = (data || [])
+    .filter((row) => row.status === 'ok')
+    .map((row) => ({
+      model: row.model,
+      exactAccuracy: Number(row.test?.exact_horizon?.health_level_accuracy || 0) * 100,
+      transitionAccuracy: Number(row.test?.transition?.health_level_accuracy || 0) * 100,
+      deteriorationRecall: Number(row.test?.deterioration?.recall || 0) * 100,
+    }));
   return (
-    <ChartShell data={chartData} height={370} message="Train the models to display unseen-hive performance.">
+    <ChartShell data={chartData} height={380} message="Train the models to display unseen-hive performance.">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} margin={{ top: 10, right: 15, left: 3, bottom: 75 }}>
+        <BarChart data={chartData} margin={{ top: 10, right: 15, left: 3, bottom: 78 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
-          <XAxis dataKey="model" angle={-24} textAnchor="end" interval={0} height={90} />
+          <XAxis dataKey="model" angle={-24} textAnchor="end" interval={0} height={92} />
           <YAxis domain={[0, 100]} unit="%" />
-          <Tooltip formatter={(v) => `${Number(v).toFixed(2)}%`} />
+          <Tooltip formatter={(value) => `${Number(value).toFixed(2)}%`} />
           <Legend />
-          <Bar dataKey="transitionAccuracy" name="Transition accuracy" fill="#2563eb" />
-          <Bar dataKey="overallAccuracy" name="Overall level accuracy" fill="#0f766e" />
-          <Bar dataKey="criticalRecall" name="Critical recall" fill="#d97706" />
+          <Bar dataKey="exactAccuracy" name="Exact +6 h level accuracy" fill="#2563eb" />
+          <Bar dataKey="transitionAccuracy" name="Transition accuracy" fill="#d97706" />
+          <Bar dataKey="deteriorationRecall" name="Deterioration recall" fill="#0f766e" />
         </BarChart>
       </ResponsiveContainer>
     </ChartShell>
   );
 }
+
 
 export function ModelErrorComparisonChart({ data }) {
-  const chartData = (data || []).filter((row) => row.status === 'ok').map((row) => ({
-    model: row.model,
-    mae: Number(row.test?.test_mae || 0),
-    transitionMae: Number(row.test?.transition_mae || 0),
-    cvMae: Number(row.test?.cv_mae_mean || 0),
-  }));
+  const chartData = (data || [])
+    .filter((row) => row.status === 'ok')
+    .map((row) => ({
+      model: row.model,
+      exactMae: Number(row.test?.exact_horizon?.mae || 0),
+      exactRmse: Number(row.test?.exact_horizon?.rmse || 0),
+      transitionMae: Number(row.test?.transition?.mae || 0),
+      groupCvMae: Number(row.test?.cv_mae_mean || 0),
+    }));
   return (
-    <ChartShell data={chartData} height={370} message="Train the models to display score errors.">
+    <ChartShell data={chartData} height={380} message="Train the models to display score errors.">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} margin={{ top: 10, right: 15, left: 3, bottom: 75 }}>
+        <BarChart data={chartData} margin={{ top: 10, right: 15, left: 3, bottom: 78 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
-          <XAxis dataKey="model" angle={-24} textAnchor="end" interval={0} height={90} />
+          <XAxis dataKey="model" angle={-24} textAnchor="end" interval={0} height={92} />
           <YAxis unit=" pts" />
-          <Tooltip formatter={(v) => `${Number(v).toFixed(3)} points`} />
+          <Tooltip formatter={(value) => `${Number(value).toFixed(3)} points`} />
           <Legend />
-          <Bar dataKey="mae" name="Overall MAE" fill="#2563eb" />
+          <Bar dataKey="exactMae" name="Exact +6 h MAE" fill="#2563eb" />
+          <Bar dataKey="exactRmse" name="Exact +6 h RMSE" fill="#7c3aed" />
           <Bar dataKey="transitionMae" name="Transition MAE" fill="#dc2626" />
-          <Bar dataKey="cvMae" name="Group-CV MAE" fill="#7c3aed" />
+          <Bar dataKey="groupCvMae" name="Group-CV MAE" fill="#0f766e" />
         </BarChart>
       </ResponsiveContainer>
     </ChartShell>
   );
 }
 
+
 export function PersistenceComparisonChart({ model, persistence }) {
+  const exact = model?.exact_horizon || {};
+  const transition = model?.transition || {};
+  const deterioration = model?.deterioration || {};
+  const persistenceExact = persistence?.exact_horizon || {};
+  const persistenceTransition = persistence?.transition || {};
+  const persistenceDeterioration = persistence?.deterioration || {};
   const data = [
     {
-      name: 'Overall level accuracy',
-      model: Number(model?.health_level_accuracy || 0) * 100,
-      persistence: Number(persistence?.health_level_accuracy || 0) * 100,
+      name: 'Exact level accuracy',
+      model: Number(exact.health_level_accuracy || 0) * 100,
+      persistence: Number(persistenceExact.health_level_accuracy || 0) * 100,
     },
     {
       name: 'Transition accuracy',
-      model: Number(model?.transition_level_accuracy || 0) * 100,
-      persistence: Number(persistence?.transition_level_accuracy || 0) * 100,
+      model: Number(transition.health_level_accuracy || 0) * 100,
+      persistence: Number(persistenceTransition.health_level_accuracy || 0) * 100,
     },
     {
-      name: 'Critical recall',
-      model: Number(model?.critical_recall || 0) * 100,
-      persistence: Number(persistence?.critical_recall || 0) * 100,
+      name: 'Deterioration recall',
+      model: Number(deterioration.recall || 0) * 100,
+      persistence: Number(persistenceDeterioration.recall || 0) * 100,
     },
   ];
   return (
     <ChartShell data={data} height={320}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ top: 10, right: 20, left: 105, bottom: 8 }}>
+        <BarChart data={data} layout="vertical" margin={{ top: 10, right: 20, left: 108, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" horizontal={false} />
           <XAxis type="number" domain={[0, 100]} unit="%" />
-          <YAxis type="category" dataKey="name" width={125} />
-          <Tooltip formatter={(v) => `${Number(v).toFixed(2)}%`} />
+          <YAxis type="category" dataKey="name" width={130} />
+          <Tooltip formatter={(value) => `${Number(value).toFixed(2)}%`} />
           <Legend />
           <Bar dataKey="model" name="Selected model" fill="#2563eb" />
-          <Bar dataKey="persistence" name="Current-score persistence" fill="#94a3b8" />
+          <Bar dataKey="persistence" name="Repeat current score" fill="#94a3b8" />
         </BarChart>
       </ResponsiveContainer>
     </ChartShell>
   );
 }
+
 
 export function ActualPredictedScoreChart({ data }) {
   return (
@@ -349,66 +365,441 @@ export function HealthHistoryChart({ data }) {
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 10, right: 20, left: 5, bottom: 12 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="timestamp" tickFormatter={(v) => new Date(v).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit' })} minTickGap={40} />
-          <YAxis domain={[0, 100]} unit="%" />
-          <Tooltip labelFormatter={(v) => new Date(v).toLocaleString()} formatter={(v) => `${Number(v).toFixed(2)}`} />
+          <XAxis dataKey="timestamp" tickFormatter={(value) => new Date(value).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit' })} minTickGap={40} />
+          <YAxis domain={[0, 100]} />
+          <Tooltip labelFormatter={(value) => new Date(value).toLocaleString()} formatter={(value) => Number(value).toFixed(2)} />
           <Legend />
           <ReferenceLine y={80} stroke="#0f766e" strokeDasharray="4 4" />
-          <ReferenceLine y={60} stroke="#2563eb" strokeDasharray="4 4" />
+          <ReferenceLine y={60} stroke="#d97706" strokeDasharray="4 4" />
           <ReferenceLine y={40} stroke="#dc2626" strokeDasharray="4 4" />
-          <Line type="monotone" dataKey="forecast_score" name="Predicted future minimum score" stroke="#2563eb" strokeWidth={3} dot={false} />
-          <Line type="monotone" dataKey="condition_score" name="Current condition score" stroke="#d97706" strokeWidth={2.5} dot={false} />
-          <Line type="monotone" dataKey="bhsi" name="Stability index" stroke="#7c3aed" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="exact_forecast_score" name="Exact +6 h score" stroke="#2563eb" strokeWidth={3} dot={false} />
+          <Line type="monotone" dataKey="condition_score" name="Current score" stroke="#d97706" strokeWidth={2.5} dot={false} />
+          <Line type="monotone" dataKey="bhsi" name="BHSI" stroke="#7c3aed" strokeWidth={2} dot={false} />
         </LineChart>
       </ResponsiveContainer>
     </ChartShell>
   );
 }
 
-export function HealthScoreComparisonChart({ currentScore, predictedScore }) {
-  const data = [
-    { name: 'Current', score: Number(currentScore || 0) },
-    { name: 'Predicted minimum', score: Number(predictedScore || 0) },
+
+export function HealthScoreComparisonChart({
+  currentScore,
+  exactScore,
+  safetyScore,
+  forecastHorizonHours = 6,
+}) {
+  const comparisonId = useId().replaceAll(':', '');
+  const trackClipId = `${comparisonId}-track`;
+  const shadowId = `${comparisonId}-shadow`;
+
+  const clampScore = (value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.min(100, Math.max(0, numeric));
+  };
+
+  const levelForScore = (value) => {
+    if (value >= 80) return 'Excellent';
+    if (value >= 60) return 'Good';
+    if (value >= 40) return 'Poor';
+    return 'Critical';
+  };
+
+  const healthColors = {
+    Critical: '#dc2626',
+    Poor: '#d97706',
+    Good: '#2563eb',
+    Excellent: '#0f766e',
+  };
+
+  const current = clampScore(currentScore);
+  const predicted = clampScore(exactScore);
+  const safety = Number.isFinite(Number(safetyScore))
+    ? clampScore(safetyScore)
+    : null;
+
+  const currentLevel = levelForScore(current);
+  const predictedLevel = levelForScore(predicted);
+  const safetyLevel = safety === null ? null : levelForScore(safety);
+  const difference = predicted - current;
+
+  const trendColor = difference < -0.05
+    ? '#dc2626'
+    : difference > 0.05
+      ? '#0f766e'
+      : '#64748b';
+
+  const trendText = difference < -0.05
+    ? 'Predicted decline'
+    : difference > 0.05
+      ? 'Predicted improvement'
+      : 'No meaningful score change';
+
+  const currentColor = healthColors[currentLevel];
+  const predictedColor = healthColors[predictedLevel];
+  const safetyColor = safetyLevel ? healthColors[safetyLevel] : '#7c3aed';
+
+  const scaleStart = 70;
+  const scaleWidth = 620;
+  const scoreToX = (score) => scaleStart + (score / 100) * scaleWidth;
+  const currentX = scoreToX(current);
+  const predictedX = scoreToX(predicted);
+  const movement = predictedX - currentX;
+  const direction = movement >= 0 ? 1 : -1;
+  const hasVisibleMovement = Math.abs(movement) > 10;
+
+  const healthSegments = [
+    { label: 'Critical', minimum: 0, maximum: 40, color: healthColors.Critical },
+    { label: 'Poor', minimum: 40, maximum: 60, color: healthColors.Poor },
+    { label: 'Good', minimum: 60, maximum: 80, color: healthColors.Good },
+    { label: 'Excellent', minimum: 80, maximum: 100, color: healthColors.Excellent },
   ];
-  const colors = ['#d97706', '#2563eb'];
+
+  const lineStartX = currentX + direction * 19;
+  const lineEndX = predictedX - direction * 19;
+  const arrowBaseX = lineEndX - direction * 12;
+  const arrowPoints = `${lineEndX},84 ${arrowBaseX},77 ${arrowBaseX},91`;
+
   return (
-    <ChartShell data={data} height={280}>
+    <div className="brood-old-style-comparison">
+      <div className="brood-comparison-heading">
+        <div>
+          <h4>Current and Predicted Health Comparison</h4>
+          <p>
+            {trendText}:{' '}
+            <strong style={{ color: trendColor }}>
+              {difference > 0 ? '+' : ''}{difference.toFixed(1)} points
+            </strong>
+          </p>
+        </div>
+        <span className={`brood-comparison-trend ${difference < -0.05 ? 'decline' : difference > 0.05 ? 'improve' : 'stable'}`}>
+          {difference < -0.05 ? '↓' : difference > 0.05 ? '↑' : '→'}
+          Exact +{forecastHorizonHours} h
+        </span>
+      </div>
+
+      <div className="brood-comparison-svg-wrap">
+        <svg
+          viewBox="0 0 760 310"
+          width="100%"
+          height="100%"
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label={`Current Brood Health Score ${current.toFixed(1)} and exact ${forecastHorizonHours}-hour score ${predicted.toFixed(1)}`}
+        >
+          <defs>
+            <filter id={shadowId} x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#0f172a" floodOpacity="0.20" />
+            </filter>
+            <clipPath id={trackClipId}>
+              <rect x={scaleStart} y="112" width={scaleWidth} height="42" rx="9" />
+            </clipPath>
+          </defs>
+
+          <rect
+            x={scaleStart}
+            y="112"
+            width={scaleWidth}
+            height="42"
+            rx="9"
+            fill="#e2e8f0"
+          />
+
+          {healthSegments.map((segment, index) => {
+            const x = scoreToX(segment.minimum);
+            const width = ((segment.maximum - segment.minimum) / 100) * scaleWidth;
+            return (
+              <g key={segment.label}>
+                <rect
+                  x={x}
+                  y="112"
+                  width={width}
+                  height="42"
+                  fill={segment.color}
+                  opacity="0.94"
+                  clipPath={`url(#${trackClipId})`}
+                >
+                  <title>{segment.label}: {segment.minimum}–{segment.maximum}</title>
+                </rect>
+                <text
+                  x={x + width / 2}
+                  y="138"
+                  textAnchor="middle"
+                  fill="#ffffff"
+                  fontSize="12"
+                  fontWeight="800"
+                >
+                  {segment.label}
+                </text>
+              </g>
+            );
+          })}
+
+          {[0, 20, 40, 60, 80, 100].map((value) => {
+            const x = scoreToX(value);
+            return (
+              <g key={value}>
+                <line
+                  x1={x}
+                  y1="106"
+                  x2={x}
+                  y2="161"
+                  stroke={value === 40 || value === 60 || value === 80 ? '#ffffff' : 'rgba(255,255,255,0.65)'}
+                  strokeWidth={value === 40 || value === 60 || value === 80 ? 2 : 1}
+                />
+                <text
+                  x={x}
+                  y="178"
+                  textAnchor="middle"
+                  fill="#64748b"
+                  fontSize="11"
+                  fontWeight="650"
+                >
+                  {value}
+                </text>
+              </g>
+            );
+          })}
+
+          {hasVisibleMovement ? (
+            <g>
+              <line
+                x1={lineStartX}
+                y1="84"
+                x2={lineEndX}
+                y2="84"
+                stroke={trendColor}
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              <polygon points={arrowPoints} fill={trendColor} />
+            </g>
+          ) : (
+            <g>
+              <line
+                x1={currentX - 18}
+                y1="84"
+                x2={currentX + 18}
+                y2="84"
+                stroke={trendColor}
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              <circle cx={currentX} cy="84" r="5" fill={trendColor} />
+            </g>
+          )}
+
+          <line
+            x1={currentX}
+            y1="56"
+            x2={currentX}
+            y2="112"
+            stroke={currentColor}
+            strokeWidth="3"
+            strokeDasharray="5 4"
+          />
+
+          <g className="brood-comparison-marker" filter={`url(#${shadowId})`} tabIndex="0">
+            <circle
+              cx={currentX}
+              cy="56"
+              r="18"
+              fill={currentColor}
+              stroke="#ffffff"
+              strokeWidth="3"
+            >
+              <title>Current score: {current.toFixed(1)} ({currentLevel})</title>
+            </circle>
+            <text
+              x={currentX}
+              y="60"
+              textAnchor="middle"
+              fill="#ffffff"
+              fontSize="10"
+              fontWeight="800"
+              pointerEvents="none"
+            >
+              NOW
+            </text>
+          </g>
+
+          <line
+            x1={predictedX}
+            y1="154"
+            x2={predictedX}
+            y2="223"
+            stroke={predictedColor}
+            strokeWidth="3"
+            strokeDasharray="5 4"
+          />
+
+          <g className="brood-comparison-marker" filter={`url(#${shadowId})`} tabIndex="0">
+            <circle
+              cx={predictedX}
+              cy="223"
+              r="19"
+              fill={predictedColor}
+              stroke="#ffffff"
+              strokeWidth="3"
+            >
+              <title>Exact +{forecastHorizonHours} h score: {predicted.toFixed(1)} ({predictedLevel})</title>
+            </circle>
+            <text
+              x={predictedX}
+              y="227"
+              textAnchor="middle"
+              fill="#ffffff"
+              fontSize="9"
+              fontWeight="800"
+              pointerEvents="none"
+            >
+              +{forecastHorizonHours}H
+            </text>
+          </g>
+
+          <text
+            x={currentX}
+            y="20"
+            textAnchor="middle"
+            fill={currentColor}
+            fontSize="19"
+            fontWeight="850"
+          >
+            {current.toFixed(1)}
+          </text>
+          <text
+            x={currentX}
+            y="39"
+            textAnchor="middle"
+            fill="#475569"
+            fontSize="11"
+            fontWeight="650"
+          >
+            Current · {currentLevel}
+          </text>
+
+          <text
+            x={predictedX}
+            y="266"
+            textAnchor="middle"
+            fill={predictedColor}
+            fontSize="19"
+            fontWeight="850"
+          >
+            {predicted.toFixed(1)}
+          </text>
+          <text
+            x={predictedX}
+            y="286"
+            textAnchor="middle"
+            fill="#475569"
+            fontSize="11"
+            fontWeight="650"
+          >
+            {forecastHorizonHours}h Forecast · {predictedLevel}
+          </text>
+        </svg>
+      </div>
+
+      <div className="brood-comparison-footer">
+        <span style={{ color: currentColor }}>
+          <i style={{ background: currentColor }} />
+          Current: {current.toFixed(1)} ({currentLevel})
+        </span>
+        <b style={{ color: trendColor }}>
+          {difference < -0.05 ? '↓' : difference > 0.05 ? '↑' : '→'}
+        </b>
+        <span style={{ color: predictedColor }}>
+          <i style={{ background: predictedColor }} />
+          +{forecastHorizonHours} h: {predicted.toFixed(1)} ({predictedLevel})
+        </span>
+      </div>
+
+      {safety !== null && (
+        <div className="brood-safety-minimum-note">
+          <span style={{ background: safetyColor }} />
+          <div>
+            <strong>Safety minimum: {safety.toFixed(1)} ({safetyLevel})</strong>
+            <small>
+              Lowest predicted point inside the 1–{forecastHorizonHours} hour trajectory.
+              The primary future output above remains the exact +{forecastHorizonHours}-hour score.
+            </small>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+export function LiveEarlyWarningTimeline({ data }) {
+  return (
+    <ChartShell data={data} height={380} message="No live timeline is available.">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ top: 12, right: 20, left: 75, bottom: 8 }}>
-          <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-          <XAxis type="number" domain={[0, 100]} />
-          <YAxis type="category" dataKey="name" width={90} />
-          <Tooltip formatter={(value) => `${Number(value).toFixed(1)} / 100`} />
-          <ReferenceLine x={40} stroke="#dc2626" strokeDasharray="4 4" />
-          <ReferenceLine x={60} stroke="#d97706" strokeDasharray="4 4" />
-          <ReferenceLine x={80} stroke="#0f766e" strokeDasharray="4 4" />
-          <Bar dataKey="score" radius={[0, 8, 8, 0]}>
-            {data.map((item, index) => <Cell key={item.name} fill={colors[index]} />)}
-          </Bar>
-        </BarChart>
+        <LineChart data={data} margin={{ top: 10, right: 24, left: 5, bottom: 12 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="timestamp" tickFormatter={(value) => new Date(value).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit' })} minTickGap={45} />
+          <YAxis yAxisId="score" domain={[0, 100]} />
+          <YAxis yAxisId="rod" orientation="right" />
+          <Tooltip labelFormatter={(value) => new Date(value).toLocaleString()} formatter={(value) => Number(value).toFixed(2)} />
+          <Legend />
+          <ReferenceLine yAxisId="score" y={40} stroke="#dc2626" strokeDasharray="4 4" />
+          <ReferenceLine yAxisId="score" y={60} stroke="#d97706" strokeDasharray="4 4" />
+          <ReferenceLine yAxisId="score" y={80} stroke="#0f766e" strokeDasharray="4 4" />
+          <Line yAxisId="score" type="monotone" dataKey="condition_score" name="Current score" stroke="#d97706" strokeWidth={2.5} dot={false} />
+          <Line yAxisId="score" type="monotone" dataKey="exact_forecast_score" name="Exact +6 h score" stroke="#2563eb" strokeWidth={3} dot={false} />
+          <Line yAxisId="score" type="monotone" dataKey="safety_minimum_score" name="Safety minimum" stroke="#7c3aed" strokeWidth={2.2} dot={false} />
+          <Line yAxisId="score" type="monotone" dataKey="bhsi" name="BHSI" stroke="#0f766e" strokeWidth={2} dot={false} />
+          <Line yAxisId="rod" type="monotone" dataKey="rod_points_per_hour" name="RoD" stroke="#dc2626" strokeWidth={2} dot={false} />
+        </LineChart>
       </ResponsiveContainer>
     </ChartShell>
   );
 }
 
-export function LiveEarlyWarningTimeline({ data }) {
+
+
+export function HorizonErrorChart({ data }) {
   return (
-    <ChartShell data={data} height={360} message="No live timeline is available.">
+    <ChartShell data={data} height={320} message="Per-horizon metrics are unavailable.">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 10, right: 24, left: 5, bottom: 12 }}>
+        <LineChart data={data} margin={{ top: 12, right: 20, left: 5, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="timestamp" tickFormatter={(v) => new Date(v).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} minTickGap={45} />
-          <YAxis yAxisId="score" domain={[0, 100]} />
-          <YAxis yAxisId="rod" orientation="right" />
-          <Tooltip labelFormatter={(v) => new Date(v).toLocaleString()} formatter={(v) => Number(v).toFixed(2)} />
+          <XAxis dataKey="horizon_hours" tickFormatter={(value) => `+${value} h`} />
+          <YAxis unit=" pts" />
+          <Tooltip labelFormatter={(value) => `Forecast horizon: +${value} hours`} formatter={(value) => `${Number(value).toFixed(3)} points`} />
           <Legend />
-          <ReferenceLine yAxisId="score" y={40} stroke="#dc2626" strokeDasharray="4 4" />
-          <ReferenceLine yAxisId="score" y={60} stroke="#d97706" strokeDasharray="4 4" />
-          <ReferenceLine yAxisId="score" y={80} stroke="#0f766e" strokeDasharray="4 4" />
-          <Line yAxisId="score" type="monotone" dataKey="condition_score" name="Current health" stroke="#d97706" strokeWidth={2.5} dot={false} />
-          <Line yAxisId="score" type="monotone" dataKey="forecast_score" name="Predicted minimum health" stroke="#2563eb" strokeWidth={3} dot={false} />
-          <Line yAxisId="score" type="monotone" dataKey="bhsi" name="BHSI" stroke="#7c3aed" strokeWidth={2} dot={false} />
-          <Line yAxisId="rod" type="monotone" dataKey="rod_points_per_hour" name="RoD" stroke="#dc2626" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="mae" name="MAE" stroke="#2563eb" strokeWidth={3} />
+          <Line type="monotone" dataKey="rmse" name="RMSE" stroke="#dc2626" strokeWidth={2.5} />
+        </LineChart>
+      </ResponsiveContainer>
+    </ChartShell>
+  );
+}
+
+export function ForecastTrajectoryChart({ data, currentScore, exactHorizon = 6 }) {
+  const current = {
+    horizon_hours: 0,
+    score: Number(currentScore || 0),
+    level: 'Current',
+  };
+  const chartData = [current, ...(data || [])];
+  const minimum = Math.min(...chartData.slice(1).map((row) => Number(row.score || 100)));
+  return (
+    <ChartShell data={chartData} height={350} message="Forecast trajectory is unavailable.">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={chartData} margin={{ top: 12, right: 28, left: 8, bottom: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="horizon_hours" tickFormatter={(value) => value === 0 ? 'Now' : `+${value} h`} />
+          <YAxis domain={[0, 100]} />
+          <Tooltip labelFormatter={(value) => value === 0 ? 'Current observation' : `Forecast +${value} hours`} formatter={(value) => `${Number(value).toFixed(1)} / 100`} />
+          <Legend />
+          <ReferenceLine y={40} stroke="#dc2626" strokeDasharray="4 4" />
+          <ReferenceLine y={60} stroke="#d97706" strokeDasharray="4 4" />
+          <ReferenceLine y={80} stroke="#0f766e" strokeDasharray="4 4" />
+          <ReferenceLine x={exactHorizon} stroke="#2563eb" strokeDasharray="5 5" label={{ value: `Exact +${exactHorizon} h`, position: 'insideTopRight' }} />
+          <ReferenceLine y={minimum} stroke="#7c3aed" strokeDasharray="3 3" label={{ value: `Safety minimum ${minimum.toFixed(1)}`, position: 'insideBottomRight' }} />
+          <Line type="monotone" dataKey="score" name="Predicted Brood Health Score" stroke="#2563eb" strokeWidth={3.2} dot={{ r: 5 }} activeDot={{ r: 7 }} />
         </LineChart>
       </ResponsiveContainer>
     </ChartShell>

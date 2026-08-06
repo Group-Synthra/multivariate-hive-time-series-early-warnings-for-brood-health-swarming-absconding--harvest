@@ -10,10 +10,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import joblib
 
 from .analyzer import HEALTH_LEVELS, compute_condition_history
 from .config import PATHS
 from .features import SENSORS, TARGET_COLUMN, normalise_historical
+from .scoring import BroodHealthScoreConfig, score_definition
 
 SENSOR_META = {
     "temperature_c": {"label": "Temperature", "unit": "°C"},
@@ -418,13 +420,47 @@ def _save_report_images(payload: dict[str, Any], frame: pd.DataFrame, directory:
     return images
 
 
+def _active_score_config() -> BroodHealthScoreConfig:
+    """Use calibrated weights when the v4 model exists; otherwise use the prior."""
+
+    if PATHS.model_bundle.exists():
+        try:
+            bundle = joblib.load(PATHS.model_bundle)
+            return BroodHealthScoreConfig.from_dict(bundle.get("score_config"))
+        except Exception:
+            pass
+    return BroodHealthScoreConfig()
+
+
+def _component_summary(frame: pd.DataFrame) -> list[dict[str, Any]]:
+    columns = (
+        ("temperature_component", "Temperature suitability"),
+        ("humidity_component", "Humidity suitability"),
+        ("co2_component", "CO₂ suitability"),
+        ("weight_component", "Relative weight stability"),
+    )
+    return [
+        {
+            "component": column,
+            "label": label,
+            "mean": _finite(frame[column].mean()),
+            "std": _finite(frame[column].std(ddof=0)),
+            "median": _finite(frame[column].median()),
+            "minimum": _finite(frame[column].min()),
+            "maximum": _finite(frame[column].max()),
+        }
+        for column, label in columns
+    ]
+
+
 def build_brood_eda(*, data_path: Path | None = None, save_cache: bool = True) -> dict[str, Any]:
     frame = _load_source(data_path)
     if TARGET_COLUMN not in frame.columns:
         raise ValueError(f"The brood-health EDA source does not contain {TARGET_COLUMN}")
     frame = frame.dropna(subset=[TARGET_COLUMN]).copy()
     frame[TARGET_COLUMN] = frame[TARGET_COLUMN].astype(int)
-    frame = compute_condition_history(frame)
+    score_config = _active_score_config()
+    frame = compute_condition_history(frame, score_config=score_config)
 
     healthy_count = int(frame[TARGET_COLUMN].sum())
     total = len(frame)
@@ -443,7 +479,7 @@ def build_brood_eda(*, data_path: Path | None = None, save_cache: bool = True) -
             "unhealthy_count": unhealthy_count,
             "healthy_rate": float(healthy_count / max(total, 1) * 100.0),
             "unhealthy_rate": float(unhealthy_count / max(total, 1) * 100.0),
-            "condition_score_note": "The 0–100 condition score is a transparent sensor-derived research index and is not used as observed medical ground truth.",
+            "condition_score_note": "The 1–100 condition score is a transparent sensor-derived research index. The historical binary status is used for EDA and training-only weight calibration, never as a forecasting feature.",
         },
         "class_balance": [
             {"label": "Healthy", "target_value": 1, "count": healthy_count, "percentage": float(healthy_count / max(total, 1) * 100.0)},
@@ -458,15 +494,17 @@ def build_brood_eda(*, data_path: Path | None = None, save_cache: bool = True) -
         "data_quality": _data_quality(frame),
         "correlation": _correlation(frame),
         "condition_level_balance": _condition_level_balance(frame),
+        "score_component_summary": _component_summary(frame),
+        "score_definition": score_definition(score_config),
         "scatter_sample": _scatter_sample(frame),
         "health_level_definitions": list(HEALTH_LEVELS),
         "methodology": {
-            "split_rule": "Per-hive chronological 70/15/15 split with a 72-hour boundary gap.",
+            "split_rule": "Complete-hive 60/20/20 train, validation and test holdout. Score weights are calibrated on training hives only.",
             "forecast_horizon_hours": 6,
             "leakage_controls": [
                 "No random row shuffle.",
                 "Features use current and past sensor observations only.",
-                "A sample is excluded when its future target crosses a split boundary.",
+                "The primary model target is the exact score at +6 hours; the predicted minimum inside the trajectory is secondary.",
                 "Target labels are never used as model input features.",
             ],
         },
