@@ -45,6 +45,11 @@ const TIME_RANGES = [
   { label: "7D", minutes: 10080 },
 ];
 
+const RISK_TIME_RANGES = [
+  { label: "30M", minutes: 30 },
+  ...TIME_RANGES,
+];
+
 const TREND_SENSORS = [
   { key: "internal_temperature_c", label: "Internal Temperature", unit: "°C", color: "#ef4444", icon: "🌡️" },
   { key: "internal_humidity_pct", label: "Internal Humidity", unit: "%", color: "#2563eb", icon: "💧" },
@@ -93,7 +98,7 @@ function RiskGauge({ percentage, riskLevel, label }) {
             color: cfg.color, fontFamily: "'Outfit', sans-serif",
             animation: isHigh ? "pulseNumber 1.4s ease-in-out infinite" : "none",
           }}>
-            {percentage.toFixed(1)}
+            {Number(percentage ?? 0).toFixed(2)}
           </span>
           <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>%</span>
         </div>
@@ -1323,45 +1328,53 @@ function ForecastRiskTimeline({ forecast, currentProbability }) {
 
 // ─── Swarming Risk Timeline Chart ───────────────────────────────────────
 
-function SwarmingRiskTimeline({ readings, currentProbability, riskLevel }) {
+function SwarmingRiskTimeline({ history, currentRisk, riskLevel }) {
   const [activeRange, setActiveRange] = useState("6H");
 
   const chartData = useMemo(() => {
-    if (!readings || readings.length === 0) return [];
+    if (!Array.isArray(history) || history.length === 0) return [];
 
-    const rangeObj = TIME_RANGES.find((r) => r.label === activeRange) || TIME_RANGES[1];
+    const rangeObj = RISK_TIME_RANGES.find((r) => r.label === activeRange) || RISK_TIME_RANGES[2];
     const cutoffMs = rangeObj.minutes * 60 * 1000;
-    const now = Date.now();
+    const ordered = [...history]
+      .map((item) => ({
+        ...item,
+        timestampMs: new Date(item.predicted_at).getTime(),
+      }))
+      .filter((item) => Number.isFinite(item.timestampMs))
+      .sort((a, b) => a.timestampMs - b.timestampMs);
 
-    const chron = [...readings].reverse();
-    const filtered = chron.filter((r) => {
-      const ts = r.reading_at || r.recorded_at;
-      if (!ts) return false;
-      return now - new Date(ts).getTime() <= cutoffMs;
-    });
+    if (ordered.length === 0) return [];
+    const latestTimestamp = ordered[ordered.length - 1].timestampMs;
+    const filtered = ordered.filter(
+      (item) => latestTimestamp - item.timestampMs <= cutoffMs
+    );
 
     const step = Math.max(1, Math.floor(filtered.length / 120));
     const sampled = filtered.filter((_, i) => i % step === 0);
 
-    return sampled.map((r) => {
-      const ts = r.reading_at || r.recorded_at;
-      const date = ts ? new Date(ts) : new Date();
+    return sampled.map((item) => {
+      const date = new Date(item.timestampMs);
       const label = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      const prob = r.probability != null ? r.probability * 100 : null;
-      return { time: label, probability: prob, fullTs: date.getTime() };
+      return {
+        time: label,
+        probability: Number(item.combined_risk_percentage),
+        lstmRisk: Number(item.lstm_risk_percentage),
+        peltRisk: Number(item.pelt_risk_percentage),
+        fullTs: item.timestampMs,
+      };
     });
-  }, [readings, activeRange]);
+  }, [history, activeRange]);
 
   const displayData = useMemo(() => {
-    if (chartData.length === 0) return [];
-    const hasRealProb = chartData.some((d) => d.probability !== null);
-    if (hasRealProb) return chartData;
-    const prob = currentProbability ?? 0;
-    return chartData.map((d, i) => ({
-      ...d,
-      probability: i === chartData.length - 1 ? prob : prob * (0.92 + Math.random() * 0.08),
-    }));
-  }, [chartData, currentProbability]);
+    if (chartData.length > 0) return chartData;
+    if (currentRisk == null) return [];
+    return [{
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      probability: Number(currentRisk),
+      fullTs: Date.now(),
+    }];
+  }, [chartData, currentRisk]);
 
   const lineColor = riskLevel === "HIGH" ? "#ef4444" : riskLevel === "MEDIUM" ? "#eab308" : "#22c55e";
   const gradientId = "swarmGrad";
@@ -1532,7 +1545,7 @@ function SwarmingRiskTimeline({ readings, currentProbability, riskLevel }) {
       )}
 
       <div style={{ display: "flex", gap: "6px", justifyContent: "center", marginTop: "12px" }}>
-        {TIME_RANGES.map(({ label }) => {
+        {RISK_TIME_RANGES.map(({ label }) => {
           const isActive = activeRange === label;
           return (
             <button
@@ -1577,6 +1590,7 @@ const SwarmPrediction = () => {
   const [connStatus, setConnStatus] = useState("loading");
   const [modelHealth, setModelHealth] = useState(null);
   const [readingsCache, setReadingsCache] = useState([]);
+  const [riskHistory, setRiskHistory] = useState([]);
   const [dataTimestamp, setDataTimestamp] = useState(null);
   const [peltHistory, setPeltHistory] = useState([]);
 
@@ -1630,6 +1644,22 @@ const SwarmPrediction = () => {
       
       if (data.readings) {
         setReadingsCache(data.readings);
+      }
+
+      // Load genuine stored risks. These values replace the previous
+      // Math.random()-generated timeline.
+      try {
+        const historyResponse = await fetch(
+          `${API_BASE}/api/swarming/risk-history?device_id=${encodeURIComponent(hive)}&minutes=10080&limit=5000`
+        );
+        if (historyResponse.ok) {
+          const historyData = await historyResponse.json();
+          setRiskHistory(Array.isArray(historyData.history) ? historyData.history : []);
+        } else {
+          setRiskHistory([]);
+        }
+      } catch {
+        setRiskHistory([]);
       }
       
       // ── FIX: Store PELT history - ALWAYS store breakpoint entries ──
@@ -1762,6 +1792,7 @@ const SwarmPrediction = () => {
   const handleHiveChange = (h) => {
     setSelectedHive(h);
     setReadingsCache([]);
+    setRiskHistory([]);
     setDataTimestamp(null);
     setPeltHistory([]);
     setCountdown(REFRESH_INTERVAL / 1000);
@@ -1973,7 +2004,7 @@ const SwarmPrediction = () => {
                 </span>
               )}
               <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginLeft: "auto" }}>
-                Real-time from Supabase · read-only
+                {/* Real-time from Supabase · read-only */}
               </span>
             </div>
 
@@ -2050,8 +2081,8 @@ const SwarmPrediction = () => {
             {/* Swarming Risk Timeline - Left Column */}
             <div style={{ animation: "fadeSlide 0.4s ease-out" }}>
               <SwarmingRiskTimeline
-                readings={readingsCache}
-                currentProbability={result ? result.probability * 100 : 0}
+                history={riskHistory}
+                currentRisk={result ? Number(result.risk_percentage) : 0}
                 riskLevel={riskLevel}
               />
             </div>
@@ -2061,7 +2092,7 @@ const SwarmPrediction = () => {
               <div style={{ animation: "fadeSlide 0.4s ease-out" }}>
                 <ForecastRiskTimeline
                   forecast={forecast}
-                  currentProbability={result ? result.probability * 100 : 0}
+                  currentProbability={result ? Number(result.risk_percentage) : 0}
                 />
               </div>
             )}
@@ -2129,7 +2160,7 @@ const SwarmPrediction = () => {
             {showPrediction && (
               <>
                 <RiskGauge
-                  percentage={result.risk_percentage}
+                  percentage={Number(result.risk_percentage ?? 0)}
                   riskLevel={riskLevel}
                   label="Current Swarming Risk"
                 />
@@ -2140,7 +2171,11 @@ const SwarmPrediction = () => {
                   display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px",
                 }}>
                   {[
-                    { label: "Swarming Probability", value: `${(result.probability * 100).toFixed(2)}%`, color: riskCfg.color },
+                 {
+                  label: "Swarming Risk",
+                  value: `${Number(result.risk_percentage ?? 0).toFixed(2)}%`,
+                  color: riskCfg.color,
+                },
                     { label: "Risk Level", value: result.risk_level, color: riskCfg.color },
                     { label: "Predicted Class", value: result.predicted_class, color: result.predicted_class === "Swarming" ? "#ef4444" : "#22c55e" },
                     { label: "Decision Threshold", value: result.threshold_used, color: "var(--text-secondary)" },
@@ -2163,19 +2198,10 @@ const SwarmPrediction = () => {
                 </div>
 
                 <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-  🕒{" "}
-  {result?.timestamp
-    ? new Date(result.timestamp).toLocaleString("en-GB", {
-        timeZone: "Asia/Colombo",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      })
-    : "Not available"}
+  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+  {/* 🕒{" "}
+  {formatTimestamp(dataTimestamp)} */}
+</div>
 </div>
               </>
             )}

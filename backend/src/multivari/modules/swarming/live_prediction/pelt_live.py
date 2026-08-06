@@ -1,23 +1,8 @@
-"""
-=========================================================
-Live Prediction — PELT Feature Generator
-=========================================================
+"""Create hourly live PELT features for the swarming LSTM.
 
-Responsibility:
-  Given the latest 24 sensor readings, reproduce the exact
-  PELT feature engineering applied during training:
-    - breakpoint
-    - days_since_breakpoint
-    - breakpoint_density (rolling-24 window)
-    - segment_duration
-
-Input:
-  readings : list of 24 dicts, each containing the 8 sensor keys
-
-Output:
-  pd.DataFrame with all 12 feature columns (sensor + PELT),
-  in the exact order defined by FEATURE_COLUMNS.
-=========================================================
+Raw IoT readings are resampled to one-hour averages.  The latest 24 hourly
+rows are converted into the eight sensor plus four PELT features used by the
+saved model, producing a DataFrame with shape ``(24, 12)``.
 """
 
 import numpy as np
@@ -26,17 +11,14 @@ import ruptures as rpt
 from sklearn.preprocessing import StandardScaler
 
 from .config import (
+    FEATURE_COLUMNS,
     PELT_COLUMNS,
     PELT_MODEL,
     PELT_PEN,
     SEQUENCE_LENGTH,
-    FEATURE_COLUMNS,
 )
 
 
-# -------------------------------------------------------
-# Sensor columns (the 8 raw sensor features)
-# -------------------------------------------------------
 SENSOR_COLUMNS = [
     "internal_temperature_c",
     "internal_humidity_pct",
@@ -48,136 +30,159 @@ SENSOR_COLUMNS = [
     "wind_speed_mps",
 ]
 
+# ``reading_at`` is the field used by the current IoT API.
+TIMESTAMP_CANDIDATES = [
+    "reading_at",
+    "recorded_at",
+    "timestamp",
+    "created_at",
+    "reading_time",
+    "time",
+    "datetime",
+]
+
 
 def _validate_readings(readings: list) -> None:
-    """Raise ValueError with a clear message if readings are invalid."""
+    """Validate the general structure of the received readings."""
     if not isinstance(readings, list):
-        raise ValueError("readings must be a list of dicts.")
+        raise ValueError("readings must be a list of dictionaries.")
+    if not readings:
+        raise ValueError("No IoT readings were provided.")
+    for index, reading in enumerate(readings):
+        if not isinstance(reading, dict):
+            raise ValueError(f"Reading at index {index} must be a dictionary.")
 
-    if len(readings) < SEQUENCE_LENGTH:
-        raise ValueError(
-            f"At least {SEQUENCE_LENGTH} readings required. "
-            f"Got {len(readings)}."
-        )
 
-    required_keys = set(SENSOR_COLUMNS)
-    for i, row in enumerate(readings[-SEQUENCE_LENGTH:]):
-        missing = required_keys - set(row.keys())
-        if missing:
-            raise ValueError(
-                f"Reading at index {i} is missing keys: {missing}"
-            )
+def _find_timestamp_column(df: pd.DataFrame) -> str:
+    """Return the original name of the first recognized timestamp column."""
+    normalized = {
+        str(column).strip().lower(): column for column in df.columns
+    }
+    for candidate in TIMESTAMP_CANDIDATES:
+        if candidate in normalized:
+            return normalized[candidate]
+
+    raise ValueError(
+        "No timestamp column was found in the IoT readings. "
+        f"Received columns: {list(df.columns)}. "
+        f"Expected one of: {TIMESTAMP_CANDIDATES}. "
+        "Ensure routes.py includes reading_at when building readings_for_lstm."
+    )
+
+
+def _validate_sensor_columns(df: pd.DataFrame) -> None:
+    """Ensure all model sensor columns are present."""
+    missing = [column for column in SENSOR_COLUMNS if column not in df.columns]
+    if missing:
+        raise ValueError(f"IoT readings are missing sensor columns: {missing}")
 
 
 def _fill_missing_numeric(df: pd.DataFrame, columns: list) -> pd.DataFrame:
-    """Forward-fill → backward-fill → column mean for NaN values."""
-    df[columns] = df[columns].ffill()
-    df[columns] = df[columns].bfill()
-    # If still NaN (all-NaN column), fill with 0
-    df[columns] = df[columns].fillna(0.0)
+    """Interpolate time gaps, then forward/backward fill remaining values."""
+    df = df.copy()
+    df[columns] = df[columns].interpolate(
+        method="time", limit_direction="both"
+    )
+    df[columns] = df[columns].ffill().bfill().fillna(0.0)
     return df
 
 
+def _resample_to_hourly(readings: list) -> pd.DataFrame:
+    """Convert raw IoT readings to the latest 24 hourly sensor averages."""
+    df = pd.DataFrame(readings)
+    timestamp_column = _find_timestamp_column(df)
+    _validate_sensor_columns(df)
+
+    if timestamp_column != "timestamp":
+        df = df.rename(columns={timestamp_column: "timestamp"})
+
+    df["timestamp"] = pd.to_datetime(
+        df["timestamp"], errors="coerce", utc=True
+    )
+    df = df.dropna(subset=["timestamp"]).sort_values("timestamp")
+    if df.empty:
+        raise ValueError("No IoT reading contains a valid timestamp.")
+
+    for column in SENSOR_COLUMNS:
+        df[column] = pd.to_numeric(df[column], errors="coerce")
+
+    hourly = (
+        df.set_index("timestamp")[SENSOR_COLUMNS]
+        .resample("1h")
+        .mean()
+    )
+    hourly = _fill_missing_numeric(hourly, SENSOR_COLUMNS)
+    hourly = hourly.tail(SEQUENCE_LENGTH)
+
+    if len(hourly) < SEQUENCE_LENGTH:
+        raise ValueError(
+            f"At least {SEQUENCE_LENGTH} hours are required after resampling, "
+            f"but only {len(hourly)} hourly records are available. For "
+            "10-minute data, retrieve at least 144 readings covering 24 hours."
+        )
+    return hourly
+
+
 def generate_pelt_features(readings: list) -> pd.DataFrame:
-    """
-    Generate the four PELT features for the latest 24 readings.
-
-    Parameters
-    ----------
-    readings : list of dict
-        Must contain at least SEQUENCE_LENGTH entries.
-        Each dict must have the 8 sensor keys.
-
-    Returns
-    -------
-    pd.DataFrame
-        Shape (24, 12) — 8 sensor columns + 4 PELT columns,
-        in FEATURE_COLUMNS order.
-    """
+    """Return the latest 24 hourly rows with all 12 model features."""
     _validate_readings(readings)
+    df = _resample_to_hourly(readings)
 
-    # Use only the last 24 readings
-    window = readings[-SEQUENCE_LENGTH:]
+    missing_pelt = [column for column in PELT_COLUMNS if column not in df.columns]
+    if missing_pelt:
+        raise ValueError(f"PELT input columns are missing: {missing_pelt}")
 
-    df = pd.DataFrame(window)
-
-    # Ensure all sensor columns exist and are numeric
-    for col in SENSOR_COLUMNS:
-        if col not in df.columns:
-            df[col] = 0.0
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-
-    df = _fill_missing_numeric(df, SENSOR_COLUMNS)
-
-    # -------------------------------------------------------
-    # Prepare PELT signal  (same as training)
-    # -------------------------------------------------------
-    signal = df[PELT_COLUMNS].values.astype(float)
-
-    # Scale PELT signal in-place (training scaled per-hive)
-    local_scaler = StandardScaler()
-    signal_scaled = local_scaler.fit_transform(signal)
-
-    # -------------------------------------------------------
-    # Run PELT
-    # -------------------------------------------------------
+    signal = df[PELT_COLUMNS].to_numpy(dtype=float)
+    signal_scaled = StandardScaler().fit_transform(signal)
     n = len(signal_scaled)
     change_points = []
 
-    if n >= 10:   # ruptures needs a minimum length
+    if n >= 10:
         algorithm = rpt.Pelt(model=PELT_MODEL, min_size=2, jump=1)
         algorithm.fit(signal_scaled)
-        raw_cp = algorithm.predict(pen=PELT_PEN)
-        # ruptures always appends n as the last element — remove it
-        change_points = [cp for cp in raw_cp if cp < n]
+        change_points = [
+            point for point in algorithm.predict(pen=PELT_PEN) if point < n
+        ]
 
-    # -------------------------------------------------------
-    # Build breakpoint binary array
-    # -------------------------------------------------------
-    breakpoint_array = np.zeros(n, dtype=float)
-    for cp in change_points:
-        if 0 < cp < n:
-            breakpoint_array[cp] = 1.0
+    breakpoints = np.zeros(n, dtype=float)
+    for point in change_points:
+        if 0 < point < n:
+            breakpoints[point] = 1.0
 
-    # -------------------------------------------------------
-    # days_since_breakpoint
-    # -------------------------------------------------------
-    days_since = []
+    # Values below are hourly steps because the input has been resampled hourly.
+    steps_since_breakpoint = []
     last_change = 0
-    for i, val in enumerate(breakpoint_array):
-        if val == 1.0:
-            last_change = i
-        days_since.append(float(i - last_change))
+    for index, value in enumerate(breakpoints):
+        if value == 1.0:
+            last_change = index
+        steps_since_breakpoint.append(float(index - last_change))
 
-    # -------------------------------------------------------
-    # breakpoint_density  (rolling window of 24)
-    # -------------------------------------------------------
     density = (
-        pd.Series(breakpoint_array)
+        pd.Series(breakpoints)
         .rolling(window=SEQUENCE_LENGTH, min_periods=1)
         .sum()
-        .values
+        .to_numpy()
     )
 
-    # -------------------------------------------------------
-    # segment_duration
-    # -------------------------------------------------------
     duration = []
     counter = 0
-    for val in breakpoint_array:
-        if val == 1.0:
+    for value in breakpoints:
+        if value == 1.0:
             counter = 0
         counter += 1
         duration.append(float(counter))
 
-    # -------------------------------------------------------
-    # Assemble result DataFrame
-    # -------------------------------------------------------
-    df["breakpoint"]           = breakpoint_array
-    df["days_since_breakpoint"] = days_since
-    df["breakpoint_density"]   = density
-    df["segment_duration"]     = duration
+    df = df.copy()
+    df["breakpoint"] = breakpoints
+    # Retain this trained feature name; one unit now represents one hour.
+    df["days_since_breakpoint"] = steps_since_breakpoint
+    df["breakpoint_density"] = density
+    df["segment_duration"] = duration
 
-    # Return only the 12 model features in the correct order
     result = df[FEATURE_COLUMNS].copy()
+    expected = (SEQUENCE_LENGTH, len(FEATURE_COLUMNS))
+    if result.shape != expected:
+        raise ValueError(
+            f"Expected feature shape {expected}, but received {result.shape}."
+        )
     return result

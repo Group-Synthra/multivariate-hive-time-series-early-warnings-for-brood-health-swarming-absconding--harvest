@@ -128,6 +128,65 @@ class RiskClassifier:
         """
         p = np.clip(sigmoid_output, 0.0001, 0.9999)
         return np.log(p / (1 - p))
+
+    def calculate_pelt_risk(self, pelt_snapshot: Optional[Dict]) -> Dict:
+        """Convert the latest PELT state into an explicit 0-100 risk score.
+
+        This is a transparent rule-based score, not a separately calibrated
+        probability. The formula must be backtested before its weights are
+        treated as final.
+        """
+        snapshot = pelt_snapshot or {}
+        breakpoint = int(snapshot.get("breakpoint", 0) or 0)
+        density = max(0.0, float(snapshot.get("breakpoint_density", 0) or 0))
+        steps_since = max(0.0, float(snapshot.get("days_since_breakpoint", 0) or 0))
+
+        density_risk = min(100.0, density * 15.0)
+        # Recency is meaningful only when a breakpoint exists in the window.
+        recency_risk = max(0.0, 40.0 - steps_since * 1.5) if density > 0 else 0.0
+        breakpoint_bonus = 15.0 if breakpoint == 1 else 0.0
+        pelt_risk = np.clip(
+            0.50 * density_risk
+            + 0.30 * recency_risk
+            + 0.20 * breakpoint_bonus,
+            0.0,
+            100.0,
+        )
+        return {
+            "pelt_risk_percentage": round(float(pelt_risk), 2),
+            "density_risk": round(float(density_risk), 2),
+            "recency_risk": round(float(recency_risk), 2),
+            "breakpoint_bonus": round(float(breakpoint_bonus), 2),
+        }
+
+    def combine_lstm_and_pelt(
+        self,
+        lstm_probability: float,
+        pelt_snapshot: Optional[Dict],
+        lstm_weight: float = 0.70,
+        pelt_weight: float = 0.30,
+    ) -> Dict:
+        """Combine LSTM probability and explicit PELT score consistently."""
+        if not np.isclose(lstm_weight + pelt_weight, 1.0):
+            raise ValueError("LSTM and PELT weights must add up to 1.0.")
+
+        lstm_risk = float(np.clip(lstm_probability, 0.0, 1.0) * 100.0)
+        pelt_details = self.calculate_pelt_risk(pelt_snapshot)
+        pelt_risk = pelt_details["pelt_risk_percentage"]
+        combined_risk = float(np.clip(
+            lstm_weight * lstm_risk + pelt_weight * pelt_risk,
+            0.0,
+            100.0,
+        ))
+        return {
+            "lstm_risk_percentage": round(lstm_risk, 2),
+            **pelt_details,
+            "risk_percentage": round(combined_risk, 2),
+            "combined_probability": round(combined_risk / 100.0, 6),
+            "lstm_weight": lstm_weight,
+            "pelt_weight": pelt_weight,
+            "formula": "0.70 × LSTM risk + 0.30 × explicit PELT risk",
+        }
     
     def classify_from_probability(self, probability: float) -> Dict:
         """
