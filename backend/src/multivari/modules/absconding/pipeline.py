@@ -298,6 +298,18 @@ def run_absconding_pipeline(
         medium_threshold=medium_threshold,
     )
 
+    # Train a second, independent classifier for the colony condition at the
+    # current timestamp.  The existing model remains the next-24-hour forecast
+    # model.  Keeping the two targets and saved bundles separate prevents the
+    # dashboard from presenting the same probability as both current risk and
+    # future risk.
+    current_state_training = _train_current_state_model(
+        split_frames=split_frames,
+        feature_names=feature_names,
+        settings=settings,
+        paths=paths,
+    )
+
     exploratory = _build_exploratory_payload(prepared, episodes, settings)
     model_bundle = {
         "module": "absconding",
@@ -346,6 +358,9 @@ def run_absconding_pipeline(
             "selected_model_name": selected.display_name,
             "selected_model_family": selected.family,
             "active_backend_model": selected.display_name,
+            "forecast_model_name": selected.display_name,
+            "current_state_model_status": current_state_training.get("status"),
+            "current_state_model_name": current_state_training.get("model_name"),
             "prediction_horizon_hours": settings.prediction_horizon_hours,
             "minimum_history_hours": settings.minimum_history_hours,
             "source_active_event_rows": int(
@@ -384,6 +399,7 @@ def run_absconding_pipeline(
             "test_event_details": test_event_details,
             "feature_importance": importances[:25],
             "features_used": feature_names,
+            "current_state_model": current_state_training,
             "selection_rule": (
                 "Model selection uses validation PR-AUC, F2, precision, and event recall. "
                 "The alert threshold is chosen only on validation data and then frozen for test evaluation."
@@ -465,6 +481,221 @@ def run_absconding_pipeline(
     )
     return dashboard
 
+
+
+def _train_current_state_model(
+    *,
+    split_frames: dict[str, pd.DataFrame],
+    feature_names: list[str],
+    settings: AbscondingSettings,
+    paths: AbscondingPaths,
+) -> dict[str, Any]:
+    """Train a classifier for whether Absconding is active at the current row.
+
+    This target is intentionally different from ``settings.target_column``, which
+    represents an onset during the next forecast horizon.  The two estimators are
+    saved separately and are never substituted for one another.
+    """
+    target_column = settings.active_event_column
+    model_path = paths.model_directory / "absconding_current_state_model_bundle.joblib"
+
+    try:
+        for split, frame in split_frames.items():
+            if target_column not in frame:
+                raise ValueError(
+                    f"Current-state target column '{target_column}' is missing from {split}."
+                )
+            classes = set(pd.to_numeric(frame[target_column], errors="coerce").dropna().astype(int))
+            if classes != {0, 1}:
+                raise ValueError(
+                    f"Current-state {split} split does not contain both classes: {sorted(classes)}."
+                )
+
+        X_train = split_frames["train"][feature_names]
+        y_train = split_frames["train"][target_column].to_numpy(dtype=int)
+        X_validation = split_frames["validation"][feature_names]
+        y_validation = split_frames["validation"][target_column].to_numpy(dtype=int)
+        X_test = split_frames["test"][feature_names]
+        y_test = split_frames["test"][target_column].to_numpy(dtype=int)
+
+        X_comparison, y_comparison = stratified_training_sample(
+            X_train,
+            y_train,
+            maximum_rows=settings.comparison_training_rows,
+            random_state=settings.random_state + 101,
+        )
+
+        comparison: list[dict[str, Any]] = []
+        for key in settings.model_candidates:
+            try:
+                candidate = fit_candidate(
+                    build_candidate(key, settings), X_comparison, y_comparison
+                )
+                probability = positive_probability(candidate.estimator, X_validation)
+                threshold = choose_alert_threshold(
+                    y_validation,
+                    probability,
+                    beta=settings.threshold_beta,
+                    maximum_alert_fraction=settings.maximum_validation_alert_fraction,
+                )
+                metrics = classification_metrics(
+                    y_validation, probability, float(threshold["threshold"])
+                )
+                score = _current_state_selection_score(metrics)
+                if not threshold.get("constraint_satisfied", True):
+                    alert_fraction = max(float(threshold.get("alert_fraction", 0.0)), 1e-12)
+                    score *= min(
+                        1.0,
+                        settings.maximum_validation_alert_fraction / alert_fraction,
+                    )
+                comparison.append(
+                    {
+                        "model_key": key,
+                        "model_name": candidate.display_name,
+                        "model_family": candidate.family,
+                        "status": "completed",
+                        "selection_score": round(float(score), 8),
+                        "threshold_selection": _json_ready(threshold),
+                        "validation_metrics": metrics,
+                        "comparison_training_records": len(X_comparison),
+                    }
+                )
+            except Exception as error:
+                LOGGER.exception("Current-state candidate '%s' failed.", key)
+                comparison.append(
+                    {
+                        "model_key": key,
+                        "model_name": key.replace("_", " ").title(),
+                        "model_family": "Unavailable",
+                        "status": "failed",
+                        "selection_score": -1.0,
+                        "validation_metrics": {},
+                        "error": str(error),
+                    }
+                )
+
+        successful = [row for row in comparison if row.get("status") == "completed"]
+        if not successful:
+            raise RuntimeError("Every current-state model candidate failed.")
+        eligible = [row for row in successful if row["model_key"] != "dummy_prior"] or successful
+        selected_row = max(
+            eligible,
+            key=lambda row: (
+                row.get("selection_score", -1.0),
+                row.get("validation_metrics", {}).get("pr_auc") or 0.0,
+                row.get("validation_metrics", {}).get("f2") or 0.0,
+            ),
+        )
+        selected_key = str(selected_row["model_key"])
+
+        X_final, y_final = stratified_training_sample(
+            X_train,
+            y_train,
+            maximum_rows=settings.final_training_rows,
+            random_state=settings.random_state + 102,
+        )
+        selected = fit_candidate(build_candidate(selected_key, settings), X_final, y_final)
+        validation_probability = positive_probability(selected.estimator, X_validation)
+        selected_threshold = choose_alert_threshold(
+            y_validation,
+            validation_probability,
+            beta=settings.threshold_beta,
+            maximum_alert_fraction=settings.maximum_validation_alert_fraction,
+        )
+        high_threshold = float(selected_threshold["threshold"])
+        medium_threshold = min(
+            high_threshold,
+            max(0.0, high_threshold * settings.medium_threshold_ratio),
+        )
+        validation_metrics = classification_metrics(
+            y_validation, validation_probability, high_threshold
+        )
+        test_probability = positive_probability(selected.estimator, X_test)
+        test_metrics = classification_metrics(y_test, test_probability, high_threshold)
+
+        bundle = {
+            "module": "absconding",
+            "output_kind": "current_state",
+            "target_column": target_column,
+            "target_definition": "1 when Absconding is active at the current timestamp; otherwise 0.",
+            "model_key": selected_key,
+            "model_name": selected.display_name,
+            "model_family": selected.family,
+            "estimator": selected.estimator,
+            "feature_names": feature_names,
+            "settings": settings.to_dict(),
+            "alert_threshold": high_threshold,
+            "medium_threshold": medium_threshold,
+            "minimum_history_hours": settings.minimum_history_hours,
+            "training_frequency": "1 hour",
+        }
+        joblib.dump(bundle, model_path)
+
+        comparison_path = paths.metrics_directory / "current_state_model_comparison.json"
+        comparison_path.write_text(
+            json.dumps(_json_ready(comparison), indent=2), encoding="utf-8"
+        )
+        pd.json_normalize(comparison).to_csv(
+            paths.metrics_directory / "current_state_model_comparison.csv", index=False
+        )
+        result = {
+            "status": "completed",
+            "target_column": target_column,
+            "target_definition": bundle["target_definition"],
+            "model_key": selected_key,
+            "model_name": selected.display_name,
+            "model_family": selected.family,
+            "model_path": str(model_path.relative_to(paths.backend_root)),
+            "training_records": len(X_final),
+            "validation_records": len(X_validation),
+            "test_records": len(X_test),
+            "positive_training_rows": int(y_train.sum()),
+            "validation_metrics": validation_metrics,
+            "test_metrics": test_metrics,
+            "medium_threshold": round(medium_threshold, 8),
+            "high_threshold": round(high_threshold, 8),
+            "model_comparison": sorted(
+                comparison, key=lambda row: row.get("selection_score", -1.0), reverse=True
+            ),
+            "interpretation": (
+                "This probability estimates whether the current sensor pattern is associated "
+                "with an active Absconding condition. It is separate from the next-24-hour forecast."
+            ),
+        }
+        (paths.metrics_directory / "current_state_model_metrics.json").write_text(
+            json.dumps(_json_ready(result), indent=2), encoding="utf-8"
+        )
+        return result
+    except Exception as error:
+        LOGGER.exception("Current-state model training was not completed.")
+        # Remove a stale model so live inference cannot silently present an old
+        # current-state score after a failed retraining run.
+        model_path.unlink(missing_ok=True)
+        return {
+            "status": "unavailable",
+            "target_column": target_column,
+            "reason": str(error),
+            "interpretation": (
+                "The next-24-hour forecast remains available. Current-state probability is "
+                "withheld until every chronological split contains labelled active and inactive rows."
+            ),
+        }
+
+
+def _current_state_selection_score(metrics: dict[str, Any]) -> float:
+    """Rare-event model score for the current-state classifier."""
+    pr_auc = float(metrics.get("pr_auc") or 0.0)
+    f2 = float(metrics.get("f2") or 0.0)
+    balanced_accuracy = float(metrics.get("balanced_accuracy") or 0.0)
+    recall = float(metrics.get("recall") or 0.0)
+    precision = float(metrics.get("precision") or 0.0)
+    return (
+        0.40 * pr_auc
+        + 0.25 * f2
+        + 0.15 * balanced_accuracy
+        + 0.15 * recall
+        + 0.05 * precision
+    )
 
 def prepare_absconding_dataset(
     clean: pd.DataFrame,

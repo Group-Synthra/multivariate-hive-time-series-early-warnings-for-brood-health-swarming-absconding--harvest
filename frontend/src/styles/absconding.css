@@ -3688,3 +3688,18 @@
     display: none;
   }
 }
+/* Separate current-state output label added by the dual-output implementation. */
+.iot-current-output-label {
+  display: inline-flex;
+  width: fit-content;
+  margin: -0.2rem 0 0.2rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--accent-cyan);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

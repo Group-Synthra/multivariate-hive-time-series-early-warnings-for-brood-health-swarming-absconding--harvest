@@ -62,7 +62,7 @@ function trendFromChange(changePercentagePoints) {
 
 function adaptiveRiskDomain(rows) {
   const values = (rows || [])
-    .map((row) => Number(row.risk))
+    .flatMap((row) => [Number(row.risk), Number(row.currentRisk)])
     .filter((value) => Number.isFinite(value));
   if (!values.length) return [0, 5];
 
@@ -253,8 +253,13 @@ function makeChartRows(timeline, hours) {
   return rangeFilter(timeline || [], hours).map((row) => ({
     time: timeLabel(row.timestamp),
     fullTime: dateTime(row.timestamp),
-    risk: getNum(row.risk_percentage, getNum(row.risk_probability) * 100),
+    risk: getNum(
+      row.forecast_percentage,
+      getNum(row.risk_percentage, getNum(row.risk_probability) * 100),
+    ),
+    currentRisk: getOptionalNum(row.current_state_percentage),
     arm: getNum(row.arm) * 100,
+    currentArm: getNum(row.current_state_arm) * 100,
     temp: getNum(row.temperature_c),
     humidity: getNum(row.humidity_pct),
     co2: getNum(row.co2_ppm),
@@ -270,7 +275,7 @@ function DashboardTooltip({ active, payload, label }) {
       <strong>{payload[0]?.payload?.fullTime || label}</strong>
       {payload.map((entry) => (
         <p key={entry.dataKey} style={{ color: entry.color }}>
-          {entry.name}: {Number(entry.value).toFixed(entry.dataKey === 'risk' ? 3 : 2)}{entry.unit || ''}
+          {entry.name}: {Number(entry.value).toFixed(['risk', 'currentRisk'].includes(entry.dataKey) ? 3 : 2)}{entry.unit || ''}
         </p>
       ))}
     </div>
@@ -435,15 +440,19 @@ export default function AbscondingLiveDashboard({
   const zoomedRiskDomain = useMemo(() => adaptiveRiskDomain(riskRows), [riskRows]);
   const armMiniRows = useMemo(() => {
     const rows = riskRows.slice(-8);
-    const values = rows.map((row) => row.risk).filter(Number.isFinite);
+    const values = rows
+      .map((row) => (Number.isFinite(row.currentRisk) ? row.currentRisk : null))
+      .filter(Number.isFinite);
     const min = values.length ? Math.min(...values) : 0;
     const max = values.length ? Math.max(...values) : 0;
     const spread = Math.max(max - min, 0.001);
-    return rows.map((row, index) => ({
-      ...row,
-      left: rows.length <= 1 ? 0 : (index / (rows.length - 1)) * 100,
-      top: 78 - ((row.risk - min) / spread) * 42,
-    }));
+    return rows
+      .filter((row) => Number.isFinite(row.currentRisk))
+      .map((row, index, currentRows) => ({
+        ...row,
+        left: currentRows.length <= 1 ? 0 : (index / (currentRows.length - 1)) * 100,
+        top: 78 - ((row.currentRisk - min) / spread) * 42,
+      }));
   }, [riskRows]);
 
   if (iotLiveError && !iotLiveData) {
@@ -465,48 +474,93 @@ export default function AbscondingLiveDashboard({
   }
 
   const latest = iotLiveData.latest_sensor_readings || {};
-  const notification = iotLiveData.notification || {};
+  const forecast = iotLiveData.forecast_24h || iotLiveData;
+  const currentState = iotLiveData.current_state || {};
+  const forecastNotification = iotLiveData.early_warning
+    || forecast.notification
+    || iotLiveData.notification
+    || {};
+  const currentNotification = iotLiveData.current_state_notification || {};
   const monitor = iotLiveData.backend_iot_monitor || {};
   const source = iotLiveData.data_source || {};
   const interval = getNum(iotLiveData.sampling_interval_minutes, 10);
   const lastUpdated = iotLiveData.last_updated;
   const nextExpected = iotLiveData.next_expected_reading || addMinutes(lastUpdated, interval);
-  const riskProbability = getNum(iotLiveData.risk_probability, getNum(iotLiveData.risk_percentage) / 100);
-  const riskPercentage = clamp(getNum(iotLiveData.risk_percentage, riskProbability * 100));
-  const comparisonHours = Math.max(1, getNum(iotLiveData.comparison_hours, 24));
-  const responsePreviousProbability = getOptionalNum(iotLiveData.previous_probability);
-  const previousProbability = responsePreviousProbability ?? (
-    Number.isFinite(riskProbability) && getOptionalNum(iotLiveData.arm) !== null
-      ? riskProbability - getNum(iotLiveData.arm, 0)
-      : null
+
+  // Future-event forecast: probability that an onset will occur during the next 24 hours.
+  const forecastProbability = getNum(
+    forecast.probability,
+    getNum(forecast.risk_probability, getNum(forecast.risk_percentage) / 100),
   );
-  const responsePreviousPercentage = getOptionalNum(iotLiveData.previous_probability_percent);
-  const previousPercentage = responsePreviousPercentage
-    ?? (previousProbability !== null ? previousProbability * 100 : null);
-  const responseChangePercentagePoints = getOptionalNum(
-    iotLiveData.probability_change_percentage_points,
+  const forecastRiskPercentage = clamp(getNum(
+    forecast.probability_percent,
+    getNum(forecast.risk_percentage, forecastProbability * 100),
+  ));
+  const forecastPreviousProbability = getOptionalNum(forecast.previous_probability);
+  const forecastPreviousPercentage = getOptionalNum(forecast.previous_probability_percent)
+    ?? (forecastPreviousProbability !== null ? forecastPreviousProbability * 100 : null);
+  const forecastChangePercentagePoints = getOptionalNum(
+    forecast.probability_change_percentage_points,
+  ) ?? (forecastPreviousPercentage !== null
+    ? forecastRiskPercentage - forecastPreviousPercentage
+    : null);
+  const forecastRiskLevel = forecast.risk_level
+    || (forecastRiskPercentage > 70 ? 'High' : forecastRiskPercentage > 35 ? 'Medium' : 'Low');
+  const forecastColor = riskColor(forecastRiskLevel);
+  const forecastArmTrend = forecast.arm_trend
+    || trendFromChange(forecastChangePercentagePoints);
+  const forecastThresholds = forecast.thresholds || iotLiveData.thresholds || {};
+  const forecastMediumThreshold = getNum(forecastThresholds.medium_percentage, 35);
+  const forecastHighThreshold = getNum(forecastThresholds.high_percentage, 70);
+  const forecastModelName = forecast.model_name
+    || iotLiveData.active_model_name
+    || modelNameFromPath(iotLiveData.active_model_path, 'Trained Forecast Model');
+  const forecastHours = predictionHorizonHours(forecast, 24);
+  const forecastWindowStart = forecast.forecast_window_start
+    || forecast.prediction_timestamp
+    || forecast.timestamp
+    || lastUpdated;
+  const forecastWindowEnd = forecast.forecast_window_end
+    || addHours(forecastWindowStart, forecastHours);
+  const forecastAlert = forecastAlertState(
+    forecastRiskLevel,
+    forecastArmTrend,
+    forecastNotification,
   );
-  const probabilityChangePercentagePoints = responseChangePercentagePoints
-    ?? (previousPercentage !== null ? riskPercentage - previousPercentage : null);
-  const riskLevel = iotLiveData.risk_level
-    || (riskPercentage > 70 ? 'High' : riskPercentage > 35 ? 'Medium' : 'Low');
-  const color = riskColor(riskLevel);
-  const arm = getNum(iotLiveData.arm, 0);
-  const armPerHour = getNum(iotLiveData.arm_per_hour, arm / comparisonHours);
-  const armTrend = iotLiveData.arm_trend || trendFromChange(probabilityChangePercentagePoints);
-  const thresholds = iotLiveData.thresholds || {};
+
+  // Current-state output: separately trained classifier for the condition at this timestamp.
+  const currentStateProbability = getOptionalNum(currentState.probability);
+  const currentStatePercentageValue = getOptionalNum(currentState.probability_percent)
+    ?? (currentStateProbability !== null ? currentStateProbability * 100 : null);
+  const currentStateAvailable = currentState.status === 'ok'
+    && currentStatePercentageValue !== null;
+  const riskPercentage = currentStateAvailable
+    ? clamp(currentStatePercentageValue)
+    : null;
+  const gaugePercentage = riskPercentage ?? 0;
+  const previousPercentage = getOptionalNum(currentState.previous_probability_percent);
+  const probabilityChangePercentagePoints = getOptionalNum(
+    currentState.change_percentage_points,
+  );
+  const comparisonHours = Math.max(1, getNum(currentState.comparison_hours, 24));
+  const riskLevel = currentStateAvailable
+    ? (currentState.risk_level || 'Low')
+    : 'Unavailable';
+  const color = currentStateAvailable ? riskColor(riskLevel) : 'var(--text-muted)';
+  const arm = getNum(currentState.arm, 0);
+  const armPerHour = getNum(currentState.arm_per_hour, arm / comparisonHours);
+  const armTrend = currentStateAvailable
+    ? (currentState.trend || trendFromChange(probabilityChangePercentagePoints))
+    : 'Unavailable';
+  const thresholds = currentState.thresholds || {};
   const mediumThreshold = getNum(thresholds.medium_percentage, 35);
   const highThreshold = getNum(thresholds.high_percentage, 70);
+  const currentModelName = currentState.model_name
+    || iotLiveData.active_current_state_model_name
+    || 'Current-state model not trained';
   const riskYAxisDomain = riskScaleMode === 'full' ? [0, 100] : zoomedRiskDomain;
-  const freshness = iotLiveData.data_freshness_status || (getNum(iotLiveData.data_age_minutes, 0) <= interval * 2 ? 'Fresh' : 'Stale');
-  const modelName = iotLiveData.active_model_name || modelNameFromPath(iotLiveData.active_model_path, 'Trained Model');
-  const forecastHours = predictionHorizonHours(iotLiveData, 24);
-  const forecastWindowStart = iotLiveData.forecast_window_start
-    || iotLiveData.prediction_timestamp
-    || lastUpdated;
-  const forecastWindowEnd = iotLiveData.forecast_window_end
-    || addHours(forecastWindowStart, forecastHours);
-  const forecastAlert = forecastAlertState(riskLevel, armTrend, notification);
+  const freshness = iotLiveData.data_freshness_status
+    || (getNum(iotLiveData.data_age_minutes, 0) <= interval * 2 ? 'Fresh' : 'Stale');
 
   const sensorStatuses = {
     temperature: statusForSensor('temperature', latest.temperature_c, latest),
@@ -551,10 +605,10 @@ export default function AbscondingLiveDashboard({
   ];
 
   const actions = [
-    notification.should_notify || riskLevel === 'High'
+    forecastNotification.should_notify || forecastRiskLevel === 'High'
       ? 'Inspect hive within the next 12 hours.'
-      : riskLevel === 'Medium'
-      ? 'Inspect hive within the next 24 hours if trend keeps increasing.'
+      : forecastRiskLevel === 'Medium'
+      ? 'Inspect hive within the next 24 hours if the forecast trend keeps increasing.'
       : 'Continue normal inspection schedule and keep monitoring.',
     'Ensure adequate ventilation to reduce CO₂ buildup.',
     'Stabilize hive temperature and reduce fluctuations.',
@@ -584,26 +638,27 @@ export default function AbscondingLiveDashboard({
 
       <Forecast24HourCard
         horizonHours={forecastHours}
-        probability={riskPercentage}
-        previousProbability={previousPercentage}
-        changePercentagePoints={probabilityChangePercentagePoints}
-        riskLevel={riskLevel}
-        armTrend={armTrend}
+        probability={forecastRiskPercentage}
+        previousProbability={forecastPreviousPercentage}
+        changePercentagePoints={forecastChangePercentagePoints}
+        riskLevel={forecastRiskLevel}
+        armTrend={forecastArmTrend}
         alertState={forecastAlert}
         windowStart={forecastWindowStart}
         windowEnd={forecastWindowEnd}
-        modelName={modelName}
-        color={color}
+        modelName={forecastModelName}
+        color={forecastColor}
       />
 
       <div className="iot-kpi-grid">
-        <OutputStatusCard title="Absconding Probability" className="iot-probability-card">
-          <div className="iot-gauge-wrap" style={{ '--risk-color': color, '--risk-deg': `${riskPercentage * 1.8}deg` }}>
+        <OutputStatusCard title="Current Absconding Risk" className="iot-probability-card">
+          <div className="iot-current-output-label">Current-state estimate</div>
+          <div className="iot-gauge-wrap" style={{ '--risk-color': color, '--risk-deg': `${gaugePercentage * 1.8}deg` }}>
             <div className="iot-gauge-arc" />
-            <div className="iot-gauge-needle" style={{ transform: `rotate(${riskPercentage * 1.8 - 90}deg)` }} />
+            <div className="iot-gauge-needle" style={{ transform: `rotate(${gaugePercentage * 1.8 - 90}deg)` }} />
             <div className="iot-gauge-value">
-              <strong style={{ color }}>{probabilityPercent(riskPercentage, 2)}</strong>
-              <span>Current probability</span>
+              <strong style={{ color }}>{probabilityPercent(riskPercentage, 3)}</strong>
+              <span>{currentStateAvailable ? 'Estimated active-condition risk now' : 'Current-state model unavailable'}</span>
             </div>
           </div>
           <div className="iot-mini-message" style={{ display: 'grid', gap: '0.35rem', textAlign: 'left' }}>
@@ -618,21 +673,37 @@ export default function AbscondingLiveDashboard({
               </strong>
             </span>
           </div>
-          <div className="iot-model-pill">Model: {modelName} <CheckCircle size={14} /></div>
+          <div className="iot-model-pill">Model: {currentModelName} {currentStateAvailable && <CheckCircle size={14} />}</div>
         </OutputStatusCard>
 
-        <OutputStatusCard title="Risk Level">
+        <OutputStatusCard title="Current Risk Level">
           <div className="iot-risk-level" style={{ color }}>{displayLevel(riskLevel)}</div>
-          <p className="iot-risk-caption">{riskLevel === 'High' ? 'Urgent Risk' : riskLevel === 'Medium' ? 'Elevated Risk' : 'Normal Risk'}</p>
-          <div className="iot-risk-scale"><span>LOW</span><span>MEDIUM</span><span>HIGH</span><b style={{ left: `${riskPercentage}%` }} /></div>
+          <p className="iot-risk-caption">
+            {!currentStateAvailable
+              ? 'Current-state model required'
+              : riskLevel === 'High'
+              ? 'Urgent Risk'
+              : riskLevel === 'Medium'
+              ? 'Elevated Risk'
+              : 'Normal Risk'}
+          </p>
+          <div className="iot-risk-scale"><span>LOW</span><span>MEDIUM</span><span>HIGH</span><b style={{ left: `${gaugePercentage}%` }} /></div>
           <p className="iot-mini-message">
-            {riskLevel === 'Low' ? 'Conditions are currently stable.' : 'Conditions indicate increased absconding likelihood. Monitor closely.'}
+            {!currentStateAvailable
+              ? 'Retrain the pipeline to generate the separate current-state model.'
+              : riskLevel === 'Low'
+              ? 'No active high-risk sensor pattern is detected now.'
+              : 'The current sensor pattern requires closer inspection.'}
             <br />
-            <small>Medium: {probabilityPercent(mediumThreshold, 2)} · High: {probabilityPercent(highThreshold, 2)}</small>
+            <small>
+              {currentStateAvailable
+                ? `Medium: ${probabilityPercent(mediumThreshold, 2)} · High: ${probabilityPercent(highThreshold, 2)}`
+                : 'No current-state thresholds available'}
+            </small>
           </p>
         </OutputStatusCard>
 
-        <OutputStatusCard title="ARM Trend Behavior">
+        <OutputStatusCard title="Current Risk Movement">
           <div className="iot-mini-arm-chart">
             {armMiniRows.map((row, index) => (
               <span
@@ -651,11 +722,25 @@ export default function AbscondingLiveDashboard({
           </p>
         </OutputStatusCard>
 
-        <OutputStatusCard title="Early Warning Alert" className="iot-alert-status-card">
+        <OutputStatusCard title="Current Condition Alert" className="iot-alert-status-card">
           <div className="iot-warning-symbol"><AlertTriangle size={82} /></div>
-          <h4 style={{ color }}>{notification.should_notify || riskLevel !== 'Low' ? (riskLevel === 'High' ? 'HIGH RISK' : 'ELEVATED RISK') : 'NORMAL'}</h4>
-          <p>{riskLevel === 'High' ? 'Act immediately' : riskLevel === 'Medium' ? 'Watch closely' : 'Continue monitoring'}</p>
-          <div className="iot-mini-message">{notification.should_notify ? 'Alert threshold reached or ARM is increasing quickly.' : 'Risk crossing HIGH threshold is monitored continuously.'}</div>
+          <h4 style={{ color }}>
+            {!currentStateAvailable
+              ? 'UNAVAILABLE'
+              : currentNotification.status || (riskLevel === 'High' ? 'CURRENT HIGH RISK' : riskLevel === 'Medium' ? 'CURRENT WATCH' : 'CURRENT NORMAL')}
+          </h4>
+          <p>
+            {!currentStateAvailable
+              ? 'Train the current-state classifier'
+              : riskLevel === 'High'
+              ? 'Inspect immediately'
+              : riskLevel === 'Medium'
+              ? 'Watch the current condition closely'
+              : 'No active high-risk pattern detected'}
+          </p>
+          <div className="iot-mini-message">
+            {currentNotification.message || currentState.message || 'Continue monitoring the current colony condition.'}
+          </div>
         </OutputStatusCard>
 
         <OutputStatusCard title="Explainable Environmental Insights">
@@ -673,7 +758,7 @@ export default function AbscondingLiveDashboard({
       <div className="iot-chart-grid">
         <section className="iot-card iot-risk-chart-card">
           <div className="iot-card-title-row">
-            <h3>Absconding Risk Timeline</h3>
+            <h3>Current State vs Next 24-Hour Forecast</h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <div className="iot-range-buttons">
                 <button type="button" className={riskScaleMode === 'zoomed' ? 'active' : ''} onClick={() => setRiskScaleMode('zoomed')}>Zoomed</button>
@@ -704,11 +789,12 @@ export default function AbscondingLiveDashboard({
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 {riskScaleMode === 'full' && (
                   <>
-                    <ReferenceLine y={mediumThreshold} stroke="var(--accent-gold)" strokeDasharray="4 4" label={{ value: `Medium threshold (${mediumThreshold.toFixed(2)}%)`, fill: 'var(--accent-gold)', fontSize: 11 }} />
-                    <ReferenceLine y={highThreshold} stroke="var(--accent-crimson)" strokeDasharray="4 4" label={{ value: `High threshold (${highThreshold.toFixed(2)}%)`, fill: 'var(--accent-crimson)', fontSize: 11 }} />
+                    <ReferenceLine y={forecastMediumThreshold} stroke="var(--accent-gold)" strokeDasharray="4 4" label={{ value: `Forecast medium (${forecastMediumThreshold.toFixed(2)}%)`, fill: 'var(--accent-gold)', fontSize: 11 }} />
+                    <ReferenceLine y={forecastHighThreshold} stroke="var(--accent-crimson)" strokeDasharray="4 4" label={{ value: `Forecast high (${forecastHighThreshold.toFixed(2)}%)`, fill: 'var(--accent-crimson)', fontSize: 11 }} />
                   </>
                 )}
-                <Area type="monotone" dataKey="risk" name="Absconding Probability" unit="%" stroke="var(--accent-emerald)" fill="url(#iotRiskGradient)" strokeWidth={2.5} dot={{ r: 2.5 }} activeDot={{ r: 5 }} />
+                <Area type="monotone" dataKey="risk" name="Next 24h Forecast" unit="%" stroke="var(--accent-emerald)" fill="url(#iotRiskGradient)" strokeWidth={2.5} dot={{ r: 2.5 }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="currentRisk" name="Current-State Risk" unit="%" stroke="var(--accent-cyan)" strokeWidth={2.2} dot={{ r: 2 }} connectNulls={false} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -760,7 +846,9 @@ export default function AbscondingLiveDashboard({
         <section className="iot-card iot-full-insights-card">
           <div className="iot-card-title-row"><h3>Full Live Prediction Diagnostics</h3><span className="iot-info-dot"><Info size={14} /></span></div>
           <div className="iot-diagnostics-grid">
-            <span><strong>Prediction window</strong>{iotLiveData.prediction_window || 'next_24_hours'}</span>
+            <span><strong>Prediction window</strong>{forecast.prediction_window || iotLiveData.prediction_window || 'next_24_hours'}</span>
+            <span><strong>Forecast model</strong>{forecastModelName}</span>
+            <span><strong>Current-state model</strong>{currentModelName}</span>
             <span><strong>API delivery mode</strong>{iotLiveData.api_delivery_mode || 'backend_cached_real_iot'}</span>
             <span><strong>Backend poller</strong>{monitor.enabled ? `Running every ${monitor.interval_minutes || interval} min` : 'Not enabled'}</span>
             <span><strong>Last DB pull</strong>{dateTime(monitor.last_success_at || monitor.last_poll_finished_at)}</span>
