@@ -110,10 +110,14 @@ class AbscondingIotMonitor:
         try:
             result = self.prediction_factory()
 
-            self.cache_path.write_text(
+            temporary_cache_path = self.cache_path.with_suffix(
+                f"{self.cache_path.suffix}.tmp"
+            )
+            temporary_cache_path.write_text(
                 json.dumps(result, indent=2, default=str),
                 encoding="utf-8",
             )
+            temporary_cache_path.replace(self.cache_path)
 
             finished = _now()
 

@@ -55,6 +55,10 @@ class AbscondingService:
     _dashboard_cache: dict[str, Any] | None = field(default=None, init=False)
     _model_cache_signature: tuple[int, int] | None = field(default=None, init=False)
     _model_cache: dict[str, Any] | None = field(default=None, init=False)
+    _current_state_model_cache_signature: tuple[int, int] | None = field(
+        default=None, init=False
+    )
+    _current_state_model_cache: dict[str, Any] | None = field(default=None, init=False)
 
     def __post_init__(self) -> None:
         self.backend_root = Path(self.backend_root).resolve()
@@ -66,6 +70,13 @@ class AbscondingService:
             / "models"
             / "absconding"
             / "absconding_model_bundle.joblib"
+        )
+        self.current_state_model_path = (
+            self.backend_root
+            / "artifacts"
+            / "models"
+            / "absconding"
+            / "absconding_current_state_model_bundle.joblib"
         )
 
     def get_dashboard(self) -> dict[str, Any]:
@@ -100,23 +111,40 @@ class AbscondingService:
         if not isinstance(readings, list) or not readings:
             raise ValueError("Send a non-empty JSON array in the 'readings' field.")
 
-        bundle, settings, hourly, scored = self._score_readings(pd.DataFrame(readings))
+        bundle, current_bundle, settings, hourly, scored = self._score_readings(
+            pd.DataFrame(readings)
+        )
         history_sizes = hourly.groupby(HIVE_COLUMN, sort=False).size().to_dict()
         predictions = []
         for hive_id, group in scored.groupby(HIVE_COLUMN, sort=True):
             latest = group.sort_values(TIMESTAMP_COLUMN).iloc[-1]
+            forecast = self._prediction_payload(
+                latest,
+                bundle=bundle,
+                settings=settings,
+                history_rows=int(history_sizes.get(hive_id, len(group))),
+                scored_rows=len(group),
+            )
+            current_state = self._current_state_payload(
+                latest,
+                bundle=current_bundle,
+                settings=settings,
+                history_rows=int(history_sizes.get(hive_id, len(group))),
+                scored_rows=len(group),
+            )
             predictions.append(
-                self._prediction_payload(
-                    latest,
-                    bundle=bundle,
-                    settings=settings,
-                    history_rows=int(history_sizes.get(hive_id, len(group))),
-                    scored_rows=len(group),
-                )
+                {
+                    **forecast,
+                    "forecast_24h": forecast,
+                    "current_state": current_state,
+                }
             )
 
         return {
             "model_name": bundle["model_name"],
+            "current_state_model_name": (
+                current_bundle.get("model_name") if current_bundle else None
+            ),
             "prediction_horizon_hours": bundle["prediction_horizon_hours"],
             "input_rows": len(readings),
             "hourly_rows": len(hourly),
@@ -142,7 +170,7 @@ class AbscondingService:
         latest_sensors = _raw_sensor_payload(latest_raw)
 
         try:
-            bundle, settings, hourly, scored = self._score_readings(
+            bundle, current_bundle, settings, hourly, scored = self._score_readings(
                 raw,
                 feature_timezone=iot_settings.feature_timezone,
                 timestamps_are_utc=iot_settings.timestamps_are_utc,
@@ -177,6 +205,13 @@ class AbscondingService:
             history_rows=len(hourly),
             scored_rows=len(scored),
         )
+        current_state = self._current_state_payload(
+            latest,
+            bundle=current_bundle,
+            settings=settings,
+            history_rows=len(hourly),
+            scored_rows=len(scored),
+        )
         factors = _signal_explanations(latest)
         recommendation = _recommended_action(prediction["risk_level"], prediction["arm"], factors)
 
@@ -185,8 +220,37 @@ class AbscondingService:
             timeline.append(
                 {
                     "timestamp": row[TIMESTAMP_COLUMN].isoformat(),
-                    "risk_probability": round(float(row["probability"]), 6),
-                    "risk_percentage": round(float(row["probability"] * 100), 3),
+                    "risk_probability": round(float(row["probability"]), 8),
+                    "risk_percentage": round(float(row["probability"] * 100), 4),
+                    "forecast_probability": round(float(row["probability"]), 8),
+                    "forecast_percentage": round(float(row["probability"] * 100), 4),
+                    "current_state_probability": _optional_float(
+                        row.get("current_state_probability"), 8
+                    ),
+                    "current_state_percentage": (
+                        round(float(row["current_state_probability"] * 100), 4)
+                        if _finite_or_none(row.get("current_state_probability")) is not None
+                        else None
+                    ),
+                    "current_state_risk_level": _current_state_risk_level_from_row(
+                        row, current_bundle, settings
+                    ),
+                    "current_state_arm": _optional_float(
+                        row.get("current_state_arm"), 8
+                    ),
+                    "current_state_arm_per_hour": _optional_float(
+                        row.get("current_state_arm_per_hour"), 10
+                    ),
+                    "current_state_change_percentage_points": (
+                        round(float(row["current_state_change"] * 100), 4)
+                        if _finite_or_none(row.get("current_state_change")) is not None
+                        else None
+                    ),
+                    "current_state_trend": (
+                        _arm_label(float(row["current_state_arm"]))
+                        if _finite_or_none(row.get("current_state_arm")) is not None
+                        else None
+                    ),
                     "risk_level": _risk_level(
                         float(row["probability"]),
                         float(row["arm"]),
@@ -194,8 +258,10 @@ class AbscondingService:
                         high=float(bundle["alert_threshold"]),
                         arm_threshold=settings.arm_escalation_threshold,
                     ),
-                    "arm": round(float(row["arm"]), 6),
-                    "arm_per_hour": round(float(row["arm_per_hour"]), 8),
+                    "arm": round(float(row["arm"]), 8),
+                    "arm_per_hour": round(float(row["arm_per_hour"]), 10),
+                    "arm_change_percentage_points": round(float(row["arm"] * 100), 4),
+                    "arm_trend": _arm_label(float(row["arm"])),
                     "environmental_stress_score": _optional_float(
                         row.get("environmental_stress_score"), 6
                     ),
@@ -226,6 +292,30 @@ class AbscondingService:
             "arm": prediction["arm"],
             "arm_trend": prediction["arm_trend"],
         }
+        current_state_notification = _current_state_notification(current_state)
+        forecast_window_start = prediction["timestamp"]
+        forecast_window_end = (
+            pd.Timestamp(prediction["timestamp"])
+            + pd.Timedelta(hours=settings.prediction_horizon_hours)
+        ).isoformat()
+        forecast_24h = {
+            **prediction,
+            "status": "ok",
+            "output_kind": "future_event_forecast",
+            "model_name": bundle["model_name"],
+            "model_family": bundle.get("model_family"),
+            "prediction_window": f"next_{settings.prediction_horizon_hours}_hours",
+            "prediction_horizon_hours": settings.prediction_horizon_hours,
+            "forecast_window_start": forecast_window_start,
+            "forecast_window_end": forecast_window_end,
+            "thresholds": {
+                "medium_probability": round(float(bundle["medium_threshold"]), 8),
+                "medium_percentage": round(float(bundle["medium_threshold"]) * 100, 4),
+                "high_probability": round(float(bundle["alert_threshold"]), 8),
+                "high_percentage": round(float(bundle["alert_threshold"]) * 100, 4),
+            },
+            "notification": notification,
+        }
 
         return {
             "mode": "real_time_iot",
@@ -251,12 +341,46 @@ class AbscondingService:
             ),
             "active_model_name": bundle["model_name"],
             "active_model_family": bundle.get("model_family"),
+            "active_current_state_model_name": (
+                current_bundle.get("model_name") if current_bundle else None
+            ),
+            "forecast_24h": forecast_24h,
+            "current_state": current_state,
+            "early_warning": notification,
+            "current_state_notification": current_state_notification,
+            # Legacy flat fields below continue to represent the next-24-hour
+            # forecast so existing API consumers are not broken.
             "risk_probability": prediction["probability"],
             "risk_percentage": prediction["risk_percentage"],
+            "current_probability": prediction["current_probability"],
+            "current_probability_percent": prediction["current_probability_percent"],
+            "current_state_probability": current_state.get("probability"),
+            "current_state_probability_percent": current_state.get("probability_percent"),
+            "current_state_risk_level": current_state.get("risk_level"),
+            "previous_probability": prediction["previous_probability"],
+            "previous_probability_percent": prediction["previous_probability_percent"],
+            "previous_probability_timestamp": prediction["previous_probability_timestamp"],
+            "probability_change": prediction["probability_change"],
+            "probability_change_percentage_points": prediction[
+                "probability_change_percentage_points"
+            ],
+            "comparison_hours": prediction["comparison_hours"],
             "risk_level": prediction["risk_level"],
             "arm": prediction["arm"],
             "arm_per_hour": prediction["arm_per_hour"],
             "arm_trend": prediction["arm_trend"],
+            "thresholds": {
+                "medium_probability": round(float(bundle["medium_threshold"]), 8),
+                "medium_percentage": round(float(bundle["medium_threshold"]) * 100, 4),
+                "high_probability": round(float(bundle["alert_threshold"]), 8),
+                "high_percentage": round(float(bundle["alert_threshold"]) * 100, 4),
+                "arm_escalation_probability_change": round(
+                    float(settings.arm_escalation_threshold), 8
+                ),
+                "arm_escalation_percentage_points": round(
+                    float(settings.arm_escalation_threshold) * 100, 4
+                ),
+            },
             "notification": notification,
             "recommended_action": recommendation,
             "recommended_actions": _action_checklist(prediction["risk_level"], factors),
@@ -329,8 +453,15 @@ class AbscondingService:
         *,
         feature_timezone: str | None = None,
         timestamps_are_utc: bool = True,
-    ) -> tuple[dict[str, Any], AbscondingSettings, pd.DataFrame, pd.DataFrame]:
+    ) -> tuple[
+        dict[str, Any],
+        dict[str, Any] | None,
+        AbscondingSettings,
+        pd.DataFrame,
+        pd.DataFrame,
+    ]:
         bundle = self._load_model_bundle()
+        current_bundle = self._load_current_state_model_bundle(required=False)
         settings = AbscondingSettings(**_restore_settings(bundle["settings"]))
         normalised = self._normalise_readings(
             frame,
@@ -353,11 +484,40 @@ class AbscondingService:
         valid["probability"] = positive_probability(
             bundle["estimator"], valid[bundle["feature_names"]]
         )
-        valid["arm"] = (
-            valid.groupby(HIVE_COLUMN)["probability"].diff(settings.arm_change_hours).fillna(0.0)
+        if current_bundle is not None:
+            for feature in current_bundle["feature_names"]:
+                if feature not in valid:
+                    valid[feature] = np.nan
+            valid["current_state_probability"] = positive_probability(
+                current_bundle["estimator"], valid[current_bundle["feature_names"]]
+            )
+        else:
+            valid["current_state_probability"] = np.nan
+
+        valid = valid.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN]).copy()
+        grouped = valid.groupby(HIVE_COLUMN, sort=False)
+        valid["previous_probability"] = grouped["probability"].shift(settings.arm_change_hours)
+        valid["previous_probability_timestamp"] = grouped[TIMESTAMP_COLUMN].shift(
+            settings.arm_change_hours
         )
+        valid["probability_change"] = valid["probability"] - valid["previous_probability"]
+        valid["arm"] = valid["probability_change"].fillna(0.0)
         valid["arm_per_hour"] = valid["arm"] / max(settings.arm_change_hours, 1)
-        return bundle, settings, hourly, valid
+        valid["current_state_previous_probability"] = grouped[
+            "current_state_probability"
+        ].shift(settings.arm_change_hours)
+        valid["current_state_previous_timestamp"] = grouped[TIMESTAMP_COLUMN].shift(
+            settings.arm_change_hours
+        )
+        valid["current_state_change"] = (
+            valid["current_state_probability"]
+            - valid["current_state_previous_probability"]
+        )
+        valid["current_state_arm"] = valid["current_state_change"].fillna(0.0)
+        valid["current_state_arm_per_hour"] = (
+            valid["current_state_arm"] / max(settings.arm_change_hours, 1)
+        )
+        return bundle, current_bundle, settings, hourly, valid
 
     def _prediction_payload(
         self,
@@ -370,6 +530,11 @@ class AbscondingService:
     ) -> dict[str, Any]:
         probability = float(latest["probability"])
         arm = float(latest["arm"])
+        previous_probability = _finite_or_none(latest.get("previous_probability"))
+        previous_timestamp = _timestamp_or_none(latest.get("previous_probability_timestamp"))
+        probability_change = (
+            probability - previous_probability if previous_probability is not None else None
+        )
         risk_level = _risk_level(
             probability,
             arm,
@@ -380,14 +545,128 @@ class AbscondingService:
         return {
             "hive_id": str(latest[HIVE_COLUMN]),
             "timestamp": latest[TIMESTAMP_COLUMN].isoformat(),
-            "probability": round(probability, 6),
-            "risk_percentage": round(probability * 100, 3),
+            "probability": round(probability, 8),
+            "risk_percentage": round(probability * 100, 4),
+            "current_probability": round(probability, 8),
+            "current_probability_percent": round(probability * 100, 4),
+            "previous_probability": (
+                round(previous_probability, 8) if previous_probability is not None else None
+            ),
+            "previous_probability_percent": (
+                round(previous_probability * 100, 4)
+                if previous_probability is not None
+                else None
+            ),
+            "previous_probability_timestamp": previous_timestamp,
+            "probability_change": (
+                round(probability_change, 8) if probability_change is not None else None
+            ),
+            "probability_change_percentage_points": (
+                round(probability_change * 100, 4)
+                if probability_change is not None
+                else None
+            ),
+            "comparison_hours": int(settings.arm_change_hours),
             "risk_level": risk_level,
-            "arm": round(arm, 6),
-            "arm_per_hour": round(float(latest["arm_per_hour"]), 8),
+            "arm": round(arm, 8),
+            "arm_per_hour": round(float(latest["arm_per_hour"]), 10),
             "arm_trend": _arm_label(arm),
             "hourly_history_supplied": history_rows,
             "scored_observations": scored_rows,
+        }
+
+    def _current_state_payload(
+        self,
+        latest: pd.Series,
+        *,
+        bundle: dict[str, Any] | None,
+        settings: AbscondingSettings,
+        history_rows: int,
+        scored_rows: int,
+    ) -> dict[str, Any]:
+        """Return the independently trained current-condition estimate."""
+        if bundle is None:
+            return {
+                "status": "model_not_trained",
+                "output_kind": "current_state",
+                "probability": None,
+                "probability_percent": None,
+                "previous_probability": None,
+                "previous_probability_percent": None,
+                "change_percentage_points": None,
+                "risk_level": "Unavailable",
+                "trend": "Unavailable",
+                "model_name": None,
+                "message": (
+                    "Run the Absconding training pipeline to create the separate "
+                    "current-state model bundle."
+                ),
+            }
+
+        probability = _finite_or_none(latest.get("current_state_probability"))
+        if probability is None:
+            return {
+                "status": "unavailable",
+                "output_kind": "current_state",
+                "probability": None,
+                "probability_percent": None,
+                "risk_level": "Unavailable",
+                "trend": "Unavailable",
+                "model_name": bundle.get("model_name"),
+                "message": "Current-state features could not be scored.",
+            }
+
+        previous = _finite_or_none(latest.get("current_state_previous_probability"))
+        change = probability - previous if previous is not None else None
+        arm = _finite_or_none(latest.get("current_state_arm")) or 0.0
+        risk_level = _risk_level(
+            probability,
+            arm,
+            medium=float(bundle["medium_threshold"]),
+            high=float(bundle["alert_threshold"]),
+            arm_threshold=settings.arm_escalation_threshold,
+        )
+        return {
+            "status": "ok",
+            "output_kind": "current_state",
+            "target_definition": (
+                "Estimated probability that the current sensor pattern is associated "
+                "with an active Absconding condition."
+            ),
+            "model_name": bundle.get("model_name"),
+            "model_family": bundle.get("model_family"),
+            "timestamp": latest[TIMESTAMP_COLUMN].isoformat(),
+            "probability": round(probability, 8),
+            "probability_percent": round(probability * 100, 4),
+            "previous_probability": round(previous, 8) if previous is not None else None,
+            "previous_probability_percent": (
+                round(previous * 100, 4) if previous is not None else None
+            ),
+            "previous_probability_timestamp": _timestamp_or_none(
+                latest.get("current_state_previous_timestamp")
+            ),
+            "change": round(change, 8) if change is not None else None,
+            "change_percentage_points": (
+                round(change * 100, 4) if change is not None else None
+            ),
+            "comparison_hours": int(settings.arm_change_hours),
+            "arm": round(arm, 8),
+            "arm_per_hour": round(
+                float(latest.get("current_state_arm_per_hour", 0.0)), 10
+            ),
+            "trend": _arm_label(arm),
+            "risk_level": risk_level,
+            "thresholds": {
+                "medium_probability": round(float(bundle["medium_threshold"]), 8),
+                "medium_percentage": round(float(bundle["medium_threshold"]) * 100, 4),
+                "high_probability": round(float(bundle["alert_threshold"]), 8),
+                "high_percentage": round(float(bundle["alert_threshold"]) * 100, 4),
+            },
+            "hourly_history_supplied": history_rows,
+            "scored_observations": scored_rows,
+            "interpretation_note": (
+                "This is a model-estimated current condition, not direct biological confirmation."
+            ),
         }
 
     def _load_model_bundle(self) -> dict[str, Any]:
@@ -401,6 +680,28 @@ class AbscondingService:
             self._model_cache = joblib.load(self.model_path)
             self._model_cache_signature = signature
         return self._model_cache
+
+    def _load_current_state_model_bundle(
+        self,
+        *,
+        required: bool = False,
+    ) -> dict[str, Any] | None:
+        if not self.current_state_model_path.is_file():
+            if required:
+                raise FileNotFoundError(
+                    "Current-state Absconding model was not found. Run: "
+                    "python scripts/run_absconding_pipeline.py"
+                )
+            return None
+        stat = self.current_state_model_path.stat()
+        signature = (stat.st_mtime_ns, stat.st_size)
+        if (
+            self._current_state_model_cache_signature != signature
+            or self._current_state_model_cache is None
+        ):
+            self._current_state_model_cache = joblib.load(self.current_state_model_path)
+            self._current_state_model_cache_signature = signature
+        return self._current_state_model_cache
 
     @staticmethod
     def _normalise_readings(
@@ -483,13 +784,40 @@ def _risk_level(
 
 
 def _arm_label(arm: float) -> str:
-    if arm >= 0.20:
-        return "Rapidly Increasing"
+    # ARM is stored as a probability change over the configured comparison
+    # window. 0.00005 therefore equals 0.005 percentage points. These labels
+    # improve display sensitivity without changing the actual model score or
+    # the alert threshold used by the decision engine.
     if arm >= 0.05:
+        return "Rapidly Increasing"
+    if arm >= 0.01:
         return "Increasing"
+    if arm >= 0.00005:
+        return "Slightly Increasing"
     if arm <= -0.05:
-        return "Improving"
+        return "Rapidly Decreasing"
+    if arm <= -0.01:
+        return "Decreasing"
+    if arm <= -0.00005:
+        return "Slightly Decreasing"
     return "Stable"
+
+
+def _finite_or_none(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if np.isfinite(number) else None
+
+
+def _timestamp_or_none(value: Any) -> str | None:
+    if value is None or pd.isna(value):
+        return None
+    timestamp = pd.to_datetime(value, errors="coerce")
+    if pd.isna(timestamp):
+        return None
+    return timestamp.isoformat()
 
 
 def _signal_explanations(row: pd.Series) -> list[dict[str, Any]]:
@@ -529,6 +857,66 @@ def _signal_explanations(row: pd.Series) -> list[dict[str, Any]]:
         }
         for factor, score, detail in candidates[:4]
     ]
+
+
+
+def _current_state_risk_level_from_row(
+    row: pd.Series,
+    bundle: dict[str, Any] | None,
+    settings: AbscondingSettings,
+) -> str | None:
+    probability = _finite_or_none(row.get("current_state_probability"))
+    if bundle is None or probability is None:
+        return None
+    arm = _finite_or_none(row.get("current_state_arm")) or 0.0
+    return _risk_level(
+        probability,
+        arm,
+        medium=float(bundle["medium_threshold"]),
+        high=float(bundle["alert_threshold"]),
+        arm_threshold=settings.arm_escalation_threshold,
+    )
+
+
+def _current_state_notification(current_state: dict[str, Any]) -> dict[str, Any]:
+    status = current_state.get("status")
+    level = str(current_state.get("risk_level") or "Unavailable")
+    probability = current_state.get("probability_percent")
+    if status != "ok":
+        return {
+            "should_notify": False,
+            "status": "UNAVAILABLE",
+            "title": "Current-state model unavailable",
+            "message": current_state.get("message", "Current-state score is unavailable."),
+            "risk_level": level,
+            "risk_percentage": probability,
+        }
+    if level == "High":
+        return {
+            "should_notify": True,
+            "status": "CURRENT HIGH RISK",
+            "title": "Possible active Absconding condition",
+            "message": "Perform an immediate physical hive inspection.",
+            "risk_level": level,
+            "risk_percentage": probability,
+        }
+    if level == "Medium":
+        return {
+            "should_notify": False,
+            "status": "CURRENT WATCH",
+            "title": "Current condition requires attention",
+            "message": "Inspect the colony if the current pattern persists.",
+            "risk_level": level,
+            "risk_percentage": probability,
+        }
+    return {
+        "should_notify": False,
+        "status": "CURRENT NORMAL",
+        "title": "No active high-risk pattern detected",
+        "message": "Continue monitoring the current colony condition.",
+        "risk_level": level,
+        "risk_percentage": probability,
+    }
 
 
 def _recommended_action(
