@@ -984,10 +984,18 @@ def _require_file(path: Path, guidance: str) -> None:
 
 
 def _arm_label(value: float) -> str:
-    if value >= 0.04:
+    if value >= 0.05:
+        return "Rapidly Increasing"
+    if value >= 0.01:
         return "Increasing"
-    if value <= -0.04:
-        return "Improving"
+    if value >= 0.00005:
+        return "Slightly Increasing"
+    if value <= -0.05:
+        return "Rapidly Decreasing"
+    if value <= -0.01:
+        return "Decreasing"
+    if value <= -0.00005:
+        return "Slightly Decreasing"
     return "Stable"
 
 

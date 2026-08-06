@@ -185,8 +185,8 @@ class AbscondingService:
             timeline.append(
                 {
                     "timestamp": row[TIMESTAMP_COLUMN].isoformat(),
-                    "risk_probability": round(float(row["probability"]), 6),
-                    "risk_percentage": round(float(row["probability"] * 100), 3),
+                    "risk_probability": round(float(row["probability"]), 8),
+                    "risk_percentage": round(float(row["probability"] * 100), 4),
                     "risk_level": _risk_level(
                         float(row["probability"]),
                         float(row["arm"]),
@@ -194,8 +194,10 @@ class AbscondingService:
                         high=float(bundle["alert_threshold"]),
                         arm_threshold=settings.arm_escalation_threshold,
                     ),
-                    "arm": round(float(row["arm"]), 6),
-                    "arm_per_hour": round(float(row["arm_per_hour"]), 8),
+                    "arm": round(float(row["arm"]), 8),
+                    "arm_per_hour": round(float(row["arm_per_hour"]), 10),
+                    "arm_change_percentage_points": round(float(row["arm"] * 100), 4),
+                    "arm_trend": _arm_label(float(row["arm"])),
                     "environmental_stress_score": _optional_float(
                         row.get("environmental_stress_score"), 6
                     ),
@@ -253,10 +255,32 @@ class AbscondingService:
             "active_model_family": bundle.get("model_family"),
             "risk_probability": prediction["probability"],
             "risk_percentage": prediction["risk_percentage"],
+            "current_probability": prediction["current_probability"],
+            "current_probability_percent": prediction["current_probability_percent"],
+            "previous_probability": prediction["previous_probability"],
+            "previous_probability_percent": prediction["previous_probability_percent"],
+            "previous_probability_timestamp": prediction["previous_probability_timestamp"],
+            "probability_change": prediction["probability_change"],
+            "probability_change_percentage_points": prediction[
+                "probability_change_percentage_points"
+            ],
+            "comparison_hours": prediction["comparison_hours"],
             "risk_level": prediction["risk_level"],
             "arm": prediction["arm"],
             "arm_per_hour": prediction["arm_per_hour"],
             "arm_trend": prediction["arm_trend"],
+            "thresholds": {
+                "medium_probability": round(float(bundle["medium_threshold"]), 8),
+                "medium_percentage": round(float(bundle["medium_threshold"]) * 100, 4),
+                "high_probability": round(float(bundle["alert_threshold"]), 8),
+                "high_percentage": round(float(bundle["alert_threshold"]) * 100, 4),
+                "arm_escalation_probability_change": round(
+                    float(settings.arm_escalation_threshold), 8
+                ),
+                "arm_escalation_percentage_points": round(
+                    float(settings.arm_escalation_threshold) * 100, 4
+                ),
+            },
             "notification": notification,
             "recommended_action": recommendation,
             "recommended_actions": _action_checklist(prediction["risk_level"], factors),
@@ -353,9 +377,14 @@ class AbscondingService:
         valid["probability"] = positive_probability(
             bundle["estimator"], valid[bundle["feature_names"]]
         )
-        valid["arm"] = (
-            valid.groupby(HIVE_COLUMN)["probability"].diff(settings.arm_change_hours).fillna(0.0)
+        valid = valid.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN]).copy()
+        grouped = valid.groupby(HIVE_COLUMN, sort=False)
+        valid["previous_probability"] = grouped["probability"].shift(settings.arm_change_hours)
+        valid["previous_probability_timestamp"] = grouped[TIMESTAMP_COLUMN].shift(
+            settings.arm_change_hours
         )
+        valid["probability_change"] = valid["probability"] - valid["previous_probability"]
+        valid["arm"] = valid["probability_change"].fillna(0.0)
         valid["arm_per_hour"] = valid["arm"] / max(settings.arm_change_hours, 1)
         return bundle, settings, hourly, valid
 
@@ -370,6 +399,11 @@ class AbscondingService:
     ) -> dict[str, Any]:
         probability = float(latest["probability"])
         arm = float(latest["arm"])
+        previous_probability = _finite_or_none(latest.get("previous_probability"))
+        previous_timestamp = _timestamp_or_none(latest.get("previous_probability_timestamp"))
+        probability_change = (
+            probability - previous_probability if previous_probability is not None else None
+        )
         risk_level = _risk_level(
             probability,
             arm,
@@ -380,11 +414,31 @@ class AbscondingService:
         return {
             "hive_id": str(latest[HIVE_COLUMN]),
             "timestamp": latest[TIMESTAMP_COLUMN].isoformat(),
-            "probability": round(probability, 6),
-            "risk_percentage": round(probability * 100, 3),
+            "probability": round(probability, 8),
+            "risk_percentage": round(probability * 100, 4),
+            "current_probability": round(probability, 8),
+            "current_probability_percent": round(probability * 100, 4),
+            "previous_probability": (
+                round(previous_probability, 8) if previous_probability is not None else None
+            ),
+            "previous_probability_percent": (
+                round(previous_probability * 100, 4)
+                if previous_probability is not None
+                else None
+            ),
+            "previous_probability_timestamp": previous_timestamp,
+            "probability_change": (
+                round(probability_change, 8) if probability_change is not None else None
+            ),
+            "probability_change_percentage_points": (
+                round(probability_change * 100, 4)
+                if probability_change is not None
+                else None
+            ),
+            "comparison_hours": int(settings.arm_change_hours),
             "risk_level": risk_level,
-            "arm": round(arm, 6),
-            "arm_per_hour": round(float(latest["arm_per_hour"]), 8),
+            "arm": round(arm, 8),
+            "arm_per_hour": round(float(latest["arm_per_hour"]), 10),
             "arm_trend": _arm_label(arm),
             "hourly_history_supplied": history_rows,
             "scored_observations": scored_rows,
@@ -483,13 +537,40 @@ def _risk_level(
 
 
 def _arm_label(arm: float) -> str:
-    if arm >= 0.20:
-        return "Rapidly Increasing"
+    # ARM is stored as a probability change over the configured comparison
+    # window. 0.00005 therefore equals 0.005 percentage points. These labels
+    # improve display sensitivity without changing the actual model score or
+    # the alert threshold used by the decision engine.
     if arm >= 0.05:
+        return "Rapidly Increasing"
+    if arm >= 0.01:
         return "Increasing"
+    if arm >= 0.00005:
+        return "Slightly Increasing"
     if arm <= -0.05:
-        return "Improving"
+        return "Rapidly Decreasing"
+    if arm <= -0.01:
+        return "Decreasing"
+    if arm <= -0.00005:
+        return "Slightly Decreasing"
     return "Stable"
+
+
+def _finite_or_none(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if np.isfinite(number) else None
+
+
+def _timestamp_or_none(value: Any) -> str | None:
+    if value is None or pd.isna(value):
+        return None
+    timestamp = pd.to_datetime(value, errors="coerce")
+    if pd.isna(timestamp):
+        return None
+    return timestamp.isoformat()
 
 
 def _signal_explanations(row: pd.Series) -> list[dict[str, Any]]:
