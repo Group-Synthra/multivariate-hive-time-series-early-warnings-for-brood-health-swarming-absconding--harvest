@@ -68,6 +68,8 @@ backend/data/interim/*
 backend/data/processed/*
 
 !backend/data/raw/.gitkeep
+!backend/data/raw/absconding/
+!backend/data/raw/absconding/.gitkeep
 !backend/data/interim/.gitkeep
 !backend/data/processed/.gitkeep
 
@@ -90,10 +92,12 @@ backend/data/manifests/*
 backend/artifacts/models/*
 backend/artifacts/metrics/*
 backend/artifacts/reports/*
+backend/artifacts/predictions/*
 
 !backend/artifacts/models/.gitkeep
 !backend/artifacts/metrics/.gitkeep
 !backend/artifacts/reports/.gitkeep
+!backend/artifacts/predictions/.gitkeep
 
 
 # ============================================================

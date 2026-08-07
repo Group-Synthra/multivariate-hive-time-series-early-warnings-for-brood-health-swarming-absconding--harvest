@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 # Allows `python app.py` to work even before an editable installation is refreshed.
 BACKEND_ROOT = Path(__file__).resolve().parent
@@ -27,5 +27,12 @@ if __name__ == "__main__":
         "yes",
         "on",
     }
+
+    # Flask debug mode creates a parent process and a reloader child. Start the
+    # background poller only in the process that actually serves requests.
+    monitor = app.extensions.get("absconding_iot_monitor")
+    serving_process = not debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true"
+    if monitor is not None and monitor.enabled and serving_process:
+        monitor.start()
 
     app.run(host=host, port=port, debug=debug)

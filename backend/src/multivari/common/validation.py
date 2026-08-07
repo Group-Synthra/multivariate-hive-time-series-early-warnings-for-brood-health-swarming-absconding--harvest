@@ -61,9 +61,7 @@ def profile_and_validate(df: pd.DataFrame) -> ValidationReport:
     return ValidationReport(
         rows=len(df),
         hives=int(df[HIVE_COLUMN].nunique()),
-        duplicate_hive_timestamps=int(
-            df.duplicated(subset=[HIVE_COLUMN, TIMESTAMP_COLUMN]).sum()
-        ),
+        duplicate_hive_timestamps=int(df.duplicated(subset=[HIVE_COLUMN, TIMESTAMP_COLUMN]).sum()),
         missing_by_column={column: int(df[column].isna().sum()) for column in REQUIRED_COLUMNS},
         invalid_binary_values=invalid_binary,
         out_of_sanity_bounds=bounds_report,

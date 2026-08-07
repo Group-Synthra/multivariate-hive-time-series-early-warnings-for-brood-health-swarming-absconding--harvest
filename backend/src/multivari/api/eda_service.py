@@ -138,8 +138,10 @@ class EDAService:
 
     @staticmethod
     def _infer_sampling_seconds(df: pd.DataFrame) -> float | None:
-        ordered = df[[HIVE_COLUMN, TIMESTAMP_COLUMN]].dropna().sort_values(
-            [HIVE_COLUMN, TIMESTAMP_COLUMN]
+        ordered = (
+            df[[HIVE_COLUMN, TIMESTAMP_COLUMN]]
+            .dropna()
+            .sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN])
         )
         differences = ordered.groupby(HIVE_COLUMN)[TIMESTAMP_COLUMN].diff().dropna()
         if differences.empty:
@@ -279,7 +281,9 @@ class EDAService:
         return EDAService._pattern_rows(monthly, "month")
 
     @staticmethod
-    def _build_sensor_histograms(df: pd.DataFrame, bins: int = 36) -> dict[str, list[dict[str, Any]]]:
+    def _build_sensor_histograms(
+        df: pd.DataFrame, bins: int = 36
+    ) -> dict[str, list[dict[str, Any]]]:
         result: dict[str, list[dict[str, Any]]] = {}
         for source_name, api_name in SENSOR_API_NAMES.items():
             values = pd.to_numeric(df[source_name], errors="coerce").dropna().to_numpy()
@@ -313,10 +317,14 @@ class EDAService:
     def _build_monthly_target_counts(df: pd.DataFrame) -> list[dict[str, Any]]:
         valid = df.dropna(subset=[TIMESTAMP_COLUMN]).copy()
         valid["month"] = valid[TIMESTAMP_COLUMN].dt.to_period("M").astype(str)
-        grouped = valid.groupby("month").agg(
-            records=(TIMESTAMP_COLUMN, "size"),
-            **{target: (target, "sum") for target in TARGET_COLUMNS},
-        ).reset_index()
+        grouped = (
+            valid.groupby("month")
+            .agg(
+                records=(TIMESTAMP_COLUMN, "size"),
+                **{target: (target, "sum") for target in TARGET_COLUMNS},
+            )
+            .reset_index()
+        )
 
         result = []
         for _, row in grouped.iterrows():
@@ -327,9 +335,9 @@ class EDAService:
             for target in TARGET_COLUMNS:
                 count = int(row[target])
                 item[target] = count
-                item[f"{target}_per_10000"] = round(
-                    (count / int(row["records"])) * 10000, 5
-                ) if int(row["records"]) else 0.0
+                item[f"{target}_per_10000"] = (
+                    round((count / int(row["records"])) * 10000, 5) if int(row["records"]) else 0.0
+                )
             result.append(item)
         return result
 
@@ -442,12 +450,10 @@ class EDAService:
     def _build_data_quality(df: pd.DataFrame) -> dict[str, Any]:
         checked_columns = [*SENSOR_COLUMNS, *TARGET_COLUMNS]
         missing_raw = {
-            column: int(value)
-            for column, value in df[checked_columns].isna().sum().items()
+            column: int(value) for column, value in df[checked_columns].isna().sum().items()
         }
         missing_by_column = {
-            SENSOR_API_NAMES.get(column, column): count
-            for column, count in missing_raw.items()
+            SENSOR_API_NAMES.get(column, column): count for column, count in missing_raw.items()
         }
         duplicate_timestamps = int(
             df.duplicated(subset=[HIVE_COLUMN, TIMESTAMP_COLUMN], keep=False).sum()
