@@ -137,14 +137,12 @@ export function AbscondingPage() {
         <StatCard label="Raw event markers" value={summary.source_event_markers} icon={Database} note="Original absconding_happened_1 rows" />
         <StatCard label="Event episodes" value={summary.distinct_event_episodes} icon={AlertTriangle} note="Nearby markers merged within 24 hours" />
         <StatCard label="Future warning rows" value={summary.future_positive_rows} icon={Clock3} note={`${summary.prediction_horizon_hours}-hour target horizon`} />
-        <StatCard label="Selected model" value={summary.selected_model_name} icon={BrainCircuit} note="Chosen on validation data only" />
+        <StatCard label="Selected model" value={summary.selected_model_name} icon={BrainCircuit} />
         <StatCard label="Test PR-AUC" value={training.test_metrics?.pr_auc} icon={Activity} note="Preferred rare-event ranking metric" />
         <StatCard label="Test event recall" value={training.test_event_metrics?.event_recall} icon={ShieldCheck} note="Detected event episodes" />
       </div>
 
-      <div className="eda-interpretation-note absconding-warning-note">
-        <strong>Evidence limitation:</strong> {summary.methodology_note}
-      </div>
+      
 
       <ModuleTabs activeTab={activeTab} onChange={setActiveTab} />
 
@@ -326,8 +324,8 @@ function ExploratoryAnalysis({ exploratory, summary, data, risks, selectedHive, 
       </div>
 
       <Panel
-        title="Generated module images"
-        subtitle="These figures are generated automatically by the Absconding pipeline."
+        title="Module Related Images"
+        
       >
         {Object.keys(data?.plots || {}).length ? (
           <div className="report-figure-grid">
@@ -371,11 +369,11 @@ function ModelTraining({ training, plots }) {
         <StatCard label="Event recall" value={metricPercentage(event.event_recall)} note={`${event.detected_event_count || 0}/${event.event_count || 0} test episodes detected`} />
       </div>
 
-      <Panel title="Report-aligned model design" subtitle="The current pipeline retrains compatible classical models on the new shared data contract.">
+      <Panel title="Report-aligned model design">
         <div className="absconding-model-design-grid">
           <article><strong>Classical comparisons</strong><p>Rule baseline, Gaussian NB, Logistic Regression, Ridge, Decision Tree, Random Forest and Extra Trees are trained and compared.</p></article>
           <article><strong>Temporal design</strong><p>Current/past-only lags, rolling windows, rates of change and 72-hour deterioration features preserve the report’s time-series rationale.</p></article>
-          <article><strong>LSTM compatibility</strong><p>The past saved LSTM is not silently reused because its feature schema and target contract differ. It must be retrained separately before it can be claimed as a new-version result.</p></article>
+          <article><strong>LSTM compatibility</strong><p>The past saved LSTM is not silently reused because its feature schema and target contract differ. It is retrained separately.</p></article>
         </div>
       </Panel>
 
@@ -422,7 +420,7 @@ function ModelTraining({ training, plots }) {
       </Panel>
 
       <div className="two-column-grid">
-        <Panel title="Top selected-model features" subtitle="Importance is model-specific and should not be interpreted as causality.">
+        <Panel title="Top selected-model features" subtitle="Importance is model-specific.">
           {importance.some((item) => item.importance > 0) ? (
             <div className="chart-area-large">
               <ResponsiveContainer width="100%" height="100%">
