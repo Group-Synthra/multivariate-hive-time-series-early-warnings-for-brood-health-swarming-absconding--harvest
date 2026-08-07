@@ -324,8 +324,8 @@ function ExploratoryAnalysis({ exploratory, summary, data, risks, selectedHive, 
       </div>
 
       <Panel
-        title="Generated module images"
-        subtitle="These figures are generated automatically by the Absconding pipeline."
+        title="Module Related Images"
+        
       >
         {Object.keys(data?.plots || {}).length ? (
           <div className="report-figure-grid">
@@ -369,11 +369,11 @@ function ModelTraining({ training, plots }) {
         <StatCard label="Event recall" value={metricPercentage(event.event_recall)} note={`${event.detected_event_count || 0}/${event.event_count || 0} test episodes detected`} />
       </div>
 
-      <Panel title="Report-aligned model design" subtitle="The current pipeline retrains compatible classical models on the new shared data contract.">
+      <Panel title="Report-aligned model design">
         <div className="absconding-model-design-grid">
           <article><strong>Classical comparisons</strong><p>Rule baseline, Gaussian NB, Logistic Regression, Ridge, Decision Tree, Random Forest and Extra Trees are trained and compared.</p></article>
           <article><strong>Temporal design</strong><p>Current/past-only lags, rolling windows, rates of change and 72-hour deterioration features preserve the report’s time-series rationale.</p></article>
-          <article><strong>LSTM compatibility</strong><p>The past saved LSTM is not silently reused because its feature schema and target contract differ. It must be retrained separately before it can be claimed as a new-version result.</p></article>
+          <article><strong>LSTM compatibility</strong><p>The past saved LSTM is not silently reused because its feature schema and target contract differ. It is retrained separately.</p></article>
         </div>
       </Panel>
 
@@ -420,7 +420,7 @@ function ModelTraining({ training, plots }) {
       </Panel>
 
       <div className="two-column-grid">
-        <Panel title="Top selected-model features" subtitle="Importance is model-specific and should not be interpreted as causality.">
+        <Panel title="Top selected-model features" subtitle="Importance is model-specific.">
           {importance.some((item) => item.importance > 0) ? (
             <div className="chart-area-large">
               <ResponsiveContainer width="100%" height="100%">
