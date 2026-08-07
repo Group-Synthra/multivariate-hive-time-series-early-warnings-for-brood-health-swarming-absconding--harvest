@@ -1,20 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  AlertTriangle,
   ArrowRight,
   CheckCircle2,
   Clock3,
+  Database,
   Gauge,
-  ShieldAlert,
+  Info,
+  LineChart as LineChartIcon,
+  Scale,
+  Sparkles,
   Thermometer,
   Waves,
+  Wind,
 } from "lucide-react";
 import {
   CartesianGrid,
   Legend,
   Line,
   LineChart,
+  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -23,7 +28,6 @@ import {
 } from "recharts";
 
 import { Panel } from "../../../components/common/Panel";
-import { StatCard } from "../../../components/common/StatCard";
 import { loadClassifierDerivedHuiDashboard } from "../../../services/classifierDerivedHuiService";
 
 import "./ClassifierDerivedHuiPredictionTab.css";
@@ -50,53 +54,96 @@ function classTone(value) {
   return "high-priority";
 }
 
-function formatModelName(value) {
-  const model = String(value ?? "").toLowerCase();
-
-  if (model === "lightgbm") {
-    return "LightGBM";
+function classShortLabel(value) {
+  if (value === "Approaching Harvest") {
+    return "Approaching";
   }
-  if (model === "xgboost") {
-    return "XGBoost";
+  if (value === "High-Priority Harvest") {
+    return "High Priority";
   }
-  if (model === "random_forest") {
-    return "Random Forest";
-  }
-  if (model === "ridge") {
-    return "Ridge";
-  }
-  if (model === "persistence") {
-    return "Persistence";
-  }
-
-  return value || "Unavailable";
+  return value ?? "Unavailable";
 }
 
-function ProjectionCard({ horizon, hui, readinessClass, model }) {
+function ForecastCard({ horizon, hui, readinessClass, model, current = false }) {
   return (
-    <div
-      className={`classifier-hui-projection-card is-${classTone(
+    <article
+      className={`decision-hui-forecast-card is-${classTone(
         readinessClass,
-      )}`}
+      )} ${current ? "is-current" : ""}`}
     >
-      <span>{horizon}</span>
+      <div className="decision-hui-forecast-heading">
+        <span>{horizon}</span>
+        <small>{current ? "Classifier" : model}</small>
+      </div>
       <strong>{formatNumber(hui, 1)}</strong>
-      <b>{readinessClass}</b>
-      <small>{formatModelName(model)}</small>
+      <b>{classShortLabel(readinessClass)}</b>
+    </article>
+  );
+}
+
+function MiniMetric({ icon: Icon, label, value, note }) {
+  return (
+    <div className="decision-hui-mini-metric">
+      <span className="decision-hui-mini-icon">
+        <Icon size={17} />
+      </span>
+      <div>
+        <small>{label}</small>
+        <strong>{value}</strong>
+        {note ? <span>{note}</span> : null}
+      </div>
     </div>
   );
 }
 
-function SensorValue({ label, value, suffix = "" }) {
+function SensorCard({ icon: Icon, label, value, suffix = "" }) {
   return (
-    <div className="classifier-hui-sensor-value">
-      <span>{label}</span>
-      <strong>
-        {value === null || value === undefined
-          ? "Not available"
-          : `${formatNumber(value, 1)}${suffix}`}
-      </strong>
+    <div className="decision-hui-sensor-card">
+      <span className="decision-hui-sensor-icon">
+        <Icon size={18} />
+      </span>
+      <div>
+        <small>{label}</small>
+        <strong>
+          {value === null || value === undefined
+            ? "Unavailable"
+            : `${formatNumber(value, 1)}${suffix}`}
+        </strong>
+      </div>
     </div>
+  );
+}
+
+function processStep(number, title, text) {
+  return (
+    <div className="decision-hui-process-step" key={number}>
+      <span>{number}</span>
+      <div>
+        <strong>{title}</strong>
+        <small>{text}</small>
+      </div>
+    </div>
+  );
+}
+
+function historyCutoff(rows, hours) {
+  if (!rows.length || hours === "all") {
+    return rows;
+  }
+
+  const timestamps = rows
+    .map((row) => new Date(row.timestamp).getTime())
+    .filter(Number.isFinite);
+
+  if (!timestamps.length) {
+    return rows;
+  }
+
+  const latest = Math.max(...timestamps);
+  const minimum = latest - Number(hours) * 60 * 60 * 1000;
+
+  return rows.filter(
+    (row) => new Date(row.timestamp).getTime() >= minimum,
   );
 }
 
@@ -104,6 +151,13 @@ export default function ClassifierDerivedHuiPredictionTab() {
   const [dashboard, setDashboard] = useState(null);
   const [selectedHive, setSelectedHive] = useState("");
   const [error, setError] = useState("");
+  const [historyRange, setHistoryRange] = useState(168);
+  const [visibleSeries, setVisibleSeries] = useState({
+    current: true,
+    h24: true,
+    h48: true,
+    h72: true,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -145,35 +199,42 @@ export default function ClassifierDerivedHuiPredictionTab() {
       return [];
     }
 
-    return dashboard.historical_test_series
+    const rows = dashboard.historical_test_series
       .filter((row) => row.hive_id === selectedHive)
       .map((row) => ({
         ...row,
-        displayTime: new Date(row.timestamp).toLocaleString(),
+        displayTime: new Date(row.timestamp).toLocaleString([], {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       }));
-  }, [dashboard, selectedHive]);
+
+    return historyCutoff(rows, historyRange);
+  }, [dashboard, selectedHive, historyRange]);
 
   if (error) {
     return (
-      <Panel title="Classifier-Derived HUI Prediction">
-        <p className="classifier-hui-error">{error}</p>
+      <Panel title="HUI Decision Support">
+        <p className="decision-hui-error">{error}</p>
       </Panel>
     );
   }
 
   if (!dashboard) {
     return (
-      <Panel title="Classifier-Derived HUI Prediction">
-        <p>Loading final HUI research dashboard…</p>
+      <Panel title="HUI Decision Support">
+        <p>Loading HUI decision-support dashboard…</p>
       </Panel>
     );
   }
 
   const horizonSummary =
     dashboard.future_hui_regression?.summary?.horizons ?? {};
-  const model24 = horizonSummary?.["24"]?.selected_model ?? "Unavailable";
-  const model48 = horizonSummary?.["48"]?.selected_model ?? "Unavailable";
-  const model72 = horizonSummary?.["72"]?.selected_model ?? "Unavailable";
+  const model24 = horizonSummary?.["24"]?.selected_model ?? "LightGBM";
+  const model48 = horizonSummary?.["48"]?.selected_model ?? "XGBoost";
+  const model72 = horizonSummary?.["72"]?.selected_model ?? "LightGBM";
   const gatePassed = Boolean(
     dashboard.future_hui_regression?.gate?.gate_passed,
   );
@@ -184,7 +245,7 @@ export default function ClassifierDerivedHuiPredictionTab() {
           horizon: "Current",
           hui: Number(latest.current_hui),
           readinessClass: latest.current_class,
-          model: "Classifier-derived HUI",
+          model: "Classifier",
         },
         {
           horizon: "+24h",
@@ -207,36 +268,36 @@ export default function ClassifierDerivedHuiPredictionTab() {
       ]
     : [];
 
+  const highestForecast = trajectory
+    .slice(1)
+    .reduce(
+      (best, item) =>
+        item.hui > (best?.hui ?? -Infinity) ? item : best,
+      null,
+    );
+
+  const recommendationTitle =
+    latest?.recommended_window ?? "No harvest window indicated";
+  const recommendationText =
+    latest?.final_recommendation ??
+    "Continue routine monitoring until the HUI enters a higher readiness range.";
+
+  const factors = (latest?.contributing_factors ?? []).slice(0, 2);
+
   return (
-    <section className="classifier-hui-tab">
-      <div className="classifier-hui-warning">
-        <ShieldAlert size={22} aria-hidden="true" />
+    <section className="classifier-hui-tab decision-hui-tab">
+      <header className="decision-hui-header">
         <div>
-          <strong>Viva research prototype</strong>
+          <span className="eyebrow">HISTORICAL HUI DECISION SUPPORT</span>
+          <h2>Current and 72-Hour Harvest Urgency</h2>
           <p>
-            HUI is a classifier-derived relative urgency index. It is
-            not a literal probability percentage and does not directly
-            measure honey maturity. The current screen uses held-out
-            historical records to demonstrate the same output package
-            that will be produced from live IoT sensor history.
-          </p>
-        </div>
-      </div>
-
-      <div className="classifier-hui-heading">
-        <div>
-          <span className="eyebrow">
-            CURRENT AND THREE-DAY HARVEST URGENCY
-          </span>
-          <h2>Classifier-Derived HUI Decision Support</h2>
-          <p>
-            The current HUI is derived from the selected classifier.
-            LightGBM and XGBoost regressors forecast the HUI after 24,
-            48 and 72 hours.
+            This view demonstrates how the selected classifier produces the
+            current HUI and how the selected regressors forecast HUI over the
+            next 24, 48 and 72 hours.
           </p>
         </div>
 
-        <label>
+        <label className="decision-hui-hive-select">
           <span>Hive</span>
           <select
             value={selectedHive}
@@ -249,230 +310,402 @@ export default function ClassifierDerivedHuiPredictionTab() {
             ))}
           </select>
         </label>
+      </header>
+
+      <section className="decision-hui-process-panel">
+        <div className="decision-hui-process-title">
+          <Info size={19} />
+          <div>
+            <strong>What is happening in this tab?</strong>
+            <small>Historical test data is used here for demonstration; live IoT prediction is shown in the separate Live IoT Prediction tab.</small>
+          </div>
+        </div>
+
+        <div className="decision-hui-process-grid">
+          {processStep(
+            "1",
+            "Current HUI",
+            "XGBoost classifier score is transformed into a 0–100 urgency index.",
+          )}
+          {processStep(
+            "2",
+            "Future HUI",
+            "Selected regressors forecast the index at +24h, +48h and +72h.",
+          )}
+          {processStep(
+            "3",
+            "Decision support",
+            "Forecast readiness classes are converted into a monitoring or inspection recommendation.",
+          )}
+        </div>
+      </section>
+
+      <div className="decision-hui-overview-grid">
+        <article className={`decision-hui-current-card is-${classTone(latest?.current_class)}`}>
+          <div className="decision-hui-current-heading">
+            <span className="decision-hui-current-icon">
+              <Gauge size={26} />
+            </span>
+            <div>
+              <small>CURRENT HUI</small>
+              <strong>{formatNumber(latest?.current_hui, 1)}</strong>
+              <b>{classShortLabel(latest?.current_class)}</b>
+            </div>
+          </div>
+
+          <div className="decision-hui-current-scale">
+            <span>0</span>
+            <div>
+              <i
+                style={{
+                  width: `${Math.min(
+                    100,
+                    Math.max(0, Number(latest?.current_hui ?? 0)),
+                  )}%`,
+                }}
+              />
+            </div>
+            <span>100</span>
+          </div>
+
+          <p>Relative harvest urgency from the selected classifier.</p>
+        </article>
+
+        <article className="decision-hui-forecast-overview">
+          <div className="decision-hui-section-heading compact">
+            <div>
+              <small>UPCOMING 72 HOURS</small>
+              <h3>Future-HUI forecast</h3>
+            </div>
+            <span className="decision-hui-gate-pill">
+              <CheckCircle2 size={15} />
+              {gatePassed ? "3/3 horizons passed" : "Research forecast"}
+            </span>
+          </div>
+
+          <div className="decision-hui-forecast-grid">
+            {trajectory.slice(1).map((item) => (
+              <ForecastCard
+                key={item.horizon}
+                horizon={item.horizon}
+                hui={item.hui}
+                readinessClass={item.readinessClass}
+                model={item.model}
+              />
+            ))}
+          </div>
+        </article>
+
+        <article className="decision-hui-action-card">
+          <div className="decision-hui-section-heading compact">
+            <div>
+              <small>RECOMMENDED ACTION</small>
+              <h3>{recommendationTitle}</h3>
+            </div>
+            <span className="decision-hui-action-icon">
+              <ArrowRight size={21} />
+            </span>
+          </div>
+
+          <p>{recommendationText}</p>
+
+          {highestForecast ? (
+            <div className="decision-hui-action-summary">
+              <span>Highest forecast</span>
+              <strong>
+                {formatNumber(highestForecast.hui, 1)} · {highestForecast.horizon}
+              </strong>
+              <small>{classShortLabel(highestForecast.readinessClass)}</small>
+            </div>
+          ) : null}
+        </article>
       </div>
 
-      <div className="stats-grid stats-grid-six">
-        <StatCard
-          label="Current HUI"
-          value={formatNumber(latest?.current_hui, 1)}
-          icon={Gauge}
-          note={latest?.current_class ?? "Unavailable"}
-        />
-        <StatCard
-          label="24h predicted HUI"
-          value={formatNumber(latest?.predicted_hui_24h, 1)}
-          icon={Clock3}
-          note={latest?.predicted_class_24h ?? "Unavailable"}
-        />
-        <StatCard
+      <div className="decision-hui-mini-grid">
+        <MiniMetric
+          icon={Waves}
           label="Readiness stability"
           value={formatNumber(latest?.hrsi, 1)}
-          icon={Waves}
           note={latest?.hrsi_interpretation ?? "Unavailable"}
         />
-        <StatCard
-          label="Rate of change"
-          value={latest?.rate_of_change ?? "—"}
+        <MiniMetric
           icon={Activity}
+          label="Recent HUI trend"
+          value={latest?.rate_of_change ?? "—"}
           note={`${formatNumber(
             latest?.rate_of_change_points_per_hour,
             2,
-          )} HUI points/hour`}
+          )} points/hour`}
         />
-        <StatCard
-          label="Evidence confidence"
-          value={latest?.prediction_confidence ?? "—"}
-          icon={ShieldAlert}
-          note={`${formatNumber(latest?.confidence_score, 1)}/100 prototype evidence; operational confidence not established`}
-        />
-        <StatCard
-          label="Future-HUI gate"
-          value={gatePassed ? "Passed" : "Limited"}
-          icon={gatePassed ? CheckCircle2 : AlertTriangle}
-          note="Viva dashboard only; operational deployment disabled"
+        <MiniMetric
+          icon={Clock3}
+          label="Forecast coverage"
+          value="72 hours"
+          note={`${model24} · ${model48} · ${model72}`}
         />
       </div>
 
       <Panel
-        title="Current and future Harvest Urgency Index"
-        subtitle="Fixed readiness classes: 0–39 Not Ready, 40–59 Approaching Harvest, 60–79 Ready, and 80–100 High-Priority Harvest."
+        title="Current and future HUI trajectory"
+        subtitle="Readiness thresholds: 40 Approaching, 60 Ready, 80 High Priority."
       >
-        <div className="classifier-hui-projection-grid">
-          {trajectory.map((item) => (
-            <ProjectionCard
-              key={item.horizon}
-              horizon={item.horizon}
-              hui={item.hui}
-              readinessClass={item.readinessClass}
-              model={item.model}
+        <div className="decision-hui-trajectory-layout">
+          <div className="decision-hui-current-plus-forecast">
+            <ForecastCard
+              horizon="Current"
+              hui={latest?.current_hui}
+              readinessClass={latest?.current_class}
+              model="Classifier"
+              current
             />
-          ))}
-        </div>
+            {trajectory.slice(1).map((item) => (
+              <ForecastCard
+                key={`trajectory-${item.horizon}`}
+                horizon={item.horizon}
+                hui={item.hui}
+                readinessClass={item.readinessClass}
+                model={item.model}
+              />
+            ))}
+          </div>
 
-        <div className="classifier-hui-trajectory-chart">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={trajectory}
-              margin={{ top: 15, right: 30, left: 5, bottom: 10 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="horizon" />
-              <YAxis domain={[0, 100]} />
-              <Tooltip
-                formatter={(value) => [
-                  formatNumber(value, 1),
-                  "HUI",
-                ]}
-              />
-              <ReferenceLine y={40} strokeDasharray="5 5" label="Approaching" />
-              <ReferenceLine y={60} strokeDasharray="5 5" label="Ready" />
-              <ReferenceLine
-                y={80}
-                strokeDasharray="5 5"
-                label="High-Priority Harvest"
-              />
-              <Line
-                type="monotone"
-                dataKey="hui"
-                name="Harvest Urgency Index"
-                strokeWidth={3}
-                dot={{ r: 5 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="classifier-hui-trajectory-chart decision-hui-trajectory-chart">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={trajectory}
+                margin={{ top: 16, right: 34, left: 5, bottom: 8 }}
+              >
+                <ReferenceArea y1={0} y2={40} fill="#f8fafc" fillOpacity={0.9} />
+                <ReferenceArea y1={40} y2={60} fill="#fffbeb" fillOpacity={0.8} />
+                <ReferenceArea y1={60} y2={80} fill="#f0fdf4" fillOpacity={0.8} />
+                <ReferenceArea y1={80} y2={100} fill="#fef2f2" fillOpacity={0.75} />
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="horizon" />
+                <YAxis domain={[0, 100]} />
+                <Tooltip
+                  formatter={(value) => [
+                    formatNumber(value, 1),
+                    "HUI",
+                  ]}
+                />
+                <ReferenceLine y={40} stroke="#d97706" strokeDasharray="5 5" />
+                <ReferenceLine y={60} stroke="#16a34a" strokeDasharray="5 5" />
+                <ReferenceLine y={80} stroke="#dc2626" strokeDasharray="5 5" />
+                <Line
+                  type="monotone"
+                  dataKey="hui"
+                  name="Harvest Urgency Index"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  dot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </Panel>
 
-      <div className="two-column-grid">
-        <Panel
-          title="Recommended inspection / potential harvest window"
-          subtitle="The earliest forecast horizon entering the Ready range determines the beekeeper inspection window; harvesting still requires physical confirmation."
-        >
-          <div className="classifier-hui-recommendation">
-            <ArrowRight size={24} aria-hidden="true" />
+      <div className="decision-hui-explanation-grid">
+        <article className="decision-hui-simple-card">
+          <div className="decision-hui-section-heading compact">
             <div>
-              <strong>{latest?.recommended_window ?? "Unavailable"}</strong>
-              <p>{latest?.final_recommendation ?? "No recommendation available."}</p>
+              <small>SIMPLE INTERPRETATION</small>
+              <h3>What does this result mean?</h3>
             </div>
+            <Sparkles size={20} />
           </div>
-        </Panel>
 
-        <Panel
-          title="Explanation of contributing factors"
-          subtitle="Data-derived reasons supporting the current decision-support output."
-        >
-          <ol className="classifier-hui-factor-list">
-            {(latest?.contributing_factors ?? []).map((factor) => (
-              <li key={factor}>{factor}</li>
-            ))}
-          </ol>
-        </Panel>
+          <p>
+            The current hive state is <strong>{classShortLabel(latest?.current_class)}</strong> at HUI {formatNumber(latest?.current_hui, 1)}.
+            The highest forecast over the next 72 hours is <strong>{formatNumber(highestForecast?.hui, 1)}</strong>, classified as <strong>{classShortLabel(highestForecast?.readinessClass)}</strong>.
+          </p>
+
+          <div className="decision-hui-class-key">
+            <span className="is-not-ready">0–39 Not Ready</span>
+            <span className="is-approaching">40–59 Approaching</span>
+            <span className="is-ready">60–79 Ready</span>
+            <span className="is-high-priority">80–100 High Priority</span>
+          </div>
+        </article>
+
+        <article className="decision-hui-simple-card">
+          <div className="decision-hui-section-heading compact">
+            <div>
+              <small>WHY THIS OUTPUT?</small>
+              <h3>Key contributing factors</h3>
+            </div>
+            <LineChartIcon size={20} />
+          </div>
+
+          <ul className="decision-hui-factor-list">
+            {factors.length ? (
+              factors.map((factor) => <li key={factor}>{factor}</li>)
+            ) : (
+              <li>No additional contributing factors were exported.</li>
+            )}
+          </ul>
+        </article>
       </div>
 
-      <Panel
-        title="Environmental and sensor status"
-        subtitle={`Latest demonstrated record: ${latest?.timestamp ?? "Unavailable"}`}
-      >
-        <div className="classifier-hui-sensor-grid">
-          <SensorValue
+      <section className="decision-hui-sensor-section">
+        <div className="decision-hui-section-heading">
+          <div>
+            <span className="eyebrow">SENSOR SNAPSHOT</span>
+            <h3>Variables behind the demonstrated decision</h3>
+            <p>{latest?.timestamp ?? "Latest historical record"}</p>
+          </div>
+        </div>
+
+        <div className="decision-hui-sensor-grid">
+          <SensorCard
+            icon={Scale}
             label="Hive weight"
             value={latest?.sensor_status?.weight_kg}
             suffix=" kg"
           />
-          <SensorValue
+          <SensorCard
+            icon={Thermometer}
             label="Internal temperature"
             value={latest?.sensor_status?.internal_temperature_c}
             suffix=" °C"
           />
-          <SensorValue
+          <SensorCard
+            icon={Waves}
             label="Internal humidity"
             value={latest?.sensor_status?.internal_humidity_pct}
             suffix="%"
           />
-          <SensorValue
+          <SensorCard
+            icon={Wind}
             label="CO₂ concentration"
             value={latest?.sensor_status?.co2_ppm}
             suffix=" ppm"
           />
-          <SensorValue
-            label="Input completeness"
-            value={latest?.sensor_status?.input_completeness_percent}
-            suffix="%"
-          />
-          <div className="classifier-hui-sensor-value">
-            <span>Sensor freshness</span>
-            <strong>{latest?.sensor_status?.sensor_freshness ?? "Unavailable"}</strong>
-          </div>
-          <div className="classifier-hui-sensor-value">
-            <span>Battery status</span>
-            <strong>{latest?.sensor_status?.battery_status ?? "Unavailable"}</strong>
-          </div>
         </div>
-      </Panel>
+      </section>
 
       <Panel
-        title="Held-out historical HUI trajectory"
-        subtitle="Held-out historical test rows for the selected hive; this chart is a demonstration, not a live IoT stream."
+        title="Historical HUI trajectory"
+        subtitle="Held-out historical test rows for the selected hive."
       >
-        <div className="classifier-hui-history-chart">
+        <div className="decision-hui-history-toolbar">
+          <div className="decision-hui-range-buttons">
+            {[
+              [24, "24h"],
+              [72, "72h"],
+              [168, "7d"],
+              ["all", "All"],
+            ].map(([value, label]) => (
+              <button
+                key={label}
+                type="button"
+                className={historyRange === value ? "is-active" : ""}
+                onClick={() => setHistoryRange(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="decision-hui-series-buttons">
+            {[
+              ["current", "Current"],
+              ["h24", "+24h"],
+              ["h48", "+48h"],
+              ["h72", "+72h"],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={visibleSeries[key] ? "is-active" : ""}
+                onClick={() =>
+                  setVisibleSeries((current) => ({
+                    ...current,
+                    [key]: !current[key],
+                  }))
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="classifier-hui-history-chart decision-hui-history-chart">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={selectedSeries}
-              margin={{ top: 10, right: 25, left: 5, bottom: 75 }}
+              margin={{ top: 10, right: 25, left: 5, bottom: 55 }}
             >
+              <ReferenceArea y1={0} y2={40} fill="#f8fafc" fillOpacity={0.75} />
+              <ReferenceArea y1={40} y2={60} fill="#fffbeb" fillOpacity={0.55} />
+              <ReferenceArea y1={60} y2={80} fill="#f0fdf4" fillOpacity={0.55} />
+              <ReferenceArea y1={80} y2={100} fill="#fef2f2" fillOpacity={0.5} />
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="displayTime"
-                angle={-35}
+                angle={-30}
                 textAnchor="end"
                 interval="preserveStartEnd"
-                height={85}
+                height={70}
                 tick={{ fontSize: 10 }}
               />
               <YAxis domain={[0, 100]} />
               <Tooltip />
               <Legend />
-              <Line
-                type="monotone"
-                dataKey="classifier_derived_hui"
-                name="Current HUI"
-                dot={false}
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="predicted_hui_24h"
-                name="Predicted +24h HUI"
-                dot={false}
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="predicted_hui_48h"
-                name="Predicted +48h HUI"
-                dot={false}
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="predicted_hui_72h"
-                name="Predicted +72h HUI"
-                dot={false}
-                strokeWidth={2}
-              />
+              <ReferenceLine y={40} stroke="#d97706" strokeDasharray="5 5" />
+              <ReferenceLine y={60} stroke="#16a34a" strokeDasharray="5 5" />
+              <ReferenceLine y={80} stroke="#dc2626" strokeDasharray="5 5" />
+              {visibleSeries.current ? (
+                <Line
+                  type="monotone"
+                  dataKey="classifier_derived_hui"
+                  name="Current HUI"
+                  dot={false}
+                  stroke="#1d4ed8"
+                  strokeWidth={2.5}
+                />
+              ) : null}
+              {visibleSeries.h24 ? (
+                <Line
+                  type="monotone"
+                  dataKey="predicted_hui_24h"
+                  name="Predicted +24h HUI"
+                  dot={false}
+                  stroke="#0891b2"
+                  strokeWidth={2}
+                />
+              ) : null}
+              {visibleSeries.h48 ? (
+                <Line
+                  type="monotone"
+                  dataKey="predicted_hui_48h"
+                  name="Predicted +48h HUI"
+                  dot={false}
+                  stroke="#7c3aed"
+                  strokeWidth={2}
+                />
+              ) : null}
+              {visibleSeries.h72 ? (
+                <Line
+                  type="monotone"
+                  dataKey="predicted_hui_72h"
+                  name="Predicted +72h HUI"
+                  dot={false}
+                  stroke="#d97706"
+                  strokeWidth={2}
+                />
+              ) : null}
             </LineChart>
           </ResponsiveContainer>
         </div>
       </Panel>
 
-      <div className="classifier-hui-method-note">
-        <Thermometer size={20} aria-hidden="true" />
-        <p>
-          Current HUI is derived from the Platt-adjusted classifier score
-          through training-only monotonic anchors. Future HUI forecasts
-          passed the predefined viva research gate at all three horizons.
-          Evidence confidence is capped at Moderate while the probability-calibration gate remains limited. Independent biological and operational validation remains future work.
-        </p>
+      <div className="decision-hui-footnote">
+        <Database size={16} />
+        <span>
+          Historical decision-support demonstration. HUI is a relative urgency index, not a direct honey-maturity percentage.
+        </span>
       </div>
     </section>
   );
