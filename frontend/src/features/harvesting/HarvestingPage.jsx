@@ -9,6 +9,7 @@ import HarvestingModelTrainingTab from "./model";
 import { Panel } from "../../components/common/Panel";
 import { ModuleTabs } from "../shared/ModuleTabs";
 import ClassifierDerivedHuiPredictionTab from "./live/ClassifierDerivedHuiPredictionTab";
+import LiveIoTHuiPredictionTab from "./live/LiveIoTHuiPredictionTab";
 // function LiveWarningPlaceholder() {
 //   return (
 //     <Panel
@@ -67,6 +68,10 @@ export function HarvestingPage() {
 
       {activeModuleTab === "live-early-warning" && (
          <ClassifierDerivedHuiPredictionTab />
+      )}
+
+      {activeModuleTab === "live-iot-prediction" && (
+        <LiveIoTHuiPredictionTab />
       )}
     </div>
   );

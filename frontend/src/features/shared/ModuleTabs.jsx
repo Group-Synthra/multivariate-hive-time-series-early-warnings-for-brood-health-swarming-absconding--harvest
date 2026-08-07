@@ -16,6 +16,11 @@ const MODULE_TABS = [
     label: "HUI Decision Support",
     icon: RadioTower,
   },
+  {
+    id: 'live-iot-prediction',
+    label: 'Live IoT Prediction',
+    icon: RadioTower,
+  },
 ];
 
 export function ModuleTabs({ activeTab, onChange }) {

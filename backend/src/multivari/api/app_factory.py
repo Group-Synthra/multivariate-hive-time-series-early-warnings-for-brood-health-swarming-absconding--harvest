@@ -6,7 +6,14 @@ from pathlib import Path
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+from multivari.api.harvesting_live_sensor_routes import register_harvesting_live_sensor_routes
+from multivari.modules.harvesting.live_hui_monitor import (
+    create_live_hui_monitor,
+    should_start_monitor_in_this_process,
+)
+
 from .eda_service import EDAService
+from .harvesting_live_routes import create_harvesting_live_blueprint
 from .routes import create_api_blueprint
 
 
@@ -41,6 +48,14 @@ def create_app() -> Flask:
     service = EDAService(backend_root=backend_root)
     app.register_blueprint(create_api_blueprint(service))
 
+    live_hui_monitor = create_live_hui_monitor(backend_root=backend_root)
+    app.extensions["live_hui_monitor"] = live_hui_monitor
+    app.register_blueprint(
+        create_harvesting_live_blueprint(live_hui_monitor)
+    )
+    if should_start_monitor_in_this_process():
+        live_hui_monitor.start()
+
     @app.get("/")
     def index():
         base_url = request.host_url.rstrip("/")
@@ -62,5 +77,7 @@ def create_app() -> Flask:
     @app.errorhandler(405)
     def method_not_allowed(_error):
         return jsonify({"error": "HTTP method not allowed for this endpoint"}), 405
+
+    register_harvesting_live_sensor_routes(app)
 
     return app
