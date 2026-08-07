@@ -1,1 +1,3 @@
-"""Module-specific code for brood health."""
+"""Brood-health exploratory analysis, training and live IoT prediction."""
+
+__all__: list[str] = []

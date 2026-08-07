@@ -9,13 +9,14 @@ from flask_cors import CORS
 from multivari.modules.absconding.iot_monitor import AbscondingIotMonitor
 from multivari.modules.absconding.routes import create_absconding_blueprint
 from multivari.modules.absconding.service import AbscondingService
+from multivari.modules.brood_health.routes import create_brood_health_blueprint
+from multivari.modules.brood_health.service import BroodHealthService
 
 from .eda_service import EDAService
 from .routes import create_api_blueprint
 
 
 def _backend_root() -> Path:
-    # .../backend/src/multivari/api/app_factory.py -> .../backend
     return Path(__file__).resolve().parents[3]
 
 
@@ -61,6 +62,8 @@ def create_app() -> Flask:
     )
 
     app.register_blueprint(create_api_blueprint(service))
+    brood_service = BroodHealthService()
+    app.register_blueprint(create_brood_health_blueprint(brood_service))
     app.register_blueprint(create_absconding_blueprint(absconding_service, iot_monitor))
     app.extensions["absconding_iot_monitor"] = iot_monitor
 
@@ -74,6 +77,9 @@ def create_app() -> Flask:
                 "endpoints": {
                     "health": f"{base_url}/api/health",
                     "common_eda": f"{base_url}/api/eda",
+                    "brood_health_eda": f"{base_url}/api/brood-health/eda",
+                    "brood_health_model": f"{base_url}/api/brood-health/model",
+                    "brood_health_iot": f"{base_url}/api/brood-health/iot/health",
                     "absconding": f"{base_url}/api/absconding/summary",
                     "absconding_iot": f"{base_url}/api/absconding/iot/live",
                     "absconding_iot_monitor": (f"{base_url}/api/absconding/iot/monitor/status"),
