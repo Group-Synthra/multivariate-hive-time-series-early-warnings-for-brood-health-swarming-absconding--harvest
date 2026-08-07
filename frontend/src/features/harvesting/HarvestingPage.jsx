@@ -7,29 +7,9 @@ import {
 import HarvestingEdaTab from "./eda";
 import HarvestingModelTrainingTab from "./model";
 import { Panel } from "../../components/common/Panel";
-import { ModuleTabs } from "../shared/ModuleTabs";
+import HarvestingModuleTabs from "./HarvestingModuleTabs";
 import ClassifierDerivedHuiPredictionTab from "./live/ClassifierDerivedHuiPredictionTab";
 import LiveIoTHuiPredictionTab from "./live/LiveIoTHuiPredictionTab";
-// function LiveWarningPlaceholder() {
-//   return (
-//     <Panel
-//       title="Live Early Warning (IoT)"
-//       subtitle="This tab will use the calibrated model to produce HUI, HRSI, HRRoC and the candidate harvest window."
-//     >
-//       <div className="empty-state">
-//         <div>
-//           <RadioTower size={34} aria-hidden="true" />
-//           <h3>Live prediction is not connected yet</h3>
-//           <p>
-//             The next stage is training-only probability
-//             calibration, followed by readiness scoring and the
-//             prediction API.
-//           </p>
-//         </div>
-//       </div>
-//     </Panel>
-//   );
-// }
 
 export function HarvestingPage() {
   const [activeModuleTab, setActiveModuleTab] = useState(
@@ -41,7 +21,7 @@ export function HarvestingPage() {
       <section className="hero compact">
         <div>
           <span className="eyebrow">
-            MODULE 4 · TIME-OPTIMAL HONEY HARVESTING
+            MODULE 4 Â· TIME-OPTIMAL HONEY HARVESTING
           </span>
           <h2>Honey Harvesting Decision Support</h2>
           <p>
@@ -53,7 +33,7 @@ export function HarvestingPage() {
         <PackageCheck size={42} aria-hidden="true" />
       </section>
 
-      <ModuleTabs
+      <HarvestingModuleTabs
         activeTab={activeModuleTab}
         onChange={setActiveModuleTab}
       />
