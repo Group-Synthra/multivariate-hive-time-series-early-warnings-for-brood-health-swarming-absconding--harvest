@@ -1,0 +1,89 @@
+.harvest-final-research {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.harvest-final-banner {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.harvest-final-banner p {
+  margin: 0.25rem 0 0;
+  line-height: 1.55;
+}
+
+.harvest-final-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.harvest-final-grid > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.45rem;
+  padding: 0.85rem;
+  border-radius: 10px;
+}
+
+.harvest-final-grid span,
+.harvest-final-grid strong {
+  grid-column: 2;
+}
+
+.harvest-final-grid span {
+  font-size: 0.72rem;
+}
+
+.harvest-final-grid strong {
+  font-size: 0.86rem;
+}
+
+.harvest-final-grid .is-complete {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.harvest-final-grid .is-limited {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.harvest-final-test-note,
+.harvest-final-hui-note {
+  padding: 0.9rem;
+  border-radius: 8px;
+  line-height: 1.55;
+}
+
+.harvest-final-test-note {
+  border-left: 4px solid #dc2626;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.harvest-final-hui-note {
+  border-left: 4px solid #16a34a;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+@media (max-width: 900px) {
+  .harvest-final-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .harvest-final-grid {
+    grid-template-columns: 1fr;
+  }
+}

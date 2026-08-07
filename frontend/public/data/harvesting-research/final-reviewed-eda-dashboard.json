@@ -1,0 +1,3298 @@
+{
+  "status": "final_reviewed_eda_dashboard_ready",
+  "generated_at": "2026-08-07T09:59:25.038460+00:00",
+  "summary": {
+    "modelling_rows": 285448,
+    "reviewed_events": 12,
+    "positive_hives": 10,
+    "engineered_features": 63,
+    "minimum_history_hours": 168,
+    "positive_rows": 864,
+    "target_prevalence": 0.003026820997169362,
+    "events_by_split": {
+      "train": 9,
+      "validation": 2,
+      "test": 1
+    }
+  },
+  "integrity": {
+    "no_prohibited_leakage_features": true,
+    "prohibited_features_present": [],
+    "past_only_feature_policy": true,
+    "available_event_samples": 60,
+    "available_controls": 60,
+    "expected_samples": 60,
+    "missing_event_samples": 0,
+    "missing_controls": 0
+  },
+  "sensor_summary_72h": [
+    {
+      "family": "weight",
+      "label": "Weight",
+      "maximum_absolute_smd": 1.2023696392280014,
+      "feature": "weight_delta_72h_kg",
+      "feature_display_name": "Weight delta 72h",
+      "strength": "Strong"
+    },
+    {
+      "family": "humidity",
+      "label": "Humidity",
+      "maximum_absolute_smd": 1.2820726097832509,
+      "feature": "humidity_pct_delta_24h",
+      "feature_display_name": "Humidity delta 24h",
+      "strength": "Strong"
+    },
+    {
+      "family": "temperature",
+      "label": "Temperature",
+      "maximum_absolute_smd": 1.154555073797186,
+      "feature": "temperature_c_delta_24h",
+      "feature_display_name": "Temperature delta 24h",
+      "strength": "Strong"
+    },
+    {
+      "family": "co2",
+      "label": "CO\u2082",
+      "maximum_absolute_smd": 1.0738110508099716,
+      "feature": "co2_ppm_delta_24h",
+      "feature_display_name": "Co\u2082 delta 24h",
+      "strength": "Strong"
+    }
+  ],
+  "strong_sensor_family_count": 4,
+  "top_sensor_features_by_lead": {
+    "72": [
+      {
+        "lead_hours": 72,
+        "feature": "humidity_pct_delta_24h",
+        "display_name": "Humidity delta 24h",
+        "sensor_family": "humidity",
+        "event_mean": 1.2764997482299805,
+        "control_mean": -0.679915726184845,
+        "smd": 1.2820726097832509,
+        "absolute_smd": 1.2820726097832509,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 72,
+        "feature": "humidity_pct_trend_24h_per_hour",
+        "display_name": "Humidity trend 24h / hour",
+        "sensor_family": "humidity",
+        "event_mean": 0.0531874857842922,
+        "control_mean": -0.0283298213034868,
+        "smd": 1.2820724412729854,
+        "absolute_smd": 1.2820724412729854,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 72,
+        "feature": "weight_delta_72h_kg",
+        "display_name": "Weight delta 72h",
+        "sensor_family": "weight",
+        "event_mean": 0.7660164833068848,
+        "control_mean": -0.2177663594484329,
+        "smd": 1.2023696392280014,
+        "absolute_smd": 1.2023696392280014,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 72,
+        "feature": "weight_trend_72h_kg_per_hour",
+        "display_name": "Weight trend 72h / hour",
+        "sensor_family": "weight",
+        "event_mean": 0.0106391170993447,
+        "control_mean": -0.0030245326925069,
+        "smd": 1.2023696124515364,
+        "absolute_smd": 1.2023696124515364,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 72,
+        "feature": "temperature_c_delta_24h",
+        "display_name": "Temperature delta 24h",
+        "sensor_family": "temperature",
+        "event_mean": -0.4354167878627777,
+        "control_mean": 0.2437325268983841,
+        "smd": -1.154555073797186,
+        "absolute_smd": 1.154555073797186,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 72,
+        "feature": "temperature_c_trend_24h_per_hour",
+        "display_name": "Temperature trend 24h / hour",
+        "sensor_family": "temperature",
+        "event_mean": -0.0181423667818307,
+        "control_mean": 0.0101555213332176,
+        "smd": -1.154555044549996,
+        "absolute_smd": 1.154555044549996,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 72,
+        "feature": "co2_ppm_delta_24h",
+        "display_name": "Co\u2082 delta 24h",
+        "sensor_family": "co2",
+        "event_mean": 615.2682495117188,
+        "control_mean": -585.494873046875,
+        "smd": 1.0738110508099716,
+        "absolute_smd": 1.0738110508099716,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 72,
+        "feature": "co2_ppm_trend_24h_per_hour",
+        "display_name": "Co\u2082 trend 24h / hour",
+        "sensor_family": "co2",
+        "event_mean": 25.63617706298828,
+        "control_mean": -24.395620346069336,
+        "smd": 1.0738110351500536,
+        "absolute_smd": 1.0738110351500536,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 72,
+        "feature": "co2_ppm_delta_6h",
+        "display_name": "Co\u2082 delta 6h",
+        "sensor_family": "co2",
+        "event_mean": -5.936666011810303,
+        "control_mean": -3487.56640625,
+        "smd": 1.0388012821607513,
+        "absolute_smd": 1.0388012821607513,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 72,
+        "feature": "weight_std_168h_kg",
+        "display_name": "Weight std 168h",
+        "sensor_family": "weight",
+        "event_mean": 0.7870468497276306,
+        "control_mean": 0.3649280071258545,
+        "smd": 0.9594337292081716,
+        "absolute_smd": 0.9594337292081716,
+        "event_n": 12,
+        "control_n": 12
+      }
+    ],
+    "48": [
+      {
+        "lead_hours": 48,
+        "feature": "weight_std_72h_kg",
+        "display_name": "Weight std 72h",
+        "sensor_family": "weight",
+        "event_mean": 0.5467708110809326,
+        "control_mean": 0.1955077797174453,
+        "smd": 1.3519064555356513,
+        "absolute_smd": 1.3519064555356513,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 48,
+        "feature": "weight_range_72h_kg",
+        "display_name": "Weight range 72h",
+        "sensor_family": "weight",
+        "event_mean": 3.8451836109161377,
+        "control_mean": 0.9845409989356996,
+        "smd": 1.3433169326116077,
+        "absolute_smd": 1.3433169326116077,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 48,
+        "feature": "weight_std_6h_kg",
+        "display_name": "Weight std 6h",
+        "sensor_family": "weight",
+        "event_mean": 1.2137330770492554,
+        "control_mean": 0.0642011240124702,
+        "smd": 1.3167292176246947,
+        "absolute_smd": 1.3167292176246947,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 48,
+        "feature": "weight_range_6h_kg",
+        "display_name": "Weight range 6h",
+        "sensor_family": "weight",
+        "event_mean": 3.0428502559661865,
+        "control_mean": 0.1658915728330612,
+        "smd": 1.3074107799713313,
+        "absolute_smd": 1.3074107799713313,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 48,
+        "feature": "weight_std_24h_kg",
+        "display_name": "Weight std 24h",
+        "sensor_family": "weight",
+        "event_mean": 0.6437694430351257,
+        "control_mean": 0.1022385284304618,
+        "smd": 1.2657246631464234,
+        "absolute_smd": 1.2657246631464234,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 48,
+        "feature": "weight_range_24h_kg",
+        "display_name": "Weight range 24h",
+        "sensor_family": "weight",
+        "event_mean": 3.130474805831909,
+        "control_mean": 0.3693578243255615,
+        "smd": 1.2654630979935446,
+        "absolute_smd": 1.2654630979935446,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 48,
+        "feature": "weight_delta_6h_kg",
+        "display_name": "Weight delta 6h",
+        "sensor_family": "weight",
+        "event_mean": -0.1547091752290725,
+        "control_mean": 0.1372747868299484,
+        "smd": -1.0190529029106803,
+        "absolute_smd": 1.0190529029106803,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 48,
+        "feature": "weight_trend_6h_kg_per_hour",
+        "display_name": "Weight trend 6h / hour",
+        "sensor_family": "weight",
+        "event_mean": -0.0257848631590604,
+        "control_mean": 0.0228791292756795,
+        "smd": -1.0190528769074174,
+        "absolute_smd": 1.0190528769074174,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 48,
+        "feature": "weight_range_168h_kg",
+        "display_name": "Weight range 168h",
+        "sensor_family": "weight",
+        "event_mean": 4.40814208984375,
+        "control_mean": 2.382732629776001,
+        "smd": 0.882064449435953,
+        "absolute_smd": 0.882064449435953,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 48,
+        "feature": "weight_delta_1h_kg",
+        "display_name": "Weight delta 1h",
+        "sensor_family": "weight",
+        "event_mean": 1.4295331239700315,
+        "control_mean": 0.0191164705902338,
+        "smd": 0.7534501144828504,
+        "absolute_smd": 0.7534501144828504,
+        "event_n": 12,
+        "control_n": 12
+      }
+    ],
+    "24": [
+      {
+        "lead_hours": 24,
+        "feature": "weight_distance_from_max_72h_kg",
+        "display_name": "Weight distance from max 72h",
+        "sensor_family": "weight",
+        "event_mean": 0.6394834518432617,
+        "control_mean": 0.1979666948318481,
+        "smd": 1.7030574542799268,
+        "absolute_smd": 1.7030574542799268,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 24,
+        "feature": "weight_trend_6h_kg_per_hour",
+        "display_name": "Weight trend 6h / hour",
+        "sensor_family": "weight",
+        "event_mean": -0.0350416786968708,
+        "control_mean": 0.0133223244920372,
+        "smd": -1.5428363758011212,
+        "absolute_smd": 1.5428363758011212,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 24,
+        "feature": "weight_delta_6h_kg",
+        "display_name": "Weight delta 6h",
+        "sensor_family": "weight",
+        "event_mean": -0.2102500647306442,
+        "control_mean": 0.0799339488148689,
+        "smd": -1.5428363460914558,
+        "absolute_smd": 1.5428363460914558,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 24,
+        "feature": "weight_distance_from_max_24h_kg",
+        "display_name": "Weight distance from max 24h",
+        "sensor_family": "weight",
+        "event_mean": 0.4598080217838287,
+        "control_mean": 0.1273082792758941,
+        "smd": 1.3982519907548865,
+        "absolute_smd": 1.3982519907548865,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 24,
+        "feature": "weight_distance_from_max_168h_kg",
+        "display_name": "Weight distance from max 168h",
+        "sensor_family": "weight",
+        "event_mean": 0.780299961566925,
+        "control_mean": 0.4486750364303589,
+        "smd": 0.9639627769127874,
+        "absolute_smd": 0.9639627769127874,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 24,
+        "feature": "humidity_pct_delta_1h",
+        "display_name": "Humidity delta 1h",
+        "sensor_family": "humidity",
+        "event_mean": -1.6222509145736694,
+        "control_mean": -0.9022496342658995,
+        "smd": -0.7940583750013558,
+        "absolute_smd": 0.7940583750013558,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 24,
+        "feature": "weight_mean_168h_kg",
+        "display_name": "Weight mean 168h",
+        "sensor_family": "weight",
+        "event_mean": 51.83238220214844,
+        "control_mean": 38.91988754272461,
+        "smd": 0.7599791332765976,
+        "absolute_smd": 0.7599791332765976,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 24,
+        "feature": "weight_mean_72h_kg",
+        "display_name": "Weight mean 72h",
+        "sensor_family": "weight",
+        "event_mean": 52.3411750793457,
+        "control_mean": 39.54763412475586,
+        "smd": 0.7434999042844328,
+        "absolute_smd": 0.7434999042844328,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 24,
+        "feature": "weight_mean_6h_kg",
+        "display_name": "Weight mean 6h",
+        "sensor_family": "weight",
+        "event_mean": 52.27804565429688,
+        "control_mean": 39.894229888916016,
+        "smd": 0.7165571104212396,
+        "absolute_smd": 0.7165571104212396,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 24,
+        "feature": "weight_mean_24h_kg",
+        "display_name": "Weight mean 24h",
+        "sensor_family": "weight",
+        "event_mean": 52.36572265625,
+        "control_mean": 39.984561920166016,
+        "smd": 0.7154094373561269,
+        "absolute_smd": 0.7154094373561269,
+        "event_n": 12,
+        "control_n": 12
+      }
+    ],
+    "6": [
+      {
+        "lead_hours": 6,
+        "feature": "weight_range_168h_kg",
+        "display_name": "Weight range 168h",
+        "sensor_family": "weight",
+        "event_mean": 5.415924549102783,
+        "control_mean": 1.7776583433151243,
+        "smd": 1.5538780421170344,
+        "absolute_smd": 1.5538780421170344,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 6,
+        "feature": "weight_range_72h_kg",
+        "display_name": "Weight range 72h",
+        "sensor_family": "weight",
+        "event_mean": 4.6366496086120605,
+        "control_mean": 0.8157244324684143,
+        "smd": 1.539983065696124,
+        "absolute_smd": 1.539983065696124,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 6,
+        "feature": "weight_std_72h_kg",
+        "display_name": "Weight std 72h",
+        "sensor_family": "weight",
+        "event_mean": 0.5661511421203613,
+        "control_mean": 0.2008156925439834,
+        "smd": 1.114157984619985,
+        "absolute_smd": 1.114157984619985,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 6,
+        "feature": "co2_ppm_std_24h",
+        "display_name": "Co\u2082 std 24h",
+        "sensor_family": "co2",
+        "event_mean": 386.5440673828125,
+        "control_mean": 1380.1571044921875,
+        "smd": -1.0839936545242146,
+        "absolute_smd": 1.0839936545242146,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 6,
+        "feature": "co2_ppm_current",
+        "display_name": "Co\u2082 current",
+        "sensor_family": "co2",
+        "event_mean": 1874.4112548828125,
+        "control_mean": 5143.58349609375,
+        "smd": -1.0591987616644694,
+        "absolute_smd": 1.0591987616644694,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 6,
+        "feature": "co2_ppm_range_24h",
+        "display_name": "Co\u2082 range 24h",
+        "sensor_family": "co2",
+        "event_mean": 1501.1356201171875,
+        "control_mean": 4677.40673828125,
+        "smd": -1.0566333679777875,
+        "absolute_smd": 1.0566333679777875,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 6,
+        "feature": "co2_ppm_std_72h",
+        "display_name": "Co\u2082 std 72h",
+        "sensor_family": "co2",
+        "event_mean": 556.2625122070312,
+        "control_mean": 1643.4638671875,
+        "smd": -1.0044012704619183,
+        "absolute_smd": 1.0044012704619183,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 6,
+        "feature": "weight_std_168h_kg",
+        "display_name": "Weight std 168h",
+        "sensor_family": "weight",
+        "event_mean": 0.7619428038597107,
+        "control_mean": 0.3572975397109985,
+        "smd": 0.8928944299753182,
+        "absolute_smd": 0.8928944299753182,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 6,
+        "feature": "co2_ppm_mean_24h",
+        "display_name": "Co\u2082 mean 24h",
+        "sensor_family": "co2",
+        "event_mean": 1655.4268798828125,
+        "control_mean": 3609.76171875,
+        "smd": -0.8489104404581194,
+        "absolute_smd": 0.8489104404581194,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 6,
+        "feature": "co2_ppm_mean_72h",
+        "display_name": "Co\u2082 mean 72h",
+        "sensor_family": "co2",
+        "event_mean": 1876.7042236328125,
+        "control_mean": 3589.317626953125,
+        "smd": -0.7747882351849675,
+        "absolute_smd": 0.7747882351849675,
+        "event_n": 12,
+        "control_n": 12
+      }
+    ],
+    "1": [
+      {
+        "lead_hours": 1,
+        "feature": "weight_range_168h_kg",
+        "display_name": "Weight range 168h",
+        "sensor_family": "weight",
+        "event_mean": 5.402233123779297,
+        "control_mean": 1.6485246419906616,
+        "smd": 1.686800690525502,
+        "absolute_smd": 1.686800690525502,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 1,
+        "feature": "weight_range_72h_kg",
+        "display_name": "Weight range 72h",
+        "sensor_family": "weight",
+        "event_mean": 4.60712480545044,
+        "control_mean": 0.8204581141471863,
+        "smd": 1.5308368945384958,
+        "absolute_smd": 1.5308368945384958,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 1,
+        "feature": "weight_std_168h_kg",
+        "display_name": "Weight std 168h",
+        "sensor_family": "weight",
+        "event_mean": 0.7312008738517761,
+        "control_mean": 0.2726894915103912,
+        "smd": 1.4156911781187769,
+        "absolute_smd": 1.4156911781187769,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 1,
+        "feature": "weight_std_72h_kg",
+        "display_name": "Weight std 72h",
+        "sensor_family": "weight",
+        "event_mean": 0.5605300068855286,
+        "control_mean": 0.179982379078865,
+        "smd": 1.345505753540827,
+        "absolute_smd": 1.345505753540827,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 1,
+        "feature": "weight_std_24h_kg",
+        "display_name": "Weight std 24h",
+        "sensor_family": "weight",
+        "event_mean": 0.1405563801527023,
+        "control_mean": 0.059628739953041,
+        "smd": 1.2265198897592324,
+        "absolute_smd": 1.2265198897592324,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 1,
+        "feature": "co2_ppm_std_24h",
+        "display_name": "Co\u2082 std 24h",
+        "sensor_family": "co2",
+        "event_mean": 340.6396789550781,
+        "control_mean": 1431.1217041015625,
+        "smd": -1.2185198752239228,
+        "absolute_smd": 1.2185198752239228,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 1,
+        "feature": "co2_ppm_delta_6h",
+        "display_name": "Co\u2082 delta 6h",
+        "sensor_family": "co2",
+        "event_mean": -351.0836486816406,
+        "control_mean": -3037.3212890625,
+        "smd": 1.177925042102668,
+        "absolute_smd": 1.177925042102668,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 1,
+        "feature": "co2_ppm_range_24h",
+        "display_name": "Co\u2082 range 24h",
+        "sensor_family": "co2",
+        "event_mean": 1336.5755615234375,
+        "control_mean": 4816.49169921875,
+        "smd": -1.1421821499288023,
+        "absolute_smd": 1.1421821499288023,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 1,
+        "feature": "co2_ppm_std_72h",
+        "display_name": "Co\u2082 std 72h",
+        "sensor_family": "co2",
+        "event_mean": 537.914306640625,
+        "control_mean": 1599.7391357421875,
+        "smd": -1.0009483065346505,
+        "absolute_smd": 1.0009483065346505,
+        "event_n": 12,
+        "control_n": 12
+      },
+      {
+        "lead_hours": 1,
+        "feature": "weight_range_24h_kg",
+        "display_name": "Weight range 24h",
+        "sensor_family": "weight",
+        "event_mean": 0.5048165321350098,
+        "control_mean": 0.2070417404174804,
+        "smd": 0.9948809503065544,
+        "absolute_smd": 0.9948809503065544,
+        "event_n": 12,
+        "control_n": 12
+      }
+    ]
+  },
+  "signal_evolution": [
+    {
+      "lead_hours": 72,
+      "weight": 1.2023696392280014,
+      "humidity": 1.2820726097832509,
+      "temperature": 1.154555073797186,
+      "co2": 1.0738110508099716
+    },
+    {
+      "lead_hours": 48,
+      "weight": 1.3519064555356513,
+      "humidity": 0.4534331361491078,
+      "temperature": 0.3200826347389729,
+      "co2": 0.7241003533624908
+    },
+    {
+      "lead_hours": 24,
+      "weight": 1.7030574542799268,
+      "humidity": 0.7940583750013558,
+      "temperature": 0.5625255755510091,
+      "co2": 0.6534402288707059
+    },
+    {
+      "lead_hours": 6,
+      "weight": 1.5538780421170344,
+      "humidity": 0.7229332090557227,
+      "temperature": 0.5716580602998826,
+      "co2": 1.0839936545242146
+    },
+    {
+      "lead_hours": 1,
+      "weight": 1.686800690525502,
+      "humidity": 0.956018311178824,
+      "temperature": 0.3389709551616143,
+      "co2": 1.2185198752239228
+    }
+  ],
+  "lead_hours": [
+    72,
+    48,
+    24,
+    6,
+    1
+  ],
+  "coverage": {
+    "reviewed_events": 12,
+    "lead_times_per_event": 5,
+    "expected_event_lead_samples": 60,
+    "available_event_lead_samples": 60,
+    "available_matched_controls": 60,
+    "coverage_percent": 100.0
+  },
+  "detailed_sensor_statistics": [
+    {
+      "lead_hours": 72,
+      "feature": "humidity_pct_delta_24h",
+      "event_mean": 1.2764997482299805,
+      "control_mean": -0.679915726184845,
+      "standardized_mean_difference": 1.2820726097832509,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "humidity_pct_trend_24h_per_hour",
+      "event_mean": 0.0531874857842922,
+      "control_mean": -0.0283298213034868,
+      "standardized_mean_difference": 1.2820724412729854,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_delta_72h_kg",
+      "event_mean": 0.7660164833068848,
+      "control_mean": -0.2177663594484329,
+      "standardized_mean_difference": 1.2023696392280014,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_trend_72h_kg_per_hour",
+      "event_mean": 0.0106391170993447,
+      "control_mean": -0.0030245326925069,
+      "standardized_mean_difference": 1.2023696124515364,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "temperature_c_delta_24h",
+      "event_mean": -0.4354167878627777,
+      "control_mean": 0.2437325268983841,
+      "standardized_mean_difference": -1.154555073797186,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "temperature_c_trend_24h_per_hour",
+      "event_mean": -0.0181423667818307,
+      "control_mean": 0.0101555213332176,
+      "standardized_mean_difference": -1.154555044549996,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "co2_ppm_delta_24h",
+      "event_mean": 615.2682495117188,
+      "control_mean": -585.494873046875,
+      "standardized_mean_difference": 1.0738110508099716,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "co2_ppm_trend_24h_per_hour",
+      "event_mean": 25.63617706298828,
+      "control_mean": -24.395620346069336,
+      "standardized_mean_difference": 1.0738110351500536,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "co2_ppm_delta_6h",
+      "event_mean": -5.936666011810303,
+      "control_mean": -3487.56640625,
+      "standardized_mean_difference": 1.0388012821607513,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_std_168h_kg",
+      "event_mean": 0.7870468497276306,
+      "control_mean": 0.3649280071258545,
+      "standardized_mean_difference": 0.9594337292081716,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "co2_ppm_std_72h",
+      "event_mean": 333.76611328125,
+      "control_mean": 1530.44287109375,
+      "standardized_mean_difference": -0.8969498761969715,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "co2_ppm_range_24h",
+      "event_mean": 1131.1749267578125,
+      "control_mean": 5133.36572265625,
+      "standardized_mean_difference": -0.8952553139247624,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "co2_ppm_std_24h",
+      "event_mean": 349.2670593261719,
+      "control_mean": 1461.43115234375,
+      "standardized_mean_difference": -0.8711144359958779,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_std_72h_kg",
+      "event_mean": 0.4390381574630737,
+      "control_mean": 0.2378522753715515,
+      "standardized_mean_difference": 0.8318841620911985,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_delta_24h_kg",
+      "event_mean": 0.139866828918457,
+      "control_mean": -0.0849500000476837,
+      "standardized_mean_difference": 0.8305125350280913,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_trend_24h_kg_per_hour",
+      "event_mean": 0.005827784538269,
+      "control_mean": -0.003539582947269,
+      "standardized_mean_difference": 0.8305125006234128,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_relative_to_max_168h",
+      "event_mean": 0.990634024143219,
+      "control_mean": 0.9526752829551696,
+      "standardized_mean_difference": 0.7592704724158913,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "co2_ppm_mean_72h",
+      "event_mean": 1890.5284423828125,
+      "control_mean": 4175.5048828125,
+      "standardized_mean_difference": -0.7568532756009391,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_mean_6h_kg",
+      "event_mean": 52.3138427734375,
+      "control_mean": 40.32986068725586,
+      "standardized_mean_difference": 0.7121345796121255,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_mean_24h_kg",
+      "event_mean": 52.34271240234375,
+      "control_mean": 40.410343170166016,
+      "standardized_mean_difference": 0.7080557209245473,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_kg_current",
+      "event_mean": 52.3458251953125,
+      "control_mean": 40.4033088684082,
+      "standardized_mean_difference": 0.7072692311037618,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_relative_to_max_72h",
+      "event_mean": 0.9931395649909972,
+      "control_mean": 0.9762856960296632,
+      "standardized_mean_difference": 0.7046056507206002,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "co2_ppm_mean_24h",
+      "event_mean": 1999.8416748046875,
+      "control_mean": 4114.19970703125,
+      "standardized_mean_difference": -0.7045395251124301,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_distance_from_max_168h_kg",
+      "event_mean": 0.3584834635257721,
+      "control_mean": 0.8551745414733887,
+      "standardized_mean_difference": -0.6955761004970563,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_mean_72h_kg",
+      "event_mean": 51.9947509765625,
+      "control_mean": 40.50820541381836,
+      "standardized_mean_difference": 0.685141797342783,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_mean_168h_kg",
+      "event_mean": 51.34041213989258,
+      "control_mean": 40.58675003051758,
+      "standardized_mean_difference": 0.6439716973072054,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_range_168h_kg",
+      "event_mean": 3.1021673679351807,
+      "control_mean": 1.9450993537902832,
+      "standardized_mean_difference": 0.5727551841118721,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_trend_6h_kg_per_hour",
+      "event_mean": 0.0268985703587532,
+      "control_mean": 0.0057069584727287,
+      "standardized_mean_difference": 0.5480594718779163,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_delta_6h_kg",
+      "event_mean": 0.1613914221525192,
+      "control_mean": 0.0342417545616626,
+      "standardized_mean_difference": 0.5480594558206145,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_delta_1h_kg",
+      "event_mean": -0.0457905121147632,
+      "control_mean": -0.0055911839008331,
+      "standardized_mean_difference": -0.5123113678367064,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_range_72h_kg",
+      "event_mean": 1.8736668825149536,
+      "control_mean": 1.1537165641784668,
+      "standardized_mean_difference": 0.4936437264734017,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "humidity_pct_delta_6h",
+      "event_mean": -5.69383430480957,
+      "control_mean": -7.289498805999756,
+      "standardized_mean_difference": 0.4848557162202144,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_distance_from_max_72h_kg",
+      "event_mean": 0.2783665657043457,
+      "control_mean": 0.4539246261119842,
+      "standardized_mean_difference": -0.4584667666033118,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_distance_from_max_24h_kg",
+      "event_mean": 0.1976919174194336,
+      "control_mean": 0.1555163860321045,
+      "standardized_mean_difference": 0.2597621957179443,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "humidity_pct_mean_72h",
+      "event_mean": 68.35684967041016,
+      "control_mean": 70.50839233398438,
+      "standardized_mean_difference": -0.2353744149562538,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "humidity_pct_mean_24h",
+      "event_mean": 68.55065155029297,
+      "control_mean": 70.2759017944336,
+      "standardized_mean_difference": -0.1939085862400767,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "humidity_pct_delta_1h",
+      "event_mean": -0.8095833659172058,
+      "control_mean": -0.9739990234375,
+      "standardized_mean_difference": 0.1886758653125196,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "co2_ppm_delta_1h",
+      "event_mean": 176.9322509765625,
+      "control_mean": 339.9957580566406,
+      "standardized_mean_difference": -0.1879420887093313,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_range_24h_kg",
+      "event_mean": 0.4592002332210541,
+      "control_mean": 0.6136497855186462,
+      "standardized_mean_difference": -0.1822315495051287,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "humidity_pct_std_72h",
+      "event_mean": 3.367630958557129,
+      "control_mean": 3.654884338378906,
+      "standardized_mean_difference": -0.1817737845537363,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "co2_flatline_24h_1",
+      "event_mean": 0.25,
+      "control_mean": 0.3333333432674408,
+      "standardized_mean_difference": -0.1762766394176383,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "co2_flatline_72h_1",
+      "event_mean": 0.25,
+      "control_mean": 0.3333333432674408,
+      "standardized_mean_difference": -0.1762766394176383,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "co2_ppm_current",
+      "event_mean": 2313.179443359375,
+      "control_mean": 2795.942138671875,
+      "standardized_mean_difference": -0.1747085107973329,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_range_6h_kg",
+      "event_mean": 0.3094917833805084,
+      "control_mean": 0.4569499790668487,
+      "standardized_mean_difference": -0.1714449302865544,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_std_6h_kg",
+      "event_mean": 0.1334303170442581,
+      "control_mean": 0.1777880787849426,
+      "standardized_mean_difference": -0.1305844868490305,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "temperature_c_mean_72h",
+      "event_mean": 30.503211975097656,
+      "control_mean": 29.597753524780277,
+      "standardized_mean_difference": 0.0979457171173459,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "temperature_c_std_24h",
+      "event_mean": 0.7756447792053223,
+      "control_mean": 0.6672453880310059,
+      "standardized_mean_difference": 0.0911962502547381,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "humidity_pct_std_24h",
+      "event_mean": 3.5255634784698486,
+      "control_mean": 3.6806271076202393,
+      "standardized_mean_difference": -0.0900526420764567,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "temperature_c_current",
+      "event_mean": 30.568906784057617,
+      "control_mean": 29.8287410736084,
+      "standardized_mean_difference": 0.0804708475660554,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "temperature_c_std_72h",
+      "event_mean": 0.6721346378326416,
+      "control_mean": 0.7601168751716614,
+      "standardized_mean_difference": -0.0799884880503101,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "temperature_c_range_24h",
+      "event_mean": 2.3199589252471924,
+      "control_mean": 2.0483248233795166,
+      "standardized_mean_difference": 0.0796616180289896,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "temperature_c_delta_1h",
+      "event_mean": 0.2259747236967086,
+      "control_mean": 0.2682832479476928,
+      "standardized_mean_difference": -0.0769748646686711,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "temperature_c_mean_24h",
+      "event_mean": 30.454355239868164,
+      "control_mean": 29.762527465820312,
+      "standardized_mean_difference": 0.0755317062118845,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "humidity_pct_range_24h",
+      "event_mean": 10.052166938781738,
+      "control_mean": 10.388916969299316,
+      "standardized_mean_difference": -0.0709421948728498,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "humidity_pct_current",
+      "event_mean": 66.22024536132812,
+      "control_mean": 66.83308410644531,
+      "standardized_mean_difference": -0.0628065519729964,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "weight_std_24h_kg",
+      "event_mean": 0.1327620595693588,
+      "control_mean": 0.1425862163305282,
+      "standardized_mean_difference": -0.058463398213841,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 72,
+      "feature": "temperature_c_delta_6h",
+      "event_mean": 0.7554996013641357,
+      "control_mean": 0.7803665995597839,
+      "standardized_mean_difference": -0.0129216503824161,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_std_72h_kg",
+      "event_mean": 0.5467708110809326,
+      "control_mean": 0.1955077797174453,
+      "standardized_mean_difference": 1.3519064555356513,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_range_72h_kg",
+      "event_mean": 3.8451836109161377,
+      "control_mean": 0.9845409989356996,
+      "standardized_mean_difference": 1.3433169326116077,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_std_6h_kg",
+      "event_mean": 1.2137330770492554,
+      "control_mean": 0.0642011240124702,
+      "standardized_mean_difference": 1.3167292176246947,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_range_6h_kg",
+      "event_mean": 3.0428502559661865,
+      "control_mean": 0.1658915728330612,
+      "standardized_mean_difference": 1.3074107799713313,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_std_24h_kg",
+      "event_mean": 0.6437694430351257,
+      "control_mean": 0.1022385284304618,
+      "standardized_mean_difference": 1.2657246631464234,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_range_24h_kg",
+      "event_mean": 3.130474805831909,
+      "control_mean": 0.3693578243255615,
+      "standardized_mean_difference": 1.2654630979935446,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_delta_6h_kg",
+      "event_mean": -0.1547091752290725,
+      "control_mean": 0.1372747868299484,
+      "standardized_mean_difference": -1.0190529029106803,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_trend_6h_kg_per_hour",
+      "event_mean": -0.0257848631590604,
+      "control_mean": 0.0228791292756795,
+      "standardized_mean_difference": -1.0190528769074174,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_range_168h_kg",
+      "event_mean": 4.40814208984375,
+      "control_mean": 2.382732629776001,
+      "standardized_mean_difference": 0.882064449435953,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_delta_1h_kg",
+      "event_mean": 1.4295331239700315,
+      "control_mean": 0.0191164705902338,
+      "standardized_mean_difference": 0.7534501144828504,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_distance_from_max_24h_kg",
+      "event_mean": 0.3425917625427246,
+      "control_mean": 0.1574332565069198,
+      "standardized_mean_difference": 0.7463104837062831,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "co2_ppm_delta_1h",
+      "event_mean": -253.79931640625,
+      "control_mean": 86.40142822265625,
+      "standardized_mean_difference": -0.7241003533624908,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_distance_from_max_72h_kg",
+      "event_mean": 0.4797252118587494,
+      "control_mean": 0.3004415035247803,
+      "standardized_mean_difference": 0.6611666556211436,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "co2_ppm_delta_24h",
+      "event_mean": -553.9261474609375,
+      "control_mean": 84.4765853881836,
+      "standardized_mean_difference": -0.5715503223866778,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "co2_ppm_trend_24h_per_hour",
+      "event_mean": -23.08025550842285,
+      "control_mean": 3.519857406616211,
+      "standardized_mean_difference": -0.5715503018953045,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_std_168h_kg",
+      "event_mean": 0.8377525806427002,
+      "control_mean": 0.551529049873352,
+      "standardized_mean_difference": 0.5174863231337594,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_mean_24h_kg",
+      "event_mean": 52.31510543823242,
+      "control_mean": 44.42974472045898,
+      "standardized_mean_difference": 0.4883506135803806,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_mean_72h_kg",
+      "event_mean": 52.21457290649414,
+      "control_mean": 44.37929153442383,
+      "standardized_mean_difference": 0.488201768412606,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_kg_current",
+      "event_mean": 52.31319808959961,
+      "control_mean": 44.4498291015625,
+      "standardized_mean_difference": 0.4867936469701961,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_mean_6h_kg",
+      "event_mean": 51.92326354980469,
+      "control_mean": 44.38204574584961,
+      "standardized_mean_difference": 0.4698657584126788,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_mean_168h_kg",
+      "event_mean": 51.59919357299805,
+      "control_mean": 44.33155822753906,
+      "standardized_mean_difference": 0.4556631392342636,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "humidity_pct_std_24h",
+      "event_mean": 3.251716375350952,
+      "control_mean": 3.865156888961792,
+      "standardized_mean_difference": -0.4534331361491078,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_delta_24h_kg",
+      "event_mean": -0.0326255150139331,
+      "control_mean": 0.0516412146389484,
+      "standardized_mean_difference": -0.4442497991857448,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_trend_24h_kg_per_hour",
+      "event_mean": -0.0013593962648883,
+      "control_mean": 0.0021517171990126,
+      "standardized_mean_difference": -0.444249782266276,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_relative_to_max_168h",
+      "event_mean": 0.9865667819976808,
+      "control_mean": 0.9688087105751038,
+      "standardized_mean_difference": 0.4307195486517244,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "humidity_pct_range_24h",
+      "event_mean": 9.606833457946776,
+      "control_mean": 10.93899917602539,
+      "standardized_mean_difference": -0.3696555410707392,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "co2_ppm_delta_6h",
+      "event_mean": -379.3263854980469,
+      "control_mean": -1017.0924682617188,
+      "standardized_mean_difference": 0.3574327185680196,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "co2_ppm_std_72h",
+      "event_mean": 420.8343811035156,
+      "control_mean": 677.8789672851562,
+      "standardized_mean_difference": -0.3536719865874977,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "humidity_pct_std_72h",
+      "event_mean": 3.349649667739868,
+      "control_mean": 3.7973403930664062,
+      "standardized_mean_difference": -0.3490839143184654,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "temperature_c_trend_24h_per_hour",
+      "event_mean": -0.0020645775366574,
+      "control_mean": 0.0124121308326721,
+      "standardized_mean_difference": -0.3200826347389729,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "temperature_c_delta_24h",
+      "event_mean": -0.0495498590171337,
+      "control_mean": 0.2978911399841308,
+      "standardized_mean_difference": -0.320082633022997,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_delta_72h_kg",
+      "event_mean": 0.4156659543514251,
+      "control_mean": 0.2034740895032882,
+      "standardized_mean_difference": 0.2916079592186618,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_trend_72h_kg_per_hour",
+      "event_mean": 0.0057731382548809,
+      "control_mean": 0.0028260292019695,
+      "standardized_mean_difference": 0.2916079353286875,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "co2_ppm_std_24h",
+      "event_mean": 457.5097961425781,
+      "control_mean": 650.0743408203125,
+      "standardized_mean_difference": -0.2672147671640764,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_distance_from_max_168h_kg",
+      "event_mean": 0.578092098236084,
+      "control_mean": 0.8170663714408875,
+      "standardized_mean_difference": -0.2656253322947683,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "humidity_pct_delta_6h",
+      "event_mean": -5.896832942962647,
+      "control_mean": -6.62933349609375,
+      "standardized_mean_difference": 0.2535099560044092,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "humidity_pct_trend_24h_per_hour",
+      "event_mean": -0.0307916700839996,
+      "control_mean": -0.006420174613595,
+      "standardized_mean_difference": -0.2518179526888879,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "humidity_pct_delta_24h",
+      "event_mean": -0.7390000224113464,
+      "control_mean": -0.1540842056274414,
+      "standardized_mean_difference": -0.2518179270745498,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "weight_relative_to_max_72h",
+      "event_mean": 0.9896150231361388,
+      "control_mean": 0.985964834690094,
+      "standardized_mean_difference": 0.1883245107472053,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "co2_flatline_24h_1",
+      "event_mean": 0.25,
+      "control_mean": 0.3333333432674408,
+      "standardized_mean_difference": -0.1762766394176383,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "co2_flatline_72h_1",
+      "event_mean": 0.25,
+      "control_mean": 0.3333333432674408,
+      "standardized_mean_difference": -0.1762766394176383,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "co2_ppm_range_24h",
+      "event_mean": 1845.3021240234373,
+      "control_mean": 2174.708251953125,
+      "standardized_mean_difference": -0.1437935937583926,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "temperature_c_delta_6h",
+      "event_mean": 0.929033100605011,
+      "control_mean": 1.3043745756149292,
+      "standardized_mean_difference": -0.14151808191528,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "co2_ppm_mean_72h",
+      "event_mean": 1983.90478515625,
+      "control_mean": 2168.658935546875,
+      "standardized_mean_difference": -0.084000739270176,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "temperature_c_current",
+      "event_mean": 30.51935768127441,
+      "control_mean": 31.230690002441406,
+      "standardized_mean_difference": -0.0829722118522005,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "humidity_pct_delta_1h",
+      "event_mean": -1.0296669006347656,
+      "control_mean": -1.1271673440933228,
+      "standardized_mean_difference": 0.0800295463120535,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "temperature_c_delta_1h",
+      "event_mean": 0.4439921081066131,
+      "control_mean": 0.3861250877380371,
+      "standardized_mean_difference": 0.0682869198893929,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "co2_ppm_current",
+      "event_mean": 1759.2532958984375,
+      "control_mean": 1659.7490234375,
+      "standardized_mean_difference": 0.0479924049515006,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "temperature_c_mean_24h",
+      "event_mean": 30.439027786254883,
+      "control_mean": 30.726266860961918,
+      "standardized_mean_difference": -0.0336300080537746,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "humidity_pct_mean_72h",
+      "event_mean": 68.39252471923828,
+      "control_mean": 68.66927337646484,
+      "standardized_mean_difference": -0.0319343705283633,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "temperature_c_std_72h",
+      "event_mean": 0.7822027206420898,
+      "control_mean": 0.826535165309906,
+      "standardized_mean_difference": -0.02910121639974,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "temperature_c_mean_72h",
+      "event_mean": 30.541696548461918,
+      "control_mean": 30.747583389282227,
+      "standardized_mean_difference": -0.0244029038243815,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "humidity_pct_mean_24h",
+      "event_mean": 68.50726318359375,
+      "control_mean": 68.66511535644531,
+      "standardized_mean_difference": -0.0180147293703758,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "co2_ppm_mean_24h",
+      "event_mean": 2104.29345703125,
+      "control_mean": 2141.661865234375,
+      "standardized_mean_difference": -0.0169675657333679,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "humidity_pct_current",
+      "event_mean": 65.48124694824219,
+      "control_mean": 65.62674713134766,
+      "standardized_mean_difference": -0.0144812288276761,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "temperature_c_range_24h",
+      "event_mean": 2.3697588443756104,
+      "control_mean": 2.359400510787964,
+      "standardized_mean_difference": 0.0021775956949705,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 48,
+      "feature": "temperature_c_std_24h",
+      "event_mean": 0.7869309782981873,
+      "control_mean": 0.7833521366119385,
+      "standardized_mean_difference": 0.0021153610378702,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_distance_from_max_72h_kg",
+      "event_mean": 0.6394834518432617,
+      "control_mean": 0.1979666948318481,
+      "standardized_mean_difference": 1.7030574542799268,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_trend_6h_kg_per_hour",
+      "event_mean": -0.0350416786968708,
+      "control_mean": 0.0133223244920372,
+      "standardized_mean_difference": -1.5428363758011212,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_delta_6h_kg",
+      "event_mean": -0.2102500647306442,
+      "control_mean": 0.0799339488148689,
+      "standardized_mean_difference": -1.5428363460914558,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_distance_from_max_24h_kg",
+      "event_mean": 0.4598080217838287,
+      "control_mean": 0.1273082792758941,
+      "standardized_mean_difference": 1.3982519907548865,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_distance_from_max_168h_kg",
+      "event_mean": 0.780299961566925,
+      "control_mean": 0.4486750364303589,
+      "standardized_mean_difference": 0.9639627769127874,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "humidity_pct_delta_1h",
+      "event_mean": -1.6222509145736694,
+      "control_mean": -0.9022496342658995,
+      "standardized_mean_difference": -0.7940583750013558,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_mean_168h_kg",
+      "event_mean": 51.83238220214844,
+      "control_mean": 38.91988754272461,
+      "standardized_mean_difference": 0.7599791332765976,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_mean_72h_kg",
+      "event_mean": 52.3411750793457,
+      "control_mean": 39.54763412475586,
+      "standardized_mean_difference": 0.7434999042844328,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_mean_6h_kg",
+      "event_mean": 52.27804565429688,
+      "control_mean": 39.894229888916016,
+      "standardized_mean_difference": 0.7165571104212396,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_mean_24h_kg",
+      "event_mean": 52.36572265625,
+      "control_mean": 39.984561920166016,
+      "standardized_mean_difference": 0.7154094373561269,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_delta_1h_kg",
+      "event_mean": -0.0123419761657714,
+      "control_mean": 0.0236586332321167,
+      "standardized_mean_difference": -0.7124820982591306,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_kg_current",
+      "event_mean": 52.2133674621582,
+      "control_mean": 40.00125503540039,
+      "standardized_mean_difference": 0.7046948922623126,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "co2_ppm_delta_6h",
+      "event_mean": -451.3910827636719,
+      "control_mean": -1778.91162109375,
+      "standardized_mean_difference": 0.6534402288707059,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_std_24h_kg",
+      "event_mean": 0.4027142822742462,
+      "control_mean": 0.1357349604368209,
+      "standardized_mean_difference": 0.6159601831693574,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "co2_ppm_std_72h",
+      "event_mean": 552.0009155273438,
+      "control_mean": 1299.7947998046875,
+      "standardized_mean_difference": -0.5633985363420728,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "temperature_c_range_24h",
+      "event_mean": 2.328608751296997,
+      "control_mean": 0.695450484752655,
+      "standardized_mean_difference": 0.5625255755510091,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_delta_24h_kg",
+      "event_mean": -0.0998328551650047,
+      "control_mean": 0.0520173497498035,
+      "standardized_mean_difference": -0.5583438074788138,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_trend_24h_kg_per_hour",
+      "event_mean": -0.004159701988101,
+      "control_mean": 0.0021673897281289,
+      "standardized_mean_difference": -0.5583437784851433,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "co2_ppm_std_24h",
+      "event_mean": 440.2464599609375,
+      "control_mean": 1057.7247314453125,
+      "standardized_mean_difference": -0.5565911903263878,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "temperature_c_std_24h",
+      "event_mean": 0.8218460083007812,
+      "control_mean": 0.2176939100027084,
+      "standardized_mean_difference": 0.5473624056708873,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_range_24h_kg",
+      "event_mean": 1.7702661752700806,
+      "control_mean": 0.577742338180542,
+      "standardized_mean_difference": 0.5319245157088608,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_trend_72h_kg_per_hour",
+      "event_mean": 0.0001028952756314,
+      "control_mean": 0.0121876234188675,
+      "standardized_mean_difference": -0.5040524644870996,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_delta_72h_kg",
+      "event_mean": 0.0074084601365029,
+      "control_mean": 0.8775088787078857,
+      "standardized_mean_difference": -0.5040524382466939,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "co2_ppm_range_24h",
+      "event_mean": 1687.48828125,
+      "control_mean": 3321.629638671875,
+      "standardized_mean_difference": -0.4758691715838811,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "co2_ppm_mean_24h",
+      "event_mean": 1708.0716552734375,
+      "control_mean": 3032.142333984375,
+      "standardized_mean_difference": -0.474900987745151,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_relative_to_max_168h",
+      "event_mean": 0.9833695888519288,
+      "control_mean": 0.9602608680725098,
+      "standardized_mean_difference": 0.4611103190382097,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "humidity_pct_trend_24h_per_hour",
+      "event_mean": -0.0286111161112785,
+      "control_mean": -0.007975710555911,
+      "standardized_mean_difference": -0.4308438497502062,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "humidity_pct_delta_24h",
+      "event_mean": -0.6866667866706848,
+      "control_mean": -0.1914170533418655,
+      "standardized_mean_difference": -0.4308438162392458,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "co2_ppm_mean_72h",
+      "event_mean": 1937.4022216796875,
+      "control_mean": 3130.528076171875,
+      "standardized_mean_difference": -0.4207397722274447,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "temperature_c_delta_1h",
+      "event_mean": 0.2250664681196212,
+      "control_mean": 0.0313160009682178,
+      "standardized_mean_difference": 0.4201706405398401,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "co2_ppm_current",
+      "event_mean": 1370.40869140625,
+      "control_mean": 2311.86865234375,
+      "standardized_mean_difference": -0.3466423455560937,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_range_6h_kg",
+      "event_mean": 0.1794338226318359,
+      "control_mean": 0.4376507997512817,
+      "standardized_mean_difference": -0.3385955407102924,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "temperature_c_std_72h",
+      "event_mean": 0.878065288066864,
+      "control_mean": 0.4523194134235382,
+      "standardized_mean_difference": 0.3371911710181867,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_std_6h_kg",
+      "event_mean": 0.0703878998756408,
+      "control_mean": 0.170649841427803,
+      "standardized_mean_difference": -0.335486303850606,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "temperature_c_delta_6h",
+      "event_mean": 0.5529587268829346,
+      "control_mean": 0.0497657470405101,
+      "standardized_mean_difference": 0.2958901058943282,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_relative_to_max_72h",
+      "event_mean": 0.9876082539558412,
+      "control_mean": 0.9812848567962646,
+      "standardized_mean_difference": 0.2626848209736332,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_std_168h_kg",
+      "event_mean": 0.8313661217689514,
+      "control_mean": 1.365485668182373,
+      "standardized_mean_difference": -0.2266436181319771,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "humidity_pct_std_24h",
+      "event_mean": 3.443547010421753,
+      "control_mean": 3.1709578037261963,
+      "standardized_mean_difference": 0.2246752902221065,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_std_72h_kg",
+      "event_mean": 0.5770923495292664,
+      "control_mean": 0.9787529110908508,
+      "standardized_mean_difference": -0.2177924137383164,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "co2_ppm_delta_24h",
+      "event_mean": -388.8446350097656,
+      "control_mean": -745.12158203125,
+      "standardized_mean_difference": 0.1984733552468954,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "co2_ppm_trend_24h_per_hour",
+      "event_mean": -16.201860427856445,
+      "control_mean": -31.046730041503903,
+      "standardized_mean_difference": 0.1984733262420376,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "co2_flatline_24h_1",
+      "event_mean": 0.25,
+      "control_mean": 0.3333333432674408,
+      "standardized_mean_difference": -0.1762766394176383,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "co2_flatline_72h_1",
+      "event_mean": 0.25,
+      "control_mean": 0.3333333432674408,
+      "standardized_mean_difference": -0.1762766394176383,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "temperature_c_delta_24h",
+      "event_mean": -0.1960417032241821,
+      "control_mean": -0.1260173320770263,
+      "standardized_mean_difference": -0.1635588238467538,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "temperature_c_trend_24h_per_hour",
+      "event_mean": -0.0081684039905667,
+      "control_mean": -0.005250722169876,
+      "standardized_mean_difference": -0.1635588007514176,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "humidity_pct_delta_6h",
+      "event_mean": -5.871500492095947,
+      "control_mean": -6.194248676300049,
+      "standardized_mean_difference": 0.1342253370719727,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_range_72h_kg",
+      "event_mean": 4.664316654205322,
+      "control_mean": 3.8079004287719727,
+      "standardized_mean_difference": 0.1296393807313871,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "weight_range_168h_kg",
+      "event_mean": 5.433258056640625,
+      "control_mean": 4.6129255294799805,
+      "standardized_mean_difference": 0.125405285464059,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "humidity_pct_range_24h",
+      "event_mean": 9.650083541870115,
+      "control_mean": 9.216832160949709,
+      "standardized_mean_difference": 0.1253058798648491,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "humidity_pct_mean_24h",
+      "event_mean": 67.95035552978516,
+      "control_mean": 69.03681182861328,
+      "standardized_mean_difference": -0.1171852024509863,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "humidity_pct_current",
+      "event_mean": 64.7945785522461,
+      "control_mean": 65.95792388916016,
+      "standardized_mean_difference": -0.1108890845534542,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "humidity_pct_mean_72h",
+      "event_mean": 68.33609008789062,
+      "control_mean": 69.3392562866211,
+      "standardized_mean_difference": -0.1106543887060772,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "temperature_c_mean_72h",
+      "event_mean": 30.44868278503418,
+      "control_mean": 29.839338302612305,
+      "standardized_mean_difference": 0.0657055876651061,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "co2_ppm_delta_1h",
+      "event_mean": -7.320821285247803,
+      "control_mean": -17.532211303710938,
+      "standardized_mean_difference": 0.0475617229934419,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "temperature_c_mean_24h",
+      "event_mean": 30.45265388488769,
+      "control_mean": 30.11212158203125,
+      "standardized_mean_difference": 0.0363804158652577,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "temperature_c_current",
+      "event_mean": 30.323318481445312,
+      "control_mean": 30.023666381835938,
+      "standardized_mean_difference": 0.0309744519524744,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 24,
+      "feature": "humidity_pct_std_72h",
+      "event_mean": 3.4499213695526123,
+      "control_mean": 3.4360058307647705,
+      "standardized_mean_difference": 0.0097950500811918,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_range_168h_kg",
+      "event_mean": 5.415924549102783,
+      "control_mean": 1.7776583433151243,
+      "standardized_mean_difference": 1.5538780421170344,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_range_72h_kg",
+      "event_mean": 4.6366496086120605,
+      "control_mean": 0.8157244324684143,
+      "standardized_mean_difference": 1.539983065696124,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_std_72h_kg",
+      "event_mean": 0.5661511421203613,
+      "control_mean": 0.2008156925439834,
+      "standardized_mean_difference": 1.114157984619985,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "co2_ppm_std_24h",
+      "event_mean": 386.5440673828125,
+      "control_mean": 1380.1571044921875,
+      "standardized_mean_difference": -1.0839936545242146,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "co2_ppm_current",
+      "event_mean": 1874.4112548828125,
+      "control_mean": 5143.58349609375,
+      "standardized_mean_difference": -1.0591987616644694,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "co2_ppm_range_24h",
+      "event_mean": 1501.1356201171875,
+      "control_mean": 4677.40673828125,
+      "standardized_mean_difference": -1.0566333679777875,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "co2_ppm_std_72h",
+      "event_mean": 556.2625122070312,
+      "control_mean": 1643.4638671875,
+      "standardized_mean_difference": -1.0044012704619183,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_std_168h_kg",
+      "event_mean": 0.7619428038597107,
+      "control_mean": 0.3572975397109985,
+      "standardized_mean_difference": 0.8928944299753182,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "co2_ppm_mean_24h",
+      "event_mean": 1655.4268798828125,
+      "control_mean": 3609.76171875,
+      "standardized_mean_difference": -0.8489104404581194,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "co2_ppm_mean_72h",
+      "event_mean": 1876.7042236328125,
+      "control_mean": 3589.317626953125,
+      "standardized_mean_difference": -0.7747882351849675,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "humidity_pct_std_72h",
+      "event_mean": 3.3437931537628174,
+      "control_mean": 4.486414432525635,
+      "standardized_mean_difference": -0.7229332090557227,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "humidity_pct_std_24h",
+      "event_mean": 3.31520676612854,
+      "control_mean": 4.45353364944458,
+      "standardized_mean_difference": -0.6996804645965192,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "humidity_pct_current",
+      "event_mean": 70.86991882324219,
+      "control_mean": 76.6163330078125,
+      "standardized_mean_difference": -0.6075332668351203,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "humidity_pct_range_24h",
+      "event_mean": 9.587000846862791,
+      "control_mean": 12.26858139038086,
+      "standardized_mean_difference": -0.5981839877173885,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "temperature_c_trend_24h_per_hour",
+      "event_mean": -0.0066149136982858,
+      "control_mean": 0.0267895888537168,
+      "standardized_mean_difference": -0.5716580602998826,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "temperature_c_delta_24h",
+      "event_mean": -0.1587579250335693,
+      "control_mean": 0.6429500579833984,
+      "standardized_mean_difference": -0.5716580045171871,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_range_6h_kg",
+      "event_mean": 0.1263666152954101,
+      "control_mean": 0.0759745612740516,
+      "standardized_mean_difference": 0.5557886849807621,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_kg_current",
+      "event_mean": 52.3697395324707,
+      "control_mean": 43.80952453613281,
+      "standardized_mean_difference": 0.5490541118917145,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_mean_6h_kg",
+      "event_mean": 52.42277908325195,
+      "control_mean": 43.8524055480957,
+      "standardized_mean_difference": 0.5485646421057605,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_mean_72h_kg",
+      "event_mean": 52.34274673461914,
+      "control_mean": 43.83125686645508,
+      "standardized_mean_difference": 0.5473555691310128,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_mean_24h_kg",
+      "event_mean": 52.33848190307617,
+      "control_mean": 43.8476448059082,
+      "standardized_mean_difference": 0.5440263675911802,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_mean_168h_kg",
+      "event_mean": 51.9901123046875,
+      "control_mean": 43.85221481323242,
+      "standardized_mean_difference": 0.5285506209996138,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_std_6h_kg",
+      "event_mean": 0.0476991087198257,
+      "control_mean": 0.0295266453176736,
+      "standardized_mean_difference": 0.5198123207066867,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "co2_ppm_delta_6h",
+      "event_mean": -104.39514923095705,
+      "control_mean": 948.33154296875,
+      "standardized_mean_difference": -0.4887740445542556,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_relative_to_max_168h",
+      "event_mean": 0.9869189858436584,
+      "control_mean": 0.969665825366974,
+      "standardized_mean_difference": 0.4596106484432458,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "humidity_pct_mean_24h",
+      "event_mean": 67.90980529785156,
+      "control_mean": 72.2951431274414,
+      "standardized_mean_difference": -0.4402437024373211,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "humidity_pct_mean_72h",
+      "event_mean": 68.2109146118164,
+      "control_mean": 72.12055206298828,
+      "standardized_mean_difference": -0.4021477823099009,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_relative_to_max_72h",
+      "event_mean": 0.9915871620178224,
+      "control_mean": 0.9847862720489502,
+      "standardized_mean_difference": 0.3835020993252791,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "co2_ppm_trend_24h_per_hour",
+      "event_mean": 2.192145347595215,
+      "control_mean": 23.75482749938965,
+      "standardized_mean_difference": -0.3769514351559354,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "co2_ppm_delta_24h",
+      "event_mean": 52.61149215698242,
+      "control_mean": 570.1157836914062,
+      "standardized_mean_difference": -0.3769513600460444,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "temperature_c_range_24h",
+      "event_mean": 2.222616910934448,
+      "control_mean": 3.919208526611328,
+      "standardized_mean_difference": -0.3364617660275614,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_distance_from_max_72h_kg",
+      "event_mean": 0.4390834271907806,
+      "control_mean": 0.364424467086792,
+      "standardized_mean_difference": 0.3245681685219901,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "temperature_c_std_72h",
+      "event_mean": 0.8095683455467224,
+      "control_mean": 1.38099467754364,
+      "standardized_mean_difference": -0.3136008930433049,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "humidity_pct_delta_6h",
+      "event_mean": 0.0193344745784997,
+      "control_mean": 0.7753337025642395,
+      "standardized_mean_difference": -0.3078672043545148,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "co2_ppm_delta_1h",
+      "event_mean": -184.2960205078125,
+      "control_mean": 186.2412567138672,
+      "standardized_mean_difference": -0.2847990085181459,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "temperature_c_std_24h",
+      "event_mean": 0.7660598754882812,
+      "control_mean": 1.2558990716934204,
+      "standardized_mean_difference": -0.2829319632008714,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_distance_from_max_168h_kg",
+      "event_mean": 0.6032834053039551,
+      "control_mean": 0.7191414833068848,
+      "standardized_mean_difference": -0.2664575154510735,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_range_24h_kg",
+      "event_mean": 0.4070749282836914,
+      "control_mean": 0.3254412710666656,
+      "standardized_mean_difference": 0.2511929544912449,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "temperature_c_current",
+      "event_mean": 29.611602783203125,
+      "control_mean": 26.83674049377441,
+      "standardized_mean_difference": 0.2465000246952927,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_trend_24h_kg_per_hour",
+      "event_mean": -0.002244810340926,
+      "control_mean": 0.0004774162080138,
+      "standardized_mean_difference": -0.2407163244897611,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_delta_24h_kg",
+      "event_mean": -0.05387544631958,
+      "control_mean": 0.0114579899236559,
+      "standardized_mean_difference": -0.2407163144504367,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "temperature_c_mean_72h",
+      "event_mean": 30.40744972229004,
+      "control_mean": 28.061058044433597,
+      "standardized_mean_difference": 0.2346301278522823,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_distance_from_max_24h_kg",
+      "event_mean": 0.166325569152832,
+      "control_mean": 0.1949164867401123,
+      "standardized_mean_difference": -0.2171396832100799,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "temperature_c_mean_24h",
+      "event_mean": 30.27332878112793,
+      "control_mean": 28.089767456054688,
+      "standardized_mean_difference": 0.2170558582557359,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_trend_72h_kg_per_hour",
+      "event_mean": 0.0025737176183611,
+      "control_mean": 0.000454291672213,
+      "standardized_mean_difference": 0.1992580024845562,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_delta_72h_kg",
+      "event_mean": 0.1853076666593551,
+      "control_mean": 0.032709002494812,
+      "standardized_mean_difference": 0.1992579837465219,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_std_24h_kg",
+      "event_mean": 0.122688353061676,
+      "control_mean": 0.1042841970920562,
+      "standardized_mean_difference": 0.1709747008158689,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "temperature_c_delta_6h",
+      "event_mean": -0.6855249404907227,
+      "control_mean": -0.9862334728240968,
+      "standardized_mean_difference": 0.1574222630666464,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_delta_1h_kg",
+      "event_mean": -0.0259833335876464,
+      "control_mean": -0.0225412249565124,
+      "standardized_mean_difference": -0.1350801862443008,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "humidity_pct_delta_1h",
+      "event_mean": -0.7096659541130066,
+      "control_mean": -0.6361662745475769,
+      "standardized_mean_difference": -0.0986029174347696,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "temperature_c_delta_1h",
+      "event_mean": -0.0894166603684425,
+      "control_mean": -0.0804665461182594,
+      "standardized_mean_difference": -0.0433179461608107,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "humidity_pct_trend_24h_per_hour",
+      "event_mean": 0.0084930658340454,
+      "control_mean": 0.0096041895449161,
+      "standardized_mean_difference": -0.0209865556296234,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "humidity_pct_delta_24h",
+      "event_mean": 0.2038335800170898,
+      "control_mean": 0.2305005341768264,
+      "standardized_mean_difference": -0.020986544887043,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_trend_6h_kg_per_hour",
+      "event_mean": -0.013002872467041,
+      "control_mean": -0.0133124664425849,
+      "standardized_mean_difference": 0.0170637658305819,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "weight_delta_6h_kg",
+      "event_mean": -0.0780172348022461,
+      "control_mean": -0.0798747912049293,
+      "standardized_mean_difference": 0.0170636962209398,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "co2_flatline_24h_1",
+      "event_mean": 0.25,
+      "control_mean": 0.25,
+      "standardized_mean_difference": 0.0,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 6,
+      "feature": "co2_flatline_72h_1",
+      "event_mean": 0.25,
+      "control_mean": 0.25,
+      "standardized_mean_difference": 0.0,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_range_168h_kg",
+      "event_mean": 5.402233123779297,
+      "control_mean": 1.6485246419906616,
+      "standardized_mean_difference": 1.686800690525502,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_range_72h_kg",
+      "event_mean": 4.60712480545044,
+      "control_mean": 0.8204581141471863,
+      "standardized_mean_difference": 1.5308368945384958,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_std_168h_kg",
+      "event_mean": 0.7312008738517761,
+      "control_mean": 0.2726894915103912,
+      "standardized_mean_difference": 1.4156911781187769,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_std_72h_kg",
+      "event_mean": 0.5605300068855286,
+      "control_mean": 0.179982379078865,
+      "standardized_mean_difference": 1.345505753540827,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_std_24h_kg",
+      "event_mean": 0.1405563801527023,
+      "control_mean": 0.059628739953041,
+      "standardized_mean_difference": 1.2265198897592324,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "co2_ppm_std_24h",
+      "event_mean": 340.6396789550781,
+      "control_mean": 1431.1217041015625,
+      "standardized_mean_difference": -1.2185198752239228,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "co2_ppm_delta_6h",
+      "event_mean": -351.0836486816406,
+      "control_mean": -3037.3212890625,
+      "standardized_mean_difference": 1.177925042102668,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "co2_ppm_range_24h",
+      "event_mean": 1336.5755615234375,
+      "control_mean": 4816.49169921875,
+      "standardized_mean_difference": -1.1421821499288023,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "co2_ppm_std_72h",
+      "event_mean": 537.914306640625,
+      "control_mean": 1599.7391357421875,
+      "standardized_mean_difference": -1.0009483065346505,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_range_24h_kg",
+      "event_mean": 0.5048165321350098,
+      "control_mean": 0.2070417404174804,
+      "standardized_mean_difference": 0.9948809503065544,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "humidity_pct_delta_1h",
+      "event_mean": -0.7250836491584778,
+      "control_mean": -1.678081512451172,
+      "standardized_mean_difference": 0.956018311178824,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "co2_ppm_delta_1h",
+      "event_mean": 41.5611572265625,
+      "control_mean": -491.5341796875,
+      "standardized_mean_difference": 0.8487870997923957,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_std_6h_kg",
+      "event_mean": 0.1214451268315315,
+      "control_mean": 0.0355280041694641,
+      "standardized_mean_difference": 0.8293147596453787,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_range_6h_kg",
+      "event_mean": 0.3159240186214447,
+      "control_mean": 0.0881333649158477,
+      "standardized_mean_difference": 0.8283345691436409,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "co2_ppm_mean_24h",
+      "event_mean": 1688.1409912109375,
+      "control_mean": 3353.867919921875,
+      "standardized_mean_difference": -0.7856301375920086,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "co2_ppm_mean_72h",
+      "event_mean": 1846.59619140625,
+      "control_mean": 3384.101806640625,
+      "standardized_mean_difference": -0.7435716695222331,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "co2_ppm_delta_24h",
+      "event_mean": 329.8940734863281,
+      "control_mean": -46.7803955078125,
+      "standardized_mean_difference": 0.7155341130726334,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "co2_ppm_trend_24h_per_hour",
+      "event_mean": 13.745586395263672,
+      "control_mean": -1.949182629585266,
+      "standardized_mean_difference": 0.7155340895217285,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_mean_6h_kg",
+      "event_mean": 52.25046920776367,
+      "control_mean": 42.39910888671875,
+      "standardized_mean_difference": 0.6391846770913561,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_mean_24h_kg",
+      "event_mean": 52.325077056884766,
+      "control_mean": 42.46877670288086,
+      "standardized_mean_difference": 0.6376545451954135,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_kg_current",
+      "event_mean": 52.14304733276367,
+      "control_mean": 42.369998931884766,
+      "standardized_mean_difference": 0.634887231106611,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_mean_72h_kg",
+      "event_mean": 52.33713912963867,
+      "control_mean": 42.63942337036133,
+      "standardized_mean_difference": 0.6261682473186717,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_distance_from_max_24h_kg",
+      "event_mean": 0.3755172193050384,
+      "control_mean": 0.1809002608060836,
+      "standardized_mean_difference": 0.6125987377218975,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_mean_168h_kg",
+      "event_mean": 52.02898025512695,
+      "control_mean": 42.8004264831543,
+      "standardized_mean_difference": 0.5989793352116972,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "humidity_pct_delta_6h",
+      "event_mean": -5.066333770751953,
+      "control_mean": -7.157332897186279,
+      "standardized_mean_difference": 0.5953816051005364,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "humidity_pct_std_24h",
+      "event_mean": 3.3007428646087646,
+      "control_mean": 4.210803508758545,
+      "standardized_mean_difference": -0.5889545533656653,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_delta_6h_kg",
+      "event_mean": -0.2526749074459076,
+      "control_mean": -0.0787417665123939,
+      "standardized_mean_difference": -0.5544654865829054,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_trend_6h_kg_per_hour",
+      "event_mean": -0.0421124845743179,
+      "control_mean": -0.0131236286833882,
+      "standardized_mean_difference": -0.5544654687696391,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "humidity_pct_range_24h",
+      "event_mean": 9.504583358764648,
+      "control_mean": 11.838250160217283,
+      "standardized_mean_difference": -0.5368678461832452,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "humidity_pct_std_72h",
+      "event_mean": 3.341641664505005,
+      "control_mean": 4.13559103012085,
+      "standardized_mean_difference": -0.5179975755697823,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_relative_to_max_168h",
+      "event_mean": 0.9829797148704528,
+      "control_mean": 0.9663551449775696,
+      "standardized_mean_difference": 0.4677027842660456,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_relative_to_max_72h",
+      "event_mean": 0.9880962371826172,
+      "control_mean": 0.9806458950042723,
+      "standardized_mean_difference": 0.4277535376349605,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_delta_72h_kg",
+      "event_mean": -0.2485658377408981,
+      "control_mean": -0.4247247874736786,
+      "standardized_mean_difference": 0.3830791197956034,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_trend_72h_kg_per_hour",
+      "event_mean": -0.0034523035865277,
+      "control_mean": -0.0058989548124372,
+      "standardized_mean_difference": 0.3830790078510095,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "humidity_pct_mean_24h",
+      "event_mean": 67.93038177490234,
+      "control_mean": 71.14141845703125,
+      "standardized_mean_difference": -0.3432634935962853,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "temperature_c_delta_6h",
+      "event_mean": 0.4699341058731079,
+      "control_mean": 1.1383076906204224,
+      "standardized_mean_difference": -0.3389709551616143,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_trend_24h_kg_per_hour",
+      "event_mean": -0.0034441212192177,
+      "control_mean": -0.0082666585221886,
+      "standardized_mean_difference": 0.3335641412492912,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_delta_24h_kg",
+      "event_mean": -0.0826589241623878,
+      "control_mean": -0.1983997821807861,
+      "standardized_mean_difference": 0.3335640123994239,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "humidity_pct_delta_24h",
+      "event_mean": 0.0964158400893211,
+      "control_mean": -0.1919991225004196,
+      "standardized_mean_difference": 0.3326994976504491,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "humidity_pct_trend_24h_per_hour",
+      "event_mean": 0.0040173265151679,
+      "control_mean": -0.0079999631270766,
+      "standardized_mean_difference": 0.3326994618832971,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "humidity_pct_mean_72h",
+      "event_mean": 68.14913940429688,
+      "control_mean": 71.00630950927734,
+      "standardized_mean_difference": -0.3114935911625301,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "temperature_c_trend_24h_per_hour",
+      "event_mean": 0.0030291902367025,
+      "control_mean": 0.0170302148908376,
+      "standardized_mean_difference": -0.3105026636727628,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "temperature_c_delta_24h",
+      "event_mean": 0.0727005824446678,
+      "control_mean": 0.4087251722812652,
+      "standardized_mean_difference": -0.3105026619515904,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_delta_1h_kg",
+      "event_mean": -0.082725204527378,
+      "control_mean": -0.0059005715884268,
+      "standardized_mean_difference": -0.2725072280477031,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "temperature_c_delta_1h",
+      "event_mean": 0.2370504885911941,
+      "control_mean": 0.4407332241535187,
+      "standardized_mean_difference": -0.23299496329638,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "co2_ppm_current",
+      "event_mean": 1707.6234130859375,
+      "control_mean": 2123.56689453125,
+      "standardized_mean_difference": -0.2039988433270989,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "humidity_pct_current",
+      "event_mean": 66.51325225830078,
+      "control_mean": 68.62275695800781,
+      "standardized_mean_difference": -0.1913625681758174,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "co2_flatline_24h_1",
+      "event_mean": 0.25,
+      "control_mean": 0.3333333432674408,
+      "standardized_mean_difference": -0.1762766394176383,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "co2_flatline_72h_1",
+      "event_mean": 0.25,
+      "control_mean": 0.3333333432674408,
+      "standardized_mean_difference": -0.1762766394176383,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_distance_from_max_168h_kg",
+      "event_mean": 0.8159167170524597,
+      "control_mean": 0.9125414490699768,
+      "standardized_mean_difference": -0.1685448642803858,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "temperature_c_mean_24h",
+      "event_mean": 30.27686309814453,
+      "control_mean": 28.79065704345703,
+      "standardized_mean_difference": 0.149055086968727,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "temperature_c_mean_72h",
+      "event_mean": 30.39292907714844,
+      "control_mean": 28.91594886779785,
+      "standardized_mean_difference": 0.1488624569361512,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "temperature_c_current",
+      "event_mean": 30.17094993591309,
+      "control_mean": 28.96128273010254,
+      "standardized_mean_difference": 0.1183349325238024,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "temperature_c_range_24h",
+      "event_mean": 2.187883138656616,
+      "control_mean": 2.613741874694824,
+      "standardized_mean_difference": -0.0912351238225298,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "weight_distance_from_max_72h_kg",
+      "event_mean": 0.6358831524848938,
+      "control_mean": 0.5900831818580627,
+      "standardized_mean_difference": 0.0901779039513478,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "temperature_c_std_24h",
+      "event_mean": 0.7496902346611023,
+      "control_mean": 0.8455672264099121,
+      "standardized_mean_difference": -0.0583368784102098,
+      "event_n": 12,
+      "control_n": 12
+    },
+    {
+      "lead_hours": 1,
+      "feature": "temperature_c_std_72h",
+      "event_mean": 0.8159454464912415,
+      "control_mean": 0.8514497876167297,
+      "standardized_mean_difference": -0.0212249424002132,
+      "event_n": 12,
+      "control_n": 12
+    }
+  ],
+  "takeaway": {
+    "title": "Multivariate pre-event structure identified",
+    "text": "4 of 4 sensor families show large descriptive event-control separation at the 72-hour lead (|SMD| \u2265 0.8). Together with complete matched-control coverage and past-only feature construction, the EDA supports comparative multivariate model evaluation."
+  }
+}
