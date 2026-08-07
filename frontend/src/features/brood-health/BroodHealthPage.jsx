@@ -14,11 +14,8 @@ export function BroodHealthPage() {
       <section className="hero brood-hero">
         <div>
           <span className="eyebrow">BROOD HEALTH INTELLIGENCE</span>
-          <h2>Current Condition and Exact Six-Hour Brood Health Forecast</h2>
-          <p>
-            A transparent sensor-derived score, leakage-safe multi-horizon forecasting,
-            environmental stability analysis and live Sri Lankan IoT early warning.
-          </p>
+          <h2>Brood Health Monitoring & Six-Hour Forecast</h2>
+          <p>Monitor current health, future health, forecast stability and deterioration in one dashboard.</p>
           <div className="brood-hero-tags">
             <span><HeartPulse size={15} /> Current score 1–100</span>
             <span><Activity size={15} /> Exact score at +6 h</span>
@@ -27,12 +24,10 @@ export function BroodHealthPage() {
           </div>
         </div>
         <div className="brood-hero-target">
-          <small>PRIMARY MODEL OUTPUT</small>
-          <code>brood_health_score_t_plus_6h</code>
+          <small>FORECAST HORIZON</small>
+          <code>Exact +6 hours</code>
           <span>Critical · Poor · Good · Excellent</span>
-          <small className="brood-secondary-target">
-            Secondary warning: minimum of the predicted 1–6 h trajectory
-          </small>
+          <small className="brood-secondary-target">Forecast BHSI · Forecast RoD · Composite alert</small>
         </div>
       </section>
 

@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   Crosshair,
   Gauge,
-  Layers3,
   ShieldCheck,
   Target,
   TrendingDown,
@@ -12,7 +11,7 @@ import {
 import { Panel } from '../../../components/common/Panel';
 import { StatCard } from '../../../components/common/StatCard';
 import { useBroodTraining } from '../hooks/useBroodHealthData';
-import { asPercent, numberValue, timestampValue } from '../utils/broodHealth';
+import { asPercent, numberValue } from '../utils/broodHealth';
 import {
   ActualPredictedScoreChart,
   FeatureImportanceChart,
@@ -139,7 +138,7 @@ function ScoreWeights({ definition, sensitivity }) {
         ))}
       </div>
       <p className="chart-footnote">
-        These are training-hive-calibrated research coefficients. They are not universal biological percentages.
+        Active score coefficients for this training run.
       </p>
       {!!sensitivity?.length && (
         <details className="brood-details">
@@ -164,6 +163,14 @@ function ScoreWeights({ definition, sensitivity }) {
   );
 }
 
+function SectionHeading({ title, subtitle }) {
+  return (
+    <div className="brood-section-heading compact brood-admin-heading">
+      <div><h3>{title}</h3>{subtitle && <p>{subtitle}</p>}</div>
+    </div>
+  );
+}
+
 export function BroodTrainingTab() {
   const resource = useBroodTraining(true);
   const data = resource.data;
@@ -174,19 +181,14 @@ export function BroodTrainingTab() {
   const deterioration = metrics.deterioration || {};
   const forecastIndicators = metrics.forecast_indicators || {};
   const split = data?.split_summary || {};
-  const interpretation = data?.accuracy_interpretation || {};
 
   return (
     <div className="page-stack">
       <div className="brood-section-heading">
         <div>
-          <span className="eyebrow">BROOD-SPECIFIC MODEL DEVELOPMENT</span>
-          <h3>Forecast exact +6-hour health, Future BHSI and Forecast RoD</h3>
-          <p>
-            The model predicts the +1 to +6 hour score trajectory. The current-to-future
-            path is then evaluated for stability through Forecast BHSI and for direction
-            and speed through Forecast RoD.
-          </p>
+          <span className="eyebrow">MODEL TRAINING</span>
+          <h3>Brood Health Forecast Model</h3>
+          <p>Train, compare and review the six-hour brood-health forecasting models.</p>
         </div>
         <div className="brood-action-group">
           <button className="button button-outline" disabled={resource.starting || status.running} onClick={() => resource.startTraining({ fastMode: true, horizonHours: 6 })}>Quick comparison</button>
@@ -215,6 +217,7 @@ export function BroodTrainingTab() {
 
       {data?.trained && (
         <>
+          <SectionHeading title="Selected Model Summary" subtitle="Key performance indicators for the selected model." />
           <div className="stats-grid stats-grid-six">
             <StatCard label="Selected model" value={data.best_model} icon={BrainCircuit} note="Selected on validation hives only" />
             <StatCard label="Exact +6 h MAE" value={numberValue(exact.mae, 2)} unit="points" icon={Gauge} note="Untouched test hives" />
@@ -238,23 +241,15 @@ export function BroodTrainingTab() {
             </div>
           </Panel>
 
-          <div className="brood-alert info">
-            <Layers3 size={20} />
-            <div><strong>Exact forecast plus safety trajectory</strong>
-              <p>{data.primary_target_description}</p>
-              <p>{data.secondary_target_description}</p>
+          <Panel title="Forecast Outputs" subtitle="Outputs returned by the selected model.">
+            <div className="brood-info-list">
+              <span>Primary forecast <strong>Exact Brood Health Score at +6 hours</strong></span>
+              <span>Safety indicator <strong>Lowest predicted score within +1 to +6 hours</strong></span>
+              <span>Future indicators <strong>Forecast BHSI and Forecast RoD</strong></span>
             </div>
-          </div>
-
-          <div className="brood-alert success">
-            <CheckCircle2 size={20} />
-            <div><strong>Accuracy is reported, not forced</strong><p>{interpretation.explanation}</p></div>
-          </div>
-
-          <Panel title="Why the older binary task produced approximately 99% accuracy" subtitle="The observed healthy/unhealthy label changes rarely, so a no-change rule can appear highly accurate without predicting deterioration.">
-            <BinaryPersistenceAudit audit={data.binary_target_audit} />
           </Panel>
 
+          <SectionHeading title="Model Comparison" subtitle="Candidate models compared on forecast error and health-transition performance." />
           <div className="two-column-grid">
             <Panel title="Model-level performance" subtitle="Exact +6-hour level accuracy, transition accuracy and deterioration recall on complete unseen hives.">
               <ModelComparisonChart data={data.all_models} />
@@ -268,6 +263,7 @@ export function BroodTrainingTab() {
             <ModelComparisonTable models={data.all_models} bestModel={data.best_model} />
           </Panel>
 
+          <SectionHeading title="Forecast Performance" subtitle="Selected-model behaviour across horizons and health levels." />
           <div className="two-column-grid">
             <Panel title="Selected model versus current-score persistence" subtitle="A useful early-warning model should outperform simply repeating the current score.">
               <PersistenceComparisonChart model={metrics} persistence={data.persistence_baseline} />
@@ -286,17 +282,19 @@ export function BroodTrainingTab() {
             </Panel>
           </div>
 
+          <SectionHeading title="Score & Feature Configuration" subtitle="Current-score coefficients and model feature importance." />
           <div className="two-column-grid">
-            <Panel title="Calibrated current-score coefficients" subtitle={`${data.weight_calibration?.scope || 'training hives only'} · ${data.weight_calibration?.selection_metric || 'constrained sensitivity analysis'}`}>
+            <Panel title="Current-score coefficients" subtitle={`${data.weight_calibration?.scope || 'training hives only'} · ${data.weight_calibration?.selection_metric || 'constrained sensitivity analysis'}`}>
               <ScoreWeights definition={data.score_definition} sensitivity={data.weight_sensitivity_top} />
             </Panel>
-            <Panel title="Top causal features" subtitle="No target labels, future values, hive IDs, absolute dates or absolute hive weight are inputs.">
+            <Panel title="Feature Importance" subtitle="Most influential forecasting inputs.">
               <FeatureImportanceChart data={data.top_features} />
             </Panel>
           </div>
 
+          <SectionHeading title="Training Setup" subtitle="Dataset split and optional technical checks." />
           <div className="two-column-grid">
-            <Panel title="Whole-hive split" subtitle="Complete colonies are held out to reduce same-hive memorisation.">
+            <Panel title="Training / Validation / Test Split" subtitle="Row and hive counts used for model development and final evaluation.">
               <div className="brood-split-grid">
                 <div><span>Train</span><strong>{numberValue(split.train_rows, 0)}</strong><small>{numberValue(split.train_hives, 0)} hives</small></div>
                 <div><span>Validation</span><strong>{numberValue(split.validation_rows, 0)}</strong><small>{numberValue(split.validation_hives, 0)} hives</small></div>
@@ -304,17 +302,19 @@ export function BroodTrainingTab() {
               </div>
               <p className="chart-footnote">Minimum causal history: {split.minimum_history_hours} hours.</p>
             </Panel>
-            <Panel title="Leakage and transfer audit" subtitle="Automated checks applied to the saved deployment schema.">
-              <LeakageAudit audit={data.leakage_audit} />
+            <Panel title="Technical Checks" subtitle="Detailed validation checks are collapsed by default.">
+              <details className="brood-details brood-admin-details">
+                <summary>View model data checks</summary>
+                <LeakageAudit audit={data.leakage_audit} />
+                <div className="brood-admin-divider" />
+                <BinaryPersistenceAudit audit={data.binary_target_audit} />
+              </details>
             </Panel>
           </div>
 
-          <Panel title="Exact backend-generated model figures" subtitle="Generated from the same test-hive results returned by this API.">
+          <SectionHeading title="Model Charts" subtitle="Saved performance charts for the selected training run." />
+          <Panel title="Model Report Figures" subtitle="Generated performance charts.">
             <BroodReportGallery images={data.generated_images} />
-          </Panel>
-
-          <Panel title="Research limitations" subtitle={`Model trained at ${timestampValue(data.trained_at_utc)}.`}>
-            <ul className="brood-warning-list">{(data.model_limitations || []).map((item) => <li key={item}>{item}</li>)}</ul>
           </Panel>
         </>
       )}

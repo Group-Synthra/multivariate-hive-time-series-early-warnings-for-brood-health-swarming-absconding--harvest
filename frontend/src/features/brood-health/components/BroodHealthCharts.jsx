@@ -20,7 +20,7 @@ import {
   ZAxis,
 } from 'recharts';
 import { EmptyState } from '../../../components/common/EmptyState';
-import { SENSOR_META } from '../utils/broodHealth';
+import { SENSOR_META, clampScore, healthLevelFromScore } from '../utils/broodHealth';
 
 const STATUS_COLORS = { Healthy: '#0f766e', Unhealthy: '#dc2626' };
 const SENSOR_COLORS = {
@@ -394,19 +394,6 @@ export function HealthScoreComparisonChart({
   const trackClipId = `${comparisonId}-track`;
   const shadowId = `${comparisonId}-shadow`;
 
-  const clampScore = (value) => {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return 0;
-    return Math.min(100, Math.max(0, numeric));
-  };
-
-  const levelForScore = (value) => {
-    if (value >= 80) return 'Excellent';
-    if (value >= 60) return 'Good';
-    if (value >= 40) return 'Poor';
-    return 'Critical';
-  };
-
   const healthColors = {
     Critical: '#dc2626',
     Poor: '#d97706',
@@ -420,9 +407,9 @@ export function HealthScoreComparisonChart({
     ? clampScore(safetyScore)
     : null;
 
-  const currentLevel = levelForScore(current);
-  const predictedLevel = levelForScore(predicted);
-  const safetyLevel = safety === null ? null : levelForScore(safety);
+  const currentLevel = healthLevelFromScore(current);
+  const predictedLevel = healthLevelFromScore(predicted);
+  const safetyLevel = safety === null ? null : healthLevelFromScore(safety);
   const difference = predicted - current;
   const currentTimeLabel = currentTimestamp
     ? new Date(currentTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -476,7 +463,7 @@ export function HealthScoreComparisonChart({
           <p>
             {trendText}:{' '}
             <strong style={{ color: trendColor }}>
-              {difference > 0 ? '+' : ''}{difference.toFixed(1)} points
+              {difference > 0 ? '+' : ''}{difference.toFixed(2)} points
             </strong>
           </p>
         </div>
@@ -493,7 +480,7 @@ export function HealthScoreComparisonChart({
           height="100%"
           preserveAspectRatio="xMidYMid meet"
           role="img"
-          aria-label={`Current Brood Health Score ${current.toFixed(1)} and exact ${forecastHorizonHours}-hour score ${predicted.toFixed(1)}`}
+          aria-label={`Current Brood Health Score ${current.toFixed(2)} and exact ${forecastHorizonHours}-hour score ${predicted.toFixed(2)}`}
         >
           <defs>
             <filter id={shadowId} x="-50%" y="-50%" width="200%" height="200%">
@@ -616,7 +603,7 @@ export function HealthScoreComparisonChart({
               stroke="#ffffff"
               strokeWidth="3"
             >
-              <title>Current score: {current.toFixed(1)} ({currentLevel})</title>
+              <title>Current score: {current.toFixed(2)} ({currentLevel})</title>
             </circle>
             <text
               x={currentX}
@@ -650,7 +637,7 @@ export function HealthScoreComparisonChart({
               stroke="#ffffff"
               strokeWidth="3"
             >
-              <title>Exact +{forecastHorizonHours} h score: {predicted.toFixed(1)} ({predictedLevel})</title>
+              <title>Exact +{forecastHorizonHours} h score: {predicted.toFixed(2)} ({predictedLevel})</title>
             </circle>
             <text
               x={predictedX}
@@ -673,7 +660,7 @@ export function HealthScoreComparisonChart({
             fontSize="19"
             fontWeight="850"
           >
-            {current.toFixed(1)}
+            {current.toFixed(2)}
           </text>
           <text
             x={currentX}
@@ -694,7 +681,7 @@ export function HealthScoreComparisonChart({
             fontSize="19"
             fontWeight="850"
           >
-            {predicted.toFixed(1)}
+            {predicted.toFixed(2)}
           </text>
           <text
             x={predictedX}
@@ -712,14 +699,14 @@ export function HealthScoreComparisonChart({
       <div className="brood-comparison-footer">
         <span style={{ color: currentColor }}>
           <i style={{ background: currentColor }} />
-          Current: {current.toFixed(1)} ({currentLevel})
+          Current: {current.toFixed(2)} ({currentLevel})
         </span>
         <b style={{ color: trendColor }}>
           {difference < -0.05 ? '↓' : difference > 0.05 ? '↑' : '→'}
         </b>
         <span style={{ color: predictedColor }}>
           <i style={{ background: predictedColor }} />
-          +{forecastHorizonHours} h: {predicted.toFixed(1)} ({predictedLevel})
+          +{forecastHorizonHours} h: {predicted.toFixed(2)} ({predictedLevel})
         </span>
       </div>
 
@@ -727,7 +714,7 @@ export function HealthScoreComparisonChart({
         <div className="brood-safety-minimum-note">
           <span style={{ background: safetyColor }} />
           <div>
-            <strong>Safety minimum: {safety.toFixed(1)} ({safetyLevel})</strong>
+            <strong>Safety minimum: {safety.toFixed(2)} ({safetyLevel})</strong>
             <small>
               Lowest predicted point inside the 1–{forecastHorizonHours} hour trajectory.
               The primary future output above remains the exact +{forecastHorizonHours}-hour score.
@@ -875,7 +862,7 @@ export function ForecastTrajectoryChart({
                   : 'native hourly model output';
               return `${time} · ${kind}`;
             }}
-            formatter={(value) => [`${Number(value).toFixed(1)} / 100`, 'Brood Health Score']}
+            formatter={(value) => [`${Number(value).toFixed(2)} / 100`, 'Brood Health Score']}
           />
           <Legend />
           <ReferenceLine y={40} stroke="#dc2626" strokeDasharray="4 4" />
@@ -898,7 +885,7 @@ export function ForecastTrajectoryChart({
               stroke="#7c3aed"
               strokeDasharray="3 3"
               label={{
-                value: `Safety minimum ${minimum.toFixed(1)}`,
+                value: `Safety minimum ${minimum.toFixed(2)}`,
                 position: 'insideBottomRight',
               }}
             />

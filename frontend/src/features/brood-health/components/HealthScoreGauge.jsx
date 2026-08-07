@@ -6,9 +6,13 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import {
+  formatBhsi,
+  formatHealthScore,
   healthClass,
+  healthLevelFromScore,
   numberValue,
   stabilityClass,
+  stabilityLevelFromScore,
 } from '../utils/broodHealth';
 
 const HEALTH_SEGMENTS = [
@@ -41,21 +45,6 @@ function clamp(value, minimum, maximum) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return minimum;
   return Math.min(maximum, Math.max(minimum, numeric));
-}
-
-function healthLevelFromScore(value) {
-  const score = clamp(value, 0, 100);
-  if (score >= 80) return 'Excellent';
-  if (score >= 60) return 'Good';
-  if (score >= 40) return 'Poor';
-  return 'Critical';
-}
-
-function stabilityLevelFromScore(value) {
-  const score = clamp(value, 0, 100);
-  if (score >= 70) return 'High';
-  if (score >= 40) return 'Moderate';
-  return 'Low';
 }
 
 function pointForScore(cx, cy, radius, score) {
@@ -238,7 +227,7 @@ function SemicircleGauge({
       <circle cx={cx} cy={cy} r="3" fill={accent} />
 
       <text x={cx} y="111" textAnchor="middle" className="brood-gauge-value" fill={accent}>
-        {numberValue(animatedValue, 1)}
+        {Number(animatedValue).toFixed(2)}
       </text>
       <text x={cx} y="133" textAnchor="middle" className="brood-gauge-unit">
         {valueLabel}
@@ -266,7 +255,6 @@ function SegmentLegend({ segments }) {
 
 export function HealthScoreGauge({
   score,
-  level,
   label,
   detail,
   badge,
@@ -274,8 +262,7 @@ export function HealthScoreGauge({
   const value = clamp(score, 1, 100);
   const resolvedLevel = healthLevelFromScore(value);
   const accent = HEALTH_COLORS[resolvedLevel];
-  const suppliedLevelMismatch = Boolean(level && level !== resolvedLevel);
-
+  
   return (
     <article
       className={`brood-analogue-card brood-realistic-gauge-card ${healthClass(resolvedLevel)}`}
@@ -300,16 +287,11 @@ export function HealthScoreGauge({
         accent={accent}
         valueLabel="/ 100"
         secondaryLabel={`${resolvedLevel} health`}
-        ariaLabel={`${label}: ${value.toFixed(1)} out of 100, ${resolvedLevel}`}
+        ariaLabel={`${label}: ${formatHealthScore(value)} out of 100, ${resolvedLevel}`}
       />
 
       <div className="brood-gauge-result">
         <strong>{resolvedLevel}</strong>
-        {suppliedLevelMismatch && (
-          <small className="brood-gauge-consistency-note">
-            Display level recalculated from the score; API supplied “{level}”.
-          </small>
-        )}
         {detail && <p>{detail}</p>}
       </div>
 
@@ -320,7 +302,6 @@ export function HealthScoreGauge({
 
 export function StabilityGauge({
   score,
-  level,
   detail,
   label = 'Brood Health Stability Index',
   badge = 'Previous 6 hours',
@@ -328,8 +309,7 @@ export function StabilityGauge({
   const value = clamp(score, 0, 100);
   const resolvedLevel = stabilityLevelFromScore(value);
   const accent = STABILITY_COLORS[resolvedLevel];
-  const suppliedLevelMismatch = Boolean(level && level !== resolvedLevel);
-
+  
   return (
     <article
       className={`brood-analogue-card brood-realistic-gauge-card stability-${stabilityClass(resolvedLevel)}`}
@@ -352,16 +332,11 @@ export function StabilityGauge({
         accent={accent}
         valueLabel="/ 100"
         secondaryLabel={`${resolvedLevel} stability`}
-        ariaLabel={`BHSI: ${value.toFixed(1)} out of 100, ${resolvedLevel} stability`}
+        ariaLabel={`BHSI: ${formatBhsi(value)} out of 100, ${resolvedLevel} stability`}
       />
 
       <div className="brood-gauge-result">
         <strong>{resolvedLevel} stability</strong>
-        {suppliedLevelMismatch && (
-          <small className="brood-gauge-consistency-note">
-            Display level recalculated from BHSI; API supplied “{level}”.
-          </small>
-        )}
         <p>
           {detail
             || 'Lower six-hour variability in internal temperature, humidity and CO₂ produces a higher value.'}

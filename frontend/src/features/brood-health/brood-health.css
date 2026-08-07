@@ -119,19 +119,86 @@
 .brood-rod-meter > small { color:var(--muted); }
 
 .brood-warning-panel {
-  display:grid; grid-template-columns:auto 1fr; gap:.9rem; padding:1.1rem;
-  border:1px solid #bfdbfe; border-left:5px solid #2563eb; border-radius:14px; background:#eff6ff;
+  --alert-accent:#2563eb;
+  --alert-soft:#eff6ff;
+  --alert-border:#bfdbfe;
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr);
+  gap:1rem;
+  padding:1.05rem 1.1rem 1.1rem;
+  border:1px solid var(--alert-border);
+  border-left:5px solid var(--alert-accent);
+  border-radius:16px;
+  background:linear-gradient(135deg,#ffffff 0%,var(--alert-soft) 100%);
+  box-shadow:0 12px 28px rgba(15,23,42,.08);
+  color:#334155;
+  position:relative;
+  overflow:hidden;
 }
-.brood-warning-panel.critical { border-color:#fecaca; border-left-color:#dc2626; background:#fef2f2; color:#991b1b; }
-.brood-warning-panel.poor { border-color:#fde68a; border-left-color:#d97706; background:#fffbeb; color:#92400e; }
-.brood-warning-panel.good { border-color:#bfdbfe; border-left-color:#2563eb; background:#eff6ff; color:#1e40af; }
-.brood-warning-panel.excellent { border-color:#a7f3d0; border-left-color:#0f766e; background:#ecfdf5; color:#065f46; }
-.brood-warning-panel > div > span { font-size:.66rem; font-weight:900; letter-spacing:.12em; }
-.brood-warning-panel h3 { margin:.2rem 0 .4rem; font-size:1.2rem; }
-.brood-warning-panel p { margin:0; font-size:.8rem; line-height:1.55; }
-.brood-warning-columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; margin-top:.8rem; }
-.brood-warning-columns > div { padding:.72rem; border-radius:9px; background:rgba(255,255,255,.72); }
-.brood-warning-columns ul,.brood-warning-columns ol { margin:.4rem 0 0; padding-left:1.1rem; font-size:.74rem; line-height:1.6; }
+.brood-warning-panel.normal { --alert-accent:#0f766e; --alert-soft:#ecfdf5; --alert-border:#a7f3d0; }
+.brood-warning-panel.watch { --alert-accent:#2563eb; --alert-soft:#eff6ff; --alert-border:#bfdbfe; }
+.brood-warning-panel.warning { --alert-accent:#d97706; --alert-soft:#fffbeb; --alert-border:#fde68a; }
+.brood-warning-panel.critical-alert { --alert-accent:#dc2626; --alert-soft:#fef2f2; --alert-border:#fecaca; }
+
+.brood-warning-accent {
+  width:42px; height:42px; display:grid; place-items:center;
+  border-radius:12px; background:var(--alert-accent); color:#fff;
+  box-shadow:0 8px 18px color-mix(in srgb,var(--alert-accent) 24%,transparent);
+}
+.brood-warning-body { min-width:0; }
+.brood-warning-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; }
+.brood-warning-eyebrow { display:block; color:var(--alert-accent); font-size:.64rem; font-weight:900; letter-spacing:.12em; }
+.brood-warning-panel h3 { margin:.2rem 0 .25rem; color:#172033; font-size:1.15rem; }
+.brood-warning-panel p { margin:0; color:#64748b; font-size:.78rem; line-height:1.5; }
+.brood-warning-badges { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.45rem; }
+.brood-warning-badges span {
+  display:inline-flex; align-items:center; min-height:28px; padding:.3rem .58rem;
+  border-radius:999px; font-size:.67rem; font-weight:850; white-space:nowrap;
+}
+.brood-warning-badges .alert-severity { color:#fff; background:var(--alert-accent); }
+.brood-warning-badges .health-level.critical { color:#991b1b; background:#fee2e2; border:1px solid #fecaca; }
+.brood-warning-badges .health-level.poor { color:#92400e; background:#fef3c7; border:1px solid #fde68a; }
+.brood-warning-badges .health-level.good { color:#1e40af; background:#dbeafe; border:1px solid #bfdbfe; }
+.brood-warning-badges .health-level.excellent { color:#065f46; background:#d1fae5; border:1px solid #a7f3d0; }
+
+.brood-warning-metrics {
+  display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.5rem; margin-top:.85rem;
+}
+.brood-warning-metrics > div {
+  padding:.58rem .62rem; border:1px solid rgba(148,163,184,.22);
+  border-radius:10px; background:rgba(255,255,255,.8);
+}
+.brood-warning-metrics span { display:block; color:#64748b; font-size:.62rem; font-weight:700; }
+.brood-warning-metrics strong { color:#172033; font-size:.92rem; }
+.brood-warning-metrics small { color:#64748b; font-size:.6rem; }
+
+.brood-warning-columns {
+  display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.35fr);
+  gap:.75rem; margin-top:.75rem;
+}
+.brood-warning-columns > div {
+  padding:.78rem .82rem; border:1px solid rgba(148,163,184,.2);
+  border-radius:11px; background:rgba(255,255,255,.84);
+}
+.brood-warning-columns > div > strong,
+.brood-warning-action-heading strong { color:#172033; font-size:.78rem; }
+.brood-warning-columns ul,.brood-warning-columns ol {
+  margin:.42rem 0 0; padding-left:1.05rem; color:#475569; font-size:.72rem; line-height:1.55;
+}
+.brood-warning-columns li + li { margin-top:.25rem; }
+.brood-warning-action-heading { display:flex; align-items:center; justify-content:space-between; gap:.6rem; }
+.brood-warning-action-heading span {
+  padding:.22rem .48rem; border-radius:999px; color:var(--alert-accent);
+  background:var(--alert-soft); border:1px solid var(--alert-border); font-size:.61rem; font-weight:850;
+}
+.brood-warning-confidence { margin-top:.65rem; color:#64748b; font-size:.68rem; }
+.brood-warning-confidence summary { cursor:pointer; font-weight:750; }
+.brood-warning-confidence ul { margin:.4rem 0 0; padding-left:1.05rem; }
+
+.brood-admin-heading { margin-top:.12rem; padding-top:.15rem; border-top:1px solid #eef2f7; }
+.brood-admin-heading h3 { font-size:1rem; margin-bottom:.22rem; }
+.brood-admin-heading p { font-size:.74rem; line-height:1.45; }
+.brood-admin-divider { height:1px; margin:.8rem 0; background:#e2e8f0; }
 
 .brood-interval-card { display:flex; align-items:flex-start; gap:.7rem; padding:.85rem; margin-bottom:.8rem; border:1px solid #dbeafe; border-radius:11px; background:#eff6ff; color:#1e3a5f; }
 .brood-interval-card span,.brood-interval-card strong { display:block; }
@@ -537,6 +604,310 @@
   line-height: 1.5;
 }
 
+/* ========================================================================== */
+/* Live hive selection — countdown + compact refresh                          */
+/* ========================================================================== */
+
+.brood-device-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .55rem;
+  flex-wrap: nowrap;
+}
+
+/* Hive selector */
+
+.brood-device-actions .brood-select {
+  min-width: 120px;
+  width: auto;
+  max-width: 180px;
+  height: 40px;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Next automatic update timer                                                */
+/* -------------------------------------------------------------------------- */
+
+.brood-next-update {
+  min-width: 138px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: .55rem;
+
+  padding: 0 .78rem;
+
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #f8fafc 100%
+    );
+
+  color: #64748b;
+
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, .03);
+
+  transition:
+    border-color .2s ease,
+    box-shadow .2s ease,
+    background .2s ease,
+    transform .2s ease;
+}
+
+.brood-next-update:hover {
+  border-color: #bfdbfe;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #eff6ff 100%
+    );
+
+  box-shadow:
+    0 5px 14px rgba(37, 99, 235, .08);
+}
+
+.brood-next-update > svg {
+  flex: 0 0 auto;
+
+  color: #64748b;
+}
+
+
+/*
+ * Text inside the timer.
+ *
+ * "Next update" stays small.
+ * Countdown is visually stronger.
+ */
+.brood-next-update > div {
+  display: flex;
+  align-items: baseline;
+
+  gap: .35rem;
+
+  white-space: nowrap;
+}
+
+.brood-next-update span {
+  color: #64748b;
+
+  font-size: .67rem;
+  font-weight: 650;
+}
+
+.brood-next-update strong {
+  color: #334155;
+
+  font-size: .76rem;
+  font-weight: 850;
+
+  font-variant-numeric: tabular-nums;
+
+  letter-spacing: -.01em;
+}
+
+
+/* Automatic updating disabled */
+
+.brood-next-update.paused {
+  border-color: #e2e8f0;
+
+  background: #f8fafc;
+
+  opacity: .76;
+}
+
+.brood-next-update.paused strong {
+  color: #64748b;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Compact refresh button                                                     */
+/* -------------------------------------------------------------------------- */
+
+.brood-live-refresh-button {
+  width: 40px;
+  height: 40px;
+
+  flex: 0 0 40px;
+
+  display: inline-grid;
+  place-items: center;
+
+  padding: 0;
+
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #f8fafc 100%
+    );
+
+  color: #475569;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, .04);
+
+  transition:
+    color .2s ease,
+    border-color .2s ease,
+    background .2s ease,
+    box-shadow .2s ease,
+    transform .16s ease;
+}
+
+.brood-live-refresh-button:hover:not(:disabled) {
+  color: #1d4ed8;
+
+  border-color: #93c5fd;
+
+  background: #eff6ff;
+
+  box-shadow:
+    0 5px 14px rgba(37, 99, 235, .10);
+
+  transform: translateY(-1px);
+}
+
+.brood-live-refresh-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.brood-live-refresh-button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, .16);
+  outline-offset: 2px;
+}
+
+.brood-live-refresh-button:disabled {
+  color: #94a3b8;
+
+  background: #f8fafc;
+
+  cursor: not-allowed;
+
+  opacity: .58;
+}
+
+
+/* Refresh icon animation while request is running */
+
+.brood-refresh-spinning {
+  animation: brood-refresh-spin .85s linear infinite;
+}
+
+@keyframes brood-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Live metadata                                                              */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The countdown has been moved to the top action area,
+ * therefore the old "Next refresh" metadata chip is no longer required.
+ */
+
+.brood-live-meta {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: .55rem;
+
+  color: var(--muted);
+
+  font-size: .73rem;
+}
+
+.brood-live-meta span {
+  display: inline-flex;
+  align-items: center;
+
+  gap: .35rem;
+
+  padding: .42rem .58rem;
+
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+
+  background: #f8fafc;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Tablet                                                                     */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .brood-device-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .brood-next-update {
+    min-width: 135px;
+  }
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Mobile                                                                     */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 650px) {
+  .brood-device-actions {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      auto;
+
+    gap: .5rem;
+  }
+
+  .brood-device-actions .brood-select {
+    width: 100%;
+    max-width: none;
+
+    grid-column: 1 / -1;
+  }
+
+  .brood-next-update {
+    width: 100%;
+
+    min-width: 0;
+
+    justify-content: flex-start;
+  }
+
+  .brood-live-refresh-button {
+    width: 40px;
+  }
+}
+
 @media (max-width: 760px) {
   .brood-comparison-heading {
     flex-direction: column;
@@ -558,4 +929,16 @@
   .brood-realistic-rod-zones {
     display: none;
   }
+}
+
+@media (max-width: 1000px) {
+  .brood-warning-metrics { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width: 650px) {
+  .brood-warning-panel { grid-template-columns:1fr; }
+  .brood-warning-accent { width:38px; height:38px; }
+  .brood-warning-header { flex-direction:column; }
+  .brood-warning-badges { justify-content:flex-start; }
+  .brood-warning-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .brood-warning-columns { grid-template-columns:1fr; }
 }

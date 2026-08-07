@@ -133,6 +133,126 @@ def compute_condition_history(
     return add_stability_and_trend(out, config=condition_config)
 
 
+def _append_unique(items: list[str], value: str) -> None:
+    if value and value not in items:
+        items.append(value)
+
+
+def _optional_float(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if np.isfinite(number) else None
+
+
+def _beekeeper_actions(
+    *,
+    severity: str,
+    forecast_bhsi: float,
+    forecast_rod_points_per_hour: float,
+    current_temperature_c: float | None,
+    current_humidity_pct: float | None,
+    current_co2_ppm: float | None,
+    weight_change_pct_24h: float | None,
+    weight_component: float | None,
+) -> list[str]:
+    """Return concise, conditional actions suitable for the live admin dashboard.
+
+    Sensor values are used to prioritise checks, not to diagnose disease. Feeding is
+    recommended only after the beekeeper confirms that food stores are genuinely low.
+    """
+
+    actions: list[str] = []
+
+    if severity == "Normal":
+        _append_unique(
+            actions,
+            "Continue routine monitoring and inspect on the normal colony-management schedule.",
+        )
+    elif severity == "Watch":
+        _append_unique(
+            actions,
+            "Review the next 2–3 IoT readings; inspect during the next suitable daylight period if the decline or instability persists.",
+        )
+        _append_unique(
+            actions,
+            "Verify sensor placement, hive-scale tare and entrance condition before making a management change.",
+        )
+    elif severity == "Warning":
+        _append_unique(
+            actions,
+            "Inspect the brood nest within 6–12 hours: check brood pattern, eggs/queen-right status, food stores, entrance airflow and abnormal brood or odour.",
+        )
+        _append_unique(
+            actions,
+            "Check Varroa with a validated monitoring method and select treatment only from the measured mite level and locally approved guidance.",
+        )
+    else:  # Critical Alert
+        _append_unique(
+            actions,
+            "Inspect the colony as soon as conditions are safe; confirm brood condition, queen status, food stores, overheating/chilling and pest or disease signs.",
+        )
+        _append_unique(
+            actions,
+            "If serious brood disease is suspected, avoid moving comb or equipment between colonies and contact the relevant local apiculture or veterinary authority.",
+        )
+
+    if current_temperature_c is not None:
+        if current_temperature_c > 37.0:
+            _append_unique(
+                actions,
+                "Check shade, water availability and entrance/ventilation for obstruction; correct confirmed heat stress without unnecessarily exposing brood.",
+            )
+        elif current_temperature_c < 32.0:
+            _append_unique(
+                actions,
+                "Check colony strength, brood coverage and drafts; minimise prolonged brood-nest opening and correct confirmed cold exposure.",
+            )
+
+    if current_humidity_pct is not None:
+        if current_humidity_pct > 80.0:
+            _append_unique(
+                actions,
+                "Inspect for condensation, leaks and restricted airflow; correct confirmed excess moisture while keeping the brood nest protected.",
+            )
+        elif current_humidity_pct < 45.0:
+            _append_unique(
+                actions,
+                "Check water availability, excessive airflow and humidity-sensor position before changing ventilation.",
+            )
+
+    if current_co2_ppm is not None and current_co2_ppm > 5_000.0:
+        _append_unique(
+            actions,
+            "Check that the entrance and ventilation paths are not blocked and verify the CO₂ sensor position/calibration.",
+        )
+
+    weight_signal_low = (
+        (weight_change_pct_24h is not None and weight_change_pct_24h <= -3.0)
+        or (weight_component is not None and weight_component < 50.0)
+    )
+    if weight_signal_low:
+        _append_unique(
+            actions,
+            "Verify the scale/tare and inspect honey or nectar stores. If stores are genuinely low and forage is inadequate, provide clean sucrose syrup in an internal feeder according to local seasonal practice; avoid open feeding and do not use feeding as a disease treatment.",
+        )
+
+    if forecast_bhsi < 40.0:
+        _append_unique(
+            actions,
+            "Because forecast stability is low, recheck temperature, moisture, airflow and sensor consistency over the next readings.",
+        )
+
+    if forecast_rod_points_per_hour < -0.5 and severity in {"Watch", "Warning"}:
+        _append_unique(
+            actions,
+            "Compare brood pattern, queen activity and food stores with the previous inspection to identify the cause of the declining trend.",
+        )
+
+    return actions[:5]
+
+
 def build_warning_payload(
     *,
     exact_forecast_score: float,
@@ -146,11 +266,31 @@ def build_warning_payload(
     safety_drop_points: float | None = None,
     domain_shift_warnings: list[str] | None = None,
     history_sufficient: bool = True,
+    current_temperature_c: float | None = None,
+    current_humidity_pct: float | None = None,
+    current_co2_ppm: float | None = None,
+    weight_change_pct_24h: float | None = None,
+    weight_component: float | None = None,
 ) -> dict[str, Any]:
-    """Combine exact forecast, safety minimum, Forecast BHSI and Forecast RoD."""
+    """Build a composite deterioration alert without reusing health-level labels.
 
+    Health levels (Critical/Poor/Good/Excellent) describe individual score values.
+    Alert severities (Normal/Watch/Warning/Critical Alert) combine the current score,
+    exact +6-hour score, safety minimum, forecast decline, Forecast BHSI and Forecast
+    RoD. Data-quality notes affect confidence but do not independently escalate health.
+    """
+
+    current_score = float(np.clip(current_condition_score, 1.0, 100.0))
+    exact_score = float(np.clip(exact_forecast_score, 1.0, 100.0))
+    minimum_score = float(np.clip(safety_minimum_score, 1.0, 100.0))
     forecast_bhsi = float(
-        forecast_bhsi if forecast_bhsi is not None else (bhsi if bhsi is not None else 100.0)
+        np.clip(
+            forecast_bhsi
+            if forecast_bhsi is not None
+            else (bhsi if bhsi is not None else 100.0),
+            0.0,
+            100.0,
+        )
     )
     forecast_rod_points_per_hour = float(
         forecast_rod_points_per_hour
@@ -158,107 +298,143 @@ def build_warning_payload(
         else (rod_points_per_hour if rod_points_per_hour is not None else 0.0)
     )
 
-    exact_level = classify_health_level(exact_forecast_score)
-    minimum_level = classify_health_level(safety_minimum_score)
-    severity_lookup = {"Excellent": 0, "Good": 1, "Poor": 2, "Critical": 3}
-    severity = max(severity_lookup[exact_level], severity_lookup[minimum_level])
-    reasons: list[str] = []
-
-    if exact_level in {"Poor", "Critical"}:
-        reasons.append(
-            f"The predicted score exactly at the forecast horizon is {exact_level.lower()}."
-        )
-    if minimum_level in {"Poor", "Critical"} and minimum_level != exact_level:
-        reasons.append(
-            f"The predicted trajectory reaches a {minimum_level.lower()} safety minimum "
-            "before the forecast horizon."
-        )
-
-    current_level = classify_health_level(current_condition_score)
-    if current_level in {"Poor", "Critical"}:
-        severity = max(severity, severity_lookup[current_level])
-        reasons.append(
-            f"The current sensor-derived Brood Health Score is {current_level.lower()}."
-        )
+    current_level = classify_health_level(current_score)
+    exact_level = classify_health_level(exact_score)
+    minimum_level = classify_health_level(minimum_score)
 
     exact_drop = max(0.0, float(exact_forecast_drop_points or 0.0))
     safety_drop = max(0.0, float(safety_drop_points or 0.0))
-    if safety_drop >= 20.0 or exact_drop >= 20.0:
-        severity = max(severity, 3)
-        reasons.append(
-            f"The forecast trajectory indicates a large reduction of "
-            f"{max(safety_drop, exact_drop):.1f} points."
-        )
-    elif safety_drop >= 10.0 or exact_drop >= 10.0:
-        severity = max(severity, 2)
-        reasons.append(
-            f"The forecast trajectory indicates a meaningful reduction of "
-            f"{max(safety_drop, exact_drop):.1f} points."
-        )
+    maximum_drop = max(exact_drop, safety_drop)
 
-    if forecast_bhsi < 40.0:
-        severity = max(severity, 2)
+    score_levels = {current_level, exact_level, minimum_level}
+    rapid_unstable_decline = (
+        maximum_drop >= 20.0
+        and (forecast_bhsi < 40.0 or forecast_rod_points_per_hour < -3.0)
+    )
+
+    if "Critical" in score_levels or rapid_unstable_decline:
+        severity = "Critical Alert"
+    elif (
+        "Poor" in score_levels
+        or maximum_drop >= 10.0
+        or forecast_bhsi < 40.0
+        or forecast_rod_points_per_hour < -3.0
+    ):
+        severity = "Warning"
+    elif (
+        maximum_drop >= 5.0
+        or forecast_bhsi < 70.0
+        or forecast_rod_points_per_hour < -0.5
+    ):
+        severity = "Watch"
+    else:
+        severity = "Normal"
+
+    reasons: list[str] = []
+    if current_level in {"Poor", "Critical"}:
+        reasons.append(f"Current health is {current_level} ({current_score:.2f}/100).")
+    if exact_level in {"Poor", "Critical"}:
         reasons.append(
-            "Forecast BHSI indicates low stability in the predicted six-hour "
-            "health-score trajectory."
+            f"Exact +6-hour health is {exact_level} ({exact_score:.2f}/100)."
+        )
+    if (
+        minimum_level in {"Poor", "Critical"}
+        and minimum_score < exact_score - 0.005
+    ):
+        reasons.append(
+            f"The predicted path reaches a {minimum_level} safety minimum of "
+            f"{minimum_score:.2f}/100."
+        )
+    if maximum_drop >= 5.0:
+        reasons.append(
+            f"The predicted six-hour path drops by up to {maximum_drop:.2f} points."
+        )
+    if forecast_bhsi < 40.0:
+        reasons.append(
+            f"Forecast BHSI is {forecast_bhsi:.2f}/100 (Low stability)."
         )
     elif forecast_bhsi < 70.0:
-        severity = max(severity, 1)
         reasons.append(
-            "Forecast BHSI indicates moderate stability in the predicted six-hour "
-            "health-score trajectory."
+            f"Forecast BHSI is {forecast_bhsi:.2f}/100 (Moderate stability)."
         )
-
     if forecast_rod_points_per_hour < -3.0:
-        severity = max(severity, 2)
-        reasons.append("Forecast RoD indicates rapid predicted deterioration.")
+        reasons.append(
+            f"Forecast RoD is {forecast_rod_points_per_hour:.2f} points/hour "
+            "(Rapid Declining)."
+        )
     elif forecast_rod_points_per_hour < -0.5:
-        severity = max(severity, 1)
-        reasons.append("Forecast RoD indicates a slowly declining predicted trend.")
-
-    domain_shift_warnings = domain_shift_warnings or []
-    if domain_shift_warnings:
-        severity = max(severity, 1)
-        reasons.append("One or more live inputs differ from the historical training domain.")
-    if not history_sufficient:
-        severity = max(severity, 1)
-        reasons.append("The live history is shorter than the recommended 72 hours.")
-
-    level = {0: "Excellent", 1: "Good", 2: "Poor", 3: "Critical"}[severity]
-    actions = {
-        "Excellent": ["Continue routine monitoring and verify sensor freshness."],
-        "Good": [
-            "Review the next readings and check any sensor moving away from its usual range."
-        ],
-      "Poor": [
-    (
-        "Inspect the colony soon; verify brood temperature, humidity, ventilation, "
-        "CO₂ trend, relative weight change and sensor calibration."
-    )
-],
-        "Critical": [
-            "Perform an immediate physical hive inspection and confirm brood condition directly."
-        ],
-    }[level]
+        reasons.append(
+            f"Forecast RoD is {forecast_rod_points_per_hour:.2f} points/hour "
+            "(Slow Declining)."
+        )
 
     if not reasons:
         reasons.append(
-            "Current score, exact forecast, safety minimum, Forecast BHSI and "
-            "Forecast RoD remain within "
-            "the configured operating range."
+            "The six-hour score path, Forecast BHSI and Forecast RoD remain within the configured monitoring range."
         )
 
+    confidence_notes: list[str] = []
+    for item in domain_shift_warnings or []:
+        _append_unique(confidence_notes, str(item))
+    if not history_sufficient:
+        _append_unique(
+            confidence_notes,
+            "Live history is shorter than the recommended 72 hours; interpret the forecast with extra caution.",
+        )
+
+    urgency = {
+        "Normal": "Routine monitoring",
+        "Watch": "Review next readings",
+        "Warning": "Inspect within 6–12 h",
+        "Critical Alert": "Inspect as soon as safe",
+    }[severity]
+    title = {
+        "Normal": "Conditions stable",
+        "Watch": "Forecast watch",
+        "Warning": "Deterioration warning",
+        "Critical Alert": "Critical brood-health alert",
+    }[severity]
+
+    actions = _beekeeper_actions(
+        severity=severity,
+        forecast_bhsi=forecast_bhsi,
+        forecast_rod_points_per_hour=forecast_rod_points_per_hour,
+        current_temperature_c=_optional_float(current_temperature_c),
+        current_humidity_pct=_optional_float(current_humidity_pct),
+        current_co2_ppm=_optional_float(current_co2_ppm),
+        weight_change_pct_24h=_optional_float(weight_change_pct_24h),
+        weight_component=_optional_float(weight_component),
+    )
+
     return {
-        "level": level,
-        "title": f"{level} brood-health warning",
+        # ``level`` is retained for API compatibility; it is now alert severity,
+        # not a Brood Health Score class.
+        "level": severity,
+        "severity": severity,
+        "title": title,
+        "urgency": urgency,
+        "current_health_level": current_level,
+        "predicted_health_level": exact_level,
+        "safety_minimum_level": minimum_level,
         "summary": (
-            f"Current {current_condition_score:.1f}/100; exact forecast "
-            f"{exact_forecast_score:.1f}/100; predicted safety minimum "
-            f"{safety_minimum_score:.1f}/100."
+            f"Current {current_score:.2f}/100 ({current_level}) · "
+            f"+6 h {exact_score:.2f}/100 ({exact_level}) · "
+            f"Safety minimum {minimum_score:.2f}/100 ({minimum_level})."
         ),
         "reasons": reasons,
         "recommended_actions": actions,
+        "confidence_notes": confidence_notes,
         "requires_physical_confirmation": True,
+        "components": {
+            "current_score": round(current_score, 2),
+            "exact_score": round(exact_score, 2),
+            "safety_minimum_score": round(minimum_score, 2),
+            "maximum_drop_points": round(maximum_drop, 2),
+            "forecast_bhsi": round(forecast_bhsi, 2),
+            "forecast_rod_points_per_hour": round(
+                forecast_rod_points_per_hour, 2
+            ),
+        },
     }
 
 

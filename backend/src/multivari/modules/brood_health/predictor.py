@@ -290,6 +290,11 @@ class BroodHealthPredictor:
             safety_drop_points=float(latest["safety_drop_points"]),
             domain_shift_warnings=domain_shift,
             history_sufficient=history_sufficient,
+            current_temperature_c=float(latest["temperature_c"]),
+            current_humidity_pct=float(latest["humidity_pct"]),
+            current_co2_ppm=float(latest["co2_ppm"]),
+            weight_change_pct_24h=latest_features.get("weight_change_pct_24h"),
+            weight_component=float(latest["weight_component"]),
         )
 
         latest_timestamp = pd.Timestamp(latest["timestamp"])
