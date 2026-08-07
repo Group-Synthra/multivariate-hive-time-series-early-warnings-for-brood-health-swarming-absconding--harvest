@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import random
 from datetime import datetime
@@ -8,8 +9,12 @@ from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
-from multivari.iot.database import get_engine
 from sqlalchemy import text
+
+from .iot.database import get_engine
+from .risk_history_json import save_risk_prediction
+
+logger = logging.getLogger(__name__)
 
 COLOMBO_TIMEZONE = ZoneInfo("Asia/Colombo")
 
@@ -164,9 +169,7 @@ class SwarmingLiveService:
         ).sort_values("recorded_at")
 
         if len(frame) < 24:
-            raise ValueError(
-                f"Not enough data: only {len(frame)} readings found (need at least 24)."
-            )
+            raise ValueError(f"Not enough data: only {len(frame)} readings (need at least 24).")
 
         latest = frame.iloc[-1]
 
@@ -221,6 +224,19 @@ class SwarmingLiveService:
             prediction_readings,
         )
 
+        # Save the current prediction in the JSON history file.
+        # This record will be displayed in the Swarming Risk Timeline.
+        try:
+            save_risk_prediction(
+                device_id=device_id,
+                prediction=prediction,
+            )
+        except (OSError, TypeError, ValueError):
+            logger.exception(
+                "Could not save swarming risk history for device %s",
+                device_id,
+            )
+
         current_risk = float(
             prediction.get(
                 "risk_percentage",
@@ -268,7 +284,7 @@ class SwarmingLiveService:
                         1,
                     ),
                     "level": classified["risk_level"],
-                    "color": (classifier.get_risk_color(classified["risk_level"])),
+                    "color": classifier.get_risk_color(classified["risk_level"]),
                 }
             )
 

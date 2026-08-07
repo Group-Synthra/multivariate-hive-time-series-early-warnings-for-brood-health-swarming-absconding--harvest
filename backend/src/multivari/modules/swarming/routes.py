@@ -28,7 +28,12 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from flask import Blueprint, jsonify, request, send_from_directory
+from sqlalchemy import text
+
+from .iot.database import get_engine
+from .risk_history_json import get_risk_history, save_risk_prediction
 
 logger = logging.getLogger(__name__)
 
@@ -245,11 +250,6 @@ def predict_from_iot():
       device_id (required) — e.g. "Hive_01"
       limit     (optional) — number of readings to fetch (default 432)
     """
-    import os
-
-    import pandas as pd
-    from sqlalchemy import text
-
     device_id = request.args.get("device_id")
     if not device_id:
         return jsonify({"error": "device_id query parameter is required"}), 400
@@ -276,8 +276,6 @@ def predict_from_iot():
 
     try:
         # ── Query latest readings ─────────────────────────────
-        from .iot.database import get_engine
-
         engine = get_engine()
 
         sql = text(f"""
@@ -415,6 +413,23 @@ def predict_from_iot():
             if combination["combined_probability"] >= prediction.get("threshold_used", 0.70)
             else "No Swarming"
         )
+
+        # Tie the risk point to the latest IoT reading. Repeated manual
+        # refreshes for the same reading update one record rather than
+        # creating duplicate timeline points.
+        prediction["data_timestamp"] = latest_sensor["recorded_at"]
+
+        # Store the completed combined-risk result for the timeline.
+        try:
+            save_risk_prediction(
+                device_id=device_id,
+                prediction=prediction,
+            )
+        except (OSError, TypeError, ValueError):
+            logger.exception(
+                "Could not save swarming risk history for device %s",
+                device_id,
+            )
 
         # Log the classification
         logger.info(
@@ -657,6 +672,50 @@ def predict_from_iot():
                 "details": str(e),
             }
         ), 500
+
+
+# ──────────────────────────────────────────────────────────────
+# GET /api/swarming/risk-history
+# Returns stored swarming risks from the local JSON history.
+# ──────────────────────────────────────────────────────────────
+@swarming_live_bp.get("/api/swarming/risk-history")
+def swarming_risk_history():
+    """Return stored swarming risks for the selected device."""
+    device_id = request.args.get("device_id", "").strip()
+
+    if not device_id:
+        return jsonify(
+            {
+                "error": "device_id query parameter is required",
+                "history": [],
+            }
+        ), 400
+
+    try:
+        minutes = int(request.args.get("minutes", 1440))
+        limit = int(request.args.get("limit", 5000))
+    except ValueError:
+        return jsonify(
+            {
+                "error": "minutes and limit must be integers",
+                "history": [],
+            }
+        ), 400
+
+    history = get_risk_history(
+        device_id=device_id,
+        minutes=minutes,
+        limit=limit,
+    )
+
+    return jsonify(
+        {
+            "device_id": device_id,
+            "minutes": min(max(minutes, 1), 1440),
+            "count": len(history),
+            "history": history,
+        }
+    ), 200
 
 
 @swarming_live_bp.get("/api/eda-swarming")

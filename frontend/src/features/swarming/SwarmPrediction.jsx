@@ -42,7 +42,6 @@ const TIME_RANGES = [
   { label: "6H", minutes: 360 },
   { label: "12H", minutes: 720 },
   { label: "24H", minutes: 1440 },
-  { label: "7D", minutes: 10080 },
 ];
 
 const RISK_TIME_RANGES = [
@@ -100,7 +99,19 @@ function RiskGauge({ percentage, riskLevel, label }) {
           }}>
             {Number(percentage ?? 0).toFixed(2)}
           </span>
-          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>%</span>
+          <span
+  style={{
+    fontSize: "1.15rem",
+    fontWeight: 800,
+    lineHeight: 1,
+    marginTop: "5px",
+    color: cfg.color,
+    opacity: 0.85,
+    fontFamily: "'Outfit', sans-serif",
+  }}
+>
+  %
+</span>
         </div>
       </div>
       <div style={{
@@ -210,7 +221,7 @@ function ForecastCard({ forecast }) {
         marginTop: "10px", fontSize: "0.68rem", color: "var(--text-muted)",
         textAlign: "center", borderTop: "1px solid #dbe4f0", paddingTop: "6px",
       }}>
-        Forecast based on current hive trend · Derived from LSTM risk output
+        {/* Forecast based on current hive trend · Derived from LSTM risk output */}
       </div>
     </div>
   );
@@ -1376,6 +1387,34 @@ function SwarmingRiskTimeline({ history, currentRisk, riskLevel }) {
     }];
   }, [chartData, currentRisk]);
 
+  // Automatically zoom the vertical axis around the actual values so
+  // small risk changes remain visible instead of looking horizontal.
+  const yDomain = useMemo(() => {
+    const values = displayData
+      .map((item) => Number(item.probability))
+      .filter((value) => Number.isFinite(value));
+
+    if (values.length === 0) return [0, 100];
+
+    const minimum = Math.min(...values);
+    const maximum = Math.max(...values);
+    const difference = maximum - minimum;
+    const padding = difference === 0
+      ? Math.max(0.1, Math.abs(maximum) * 0.01)
+      : Math.max(0.1, difference * 0.3);
+
+    const lowerBound = Math.max(0, minimum - padding);
+    const upperBound = Math.min(100, maximum + padding);
+
+    if (lowerBound === upperBound) {
+      return lowerBound === 0
+        ? [0, 1]
+        : [Math.max(0, lowerBound - 0.5), Math.min(100, upperBound + 0.5)];
+    }
+
+    return [lowerBound, upperBound];
+  }, [displayData]);
+
   const lineColor = riskLevel === "HIGH" ? "#ef4444" : riskLevel === "MEDIUM" ? "#eab308" : "#22c55e";
   const gradientId = "swarmGrad";
 
@@ -1474,49 +1513,66 @@ function SwarmingRiskTimeline({ history, currentRisk, riskLevel }) {
               interval="preserveStartEnd"
             />
             <YAxis
-              domain={[0, 100]}
+              domain={yDomain}
+              allowDataOverflow
+              tickCount={5}
               tick={{ fill: "#64748b", fontSize: 10, fontFamily: "'Outfit', sans-serif" }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v) => `${v}`}
+              width={48}
+              tickFormatter={(value) => Number(value).toFixed(2)}
             />
             <Tooltip content={<CustomTooltip />} />
-            <ReferenceLine
-              y={RISK_THRESHOLD}
-              stroke="#ef4444"
-              strokeDasharray="6 4"
-              strokeWidth={1.5}
-              label={{
-                value: `Risk Threshold (${RISK_THRESHOLD / 100})`,
-                position: "insideTopRight",
-                fill: "#ef4444",
-                fontSize: 10,
-                fontFamily: "'Outfit', sans-serif",
-                dy: -4,
-              }}
-            />
-            <ReferenceLine
-              y={MEDIUM_THRESHOLD}
-              stroke="#f59e0b"
-              strokeDasharray="6 4"
-              strokeWidth={1.5}
-              label={{
-                value: `Moderate Threshold (${MEDIUM_THRESHOLD / 100})`,
-                position: "insideTopRight",
-                fill: "#f59e0b",
-                fontSize: 10,
-                fontFamily: "'Outfit', sans-serif",
-                dy: -4,
-              }}
-            />
+            {RISK_THRESHOLD >= yDomain[0] && RISK_THRESHOLD <= yDomain[1] && (
+              <ReferenceLine
+                y={RISK_THRESHOLD}
+                stroke="#ef4444"
+                strokeDasharray="6 4"
+                strokeWidth={1.5}
+                label={{
+                  value: `Risk Threshold (${RISK_THRESHOLD / 100})`,
+                  position: "insideTopRight",
+                  fill: "#ef4444",
+                  fontSize: 10,
+                  fontFamily: "'Outfit', sans-serif",
+                  dy: -4,
+                }}
+              />
+            )}
+            {MEDIUM_THRESHOLD >= yDomain[0] && MEDIUM_THRESHOLD <= yDomain[1] && (
+              <ReferenceLine
+                y={MEDIUM_THRESHOLD}
+                stroke="#f59e0b"
+                strokeDasharray="6 4"
+                strokeWidth={1.5}
+                label={{
+                  value: `Moderate Threshold (${MEDIUM_THRESHOLD / 100})`,
+                  position: "insideTopRight",
+                  fill: "#f59e0b",
+                  fontSize: 10,
+                  fontFamily: "'Outfit', sans-serif",
+                  dy: -4,
+                }}
+              />
+            )}
             <Area
-              type="monotone"
+              type="linear"
               dataKey="probability"
               stroke={lineColor}
-              strokeWidth={2}
+              strokeWidth={2.5}
               fill={`url(#${gradientId})`}
-              dot={false}
-              activeDot={{ r: 5, fill: lineColor, strokeWidth: 0 }}
+              dot={{
+                r: 2.5,
+                fill: "#ffffff",
+                stroke: lineColor,
+                strokeWidth: 1.5,
+              }}
+              activeDot={{
+                r: 5,
+                fill: lineColor,
+                stroke: "#ffffff",
+                strokeWidth: 2,
+              }}
               connectNulls
               isAnimationActive
               animationDuration={600}
@@ -1625,123 +1681,138 @@ const SwarmPrediction = () => {
   // ── Main: fetch IoT data + run prediction ────────────────────────────
   const fetchLivePrediction = useCallback(async (hive) => {
     if (!hive) return;
+  
     setLoading(true);
     setError(null);
     setConnStatus("loading");
+  
     try {
-      const res = await fetch(
-        `${API_BASE}/api/swarming/predict-from-iot?device_id=${encodeURIComponent(hive)}&limit=432`
+      const predictionResponse = await fetch(
+        `${API_BASE}/api/swarming/predict-from-iot?device_id=${encodeURIComponent(
+          hive
+        )}&limit=432`
       );
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `HTTP ${res.status}`);
+  
+      if (!predictionResponse.ok) {
+        const errorData = await predictionResponse
+          .json()
+          .catch(() => ({}));
+  
+        throw new Error(
+          errorData.error ||
+            `HTTP ${predictionResponse.status}`
+        );
       }
-      const data = await res.json();
-
+  
+      const data = await predictionResponse.json();
+  
+      const latestDataTimestamp =
+        data.latest_sensor?.recorded_at ||
+        data.readings?.[data.readings.length - 1]
+          ?.recorded_at ||
+        data.readings?.[data.readings.length - 1]
+          ?.reading_at ||
+        null;
+  
       setSensorValues(data.latest_sensor);
       setResult(data.prediction);
       setForecast(data.forecast);
-      
-      if (data.readings) {
+  
+      if (Array.isArray(data.readings)) {
         setReadingsCache(data.readings);
       }
-
-      // Load genuine stored risks. These values replace the previous
-      // Math.random()-generated timeline.
-      try {
-        const historyResponse = await fetch(
-          `${API_BASE}/api/swarming/risk-history?device_id=${encodeURIComponent(hive)}&minutes=10080&limit=5000`
+  
+      /*
+       * The prediction endpoint saves or updates the JSON
+       * record first. Now retrieve the latest 24-hour history.
+       */
+      const historyResponse = await fetch(
+        `${API_BASE}/api/swarming/risk-history?device_id=${encodeURIComponent(
+          hive
+        )}&minutes=1440&limit=5000`
+      );
+  
+      if (historyResponse.ok) {
+        const historyData = await historyResponse.json();
+  
+        setRiskHistory(
+          Array.isArray(historyData.history)
+            ? historyData.history
+            : []
         );
-        if (historyResponse.ok) {
-          const historyData = await historyResponse.json();
-          setRiskHistory(Array.isArray(historyData.history) ? historyData.history : []);
-        } else {
-          setRiskHistory([]);
-        }
-      } catch {
+      } else {
         setRiskHistory([]);
       }
-      
-      // ── FIX: Store PELT history - ALWAYS store breakpoint entries ──
+  
       if (data.prediction?.pelt_snapshot) {
-        const breakpointValue = Number(data.prediction.pelt_snapshot.breakpoint) || 0;
-        const densityValue = Number(data.prediction.pelt_snapshot.breakpoint_density) || 0;
-        
         const peltEntry = {
-          timestamp: data.prediction.timestamp || new Date().toISOString(),
-          breakpoint: breakpointValue,
-          breakpoint_density: densityValue,
-          days_since_breakpoint: Number(data.prediction.pelt_snapshot.days_since_breakpoint) || 0,
-          segment_duration: Number(data.prediction.pelt_snapshot.segment_duration) || 0,
+          timestamp:
+            latestDataTimestamp ||
+            data.prediction.timestamp ||
+            new Date().toISOString(),
+  
+          breakpoint:
+            Number(
+              data.prediction.pelt_snapshot.breakpoint
+            ) || 0,
+  
+          breakpoint_density:
+            Number(
+              data.prediction.pelt_snapshot
+                .breakpoint_density
+            ) || 0,
+  
+          days_since_breakpoint:
+            Number(
+              data.prediction.pelt_snapshot
+                .days_since_breakpoint
+            ) || 0,
+  
+          segment_duration:
+            Number(
+              data.prediction.pelt_snapshot
+                .segment_duration
+            ) || 0,
         };
-        
-        // Debug logging
-        console.log('📊 PELT Entry from API:', peltEntry);
-        
-        if (peltEntry.breakpoint === 1) {
-          console.log('⚠️ BREAKPOINT DETECTED!', peltEntry);
-        }
-        
-        setPeltHistory(prev => {
-          // ALWAYS add to history if breakpoint is detected
-          if (peltEntry.breakpoint === 1) {
-            console.log('✅ Adding breakpoint to history');
-            const newHistory = [...prev, peltEntry];
-            if (newHistory.length > 500) {
-              return newHistory.slice(-500);
-            }
-            return newHistory;
-          }
-          
-          // For non-breakpoint entries, check if data changed
-          const lastEntry = prev[prev.length - 1];
-          const getEntryKey = (entry) => 
-            `${entry.breakpoint}-${entry.breakpoint_density}-${entry.days_since_breakpoint}-${entry.segment_duration}`;
-          
-          const currentKey = getEntryKey(peltEntry);
-          const lastKey = lastEntry ? getEntryKey(lastEntry) : null;
-          
-          // Only add if data changed
-          if (currentKey !== lastKey) {
-            console.log('📊 Adding new PELT entry (data changed)');
-            const newHistory = [...prev, peltEntry];
-            if (newHistory.length > 500) {
-              return newHistory.slice(-500);
-            }
-            return newHistory;
-          }
-          
-          // Update timestamp only
-          if (lastEntry) {
-            console.log('⏭️ Updating timestamp (data unchanged)');
-            const updatedHistory = [...prev];
-            updatedHistory[updatedHistory.length - 1] = {
-              ...lastEntry,
-              timestamp: peltEntry.timestamp,
-            };
+  
+        setPeltHistory((previousHistory) => {
+          const existingIndex =
+            previousHistory.findIndex(
+              (item) =>
+                item.timestamp === peltEntry.timestamp
+            );
+  
+          if (existingIndex >= 0) {
+            const updatedHistory = [
+              ...previousHistory,
+            ];
+  
+            updatedHistory[existingIndex] = peltEntry;
+  
             return updatedHistory;
           }
-          
-          return prev;
+  
+          const updatedHistory = [
+            ...previousHistory,
+            peltEntry,
+          ];
+  
+          return updatedHistory.slice(-500);
         });
       }
-      
-      let latestDataTimestamp = data.latest_sensor?.recorded_at || null;
-
-      if (!latestDataTimestamp && data.readings?.length > 0) {
-        const latestReading = data.readings[data.readings.length - 1];
-        latestDataTimestamp = latestReading?.reading_at || latestReading?.recorded_at || null;
-      }
-
+  
       if (latestDataTimestamp) {
         setDataTimestamp(latestDataTimestamp);
-        setCountdown(secondsUntilRefresh(latestDataTimestamp));
+  
+        setCountdown(
+          secondsUntilRefresh(latestDataTimestamp)
+        );
       }
-      
+  
       setLastUpdated(new Date());
       setConnStatus("connected");
-    } catch (e) {
-      setError(e.message);
+    } catch (error) {
+      setError(error.message);
       setConnStatus("error");
     } finally {
       setLoading(false);
