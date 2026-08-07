@@ -122,3 +122,5 @@ tmp/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+backend/src/multivari/modules/swarming/data/swarming_risk_history.json
