@@ -63,7 +63,7 @@ class EDAConfig:
     }
 
     @classmethod
-    def default(cls) -> "EDAConfig":
+    def default(cls) -> EDAConfig:
         # .../backend/src/multivari/modules/swarming/eda/this_file.py
         resolved = Path(__file__).resolve()
         backend_dir = next(
