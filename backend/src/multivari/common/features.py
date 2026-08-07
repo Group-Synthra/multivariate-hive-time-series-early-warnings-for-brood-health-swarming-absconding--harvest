@@ -11,16 +11,21 @@ from .schema import HIVE_COLUMN, SENSOR_COLUMNS, TIMESTAMP_COLUMN
 def add_time_features(df: pd.DataFrame) -> pd.DataFrame:
     result = df.copy()
     timestamp = pd.to_datetime(result[TIMESTAMP_COLUMN])
-    result["hour"] = timestamp.dt.hour.astype("int8")
-    result["day_of_week"] = timestamp.dt.dayofweek.astype("int8")
-    result["month"] = timestamp.dt.month.astype("int8")
-    result["day_of_year"] = timestamp.dt.dayofyear.astype("int16")
-    result["is_weekend"] = (timestamp.dt.dayofweek >= 5).astype("int8")
-    result["hour_sin"] = np.sin(2 * np.pi * result["hour"] / 24).astype("float32")
-    result["hour_cos"] = np.cos(2 * np.pi * result["hour"] / 24).astype("float32")
-    result["day_of_year_sin"] = np.sin(2 * np.pi * result["day_of_year"] / 365.25).astype("float32")
-    result["day_of_year_cos"] = np.cos(2 * np.pi * result["day_of_year"] / 365.25).astype("float32")
-    return result
+    time_features = pd.DataFrame(index=result.index)
+    time_features["hour"] = timestamp.dt.hour.astype("int8")
+    time_features["day_of_week"] = timestamp.dt.dayofweek.astype("int8")
+    time_features["month"] = timestamp.dt.month.astype("int8")
+    time_features["day_of_year"] = timestamp.dt.dayofyear.astype("int16")
+    time_features["is_weekend"] = (timestamp.dt.dayofweek >= 5).astype("int8")
+    time_features["hour_sin"] = np.sin(2 * np.pi * time_features["hour"] / 24).astype("float32")
+    time_features["hour_cos"] = np.cos(2 * np.pi * time_features["hour"] / 24).astype("float32")
+    time_features["day_of_year_sin"] = np.sin(
+        2 * np.pi * time_features["day_of_year"] / 365.25
+    ).astype("float32")
+    time_features["day_of_year_cos"] = np.cos(
+        2 * np.pi * time_features["day_of_year"] / 365.25
+    ).astype("float32")
+    return pd.concat([result, time_features], axis=1)
 
 
 def build_common_features(
@@ -35,31 +40,33 @@ def build_common_features(
     """Generate reusable past-only time-series features for all modules."""
     result = add_time_features(df)
     grouped = result.groupby(HIVE_COLUMN, sort=False)
+    additions: dict[str, pd.Series] = {}
+    requested_statistics = set(rolling_statistics)
 
     for sensor in sensor_columns:
         for lag in lags_hours:
-            result[f"{sensor}_lag_{lag}h"] = grouped[sensor].shift(lag).astype("float32")
+            additions[f"{sensor}_lag_{lag}h"] = grouped[sensor].shift(lag).astype("float32")
 
         for period in change_hours:
-            result[f"{sensor}_change_{period}h"] = grouped[sensor].diff(period).astype("float32")
+            additions[f"{sensor}_change_{period}h"] = grouped[sensor].diff(period).astype("float32")
 
         for window in rolling_windows_hours:
             rolling = grouped[sensor].rolling(window=window, min_periods=window)
-            if "mean" in rolling_statistics:
-                result[f"{sensor}_roll_mean_{window}h"] = (
+            if "mean" in requested_statistics:
+                additions[f"{sensor}_roll_mean_{window}h"] = (
                     rolling.mean().reset_index(level=0, drop=True).astype("float32")
                 )
-            if "std" in rolling_statistics:
-                result[f"{sensor}_roll_std_{window}h"] = (
+            if "std" in requested_statistics:
+                additions[f"{sensor}_roll_std_{window}h"] = (
                     rolling.std().reset_index(level=0, drop=True).astype("float32")
                 )
-            if "min" in rolling_statistics:
-                result[f"{sensor}_roll_min_{window}h"] = (
+            if "min" in requested_statistics:
+                additions[f"{sensor}_roll_min_{window}h"] = (
                     rolling.min().reset_index(level=0, drop=True).astype("float32")
                 )
-            if "max" in rolling_statistics:
-                result[f"{sensor}_roll_max_{window}h"] = (
+            if "max" in requested_statistics:
+                additions[f"{sensor}_roll_max_{window}h"] = (
                     rolling.max().reset_index(level=0, drop=True).astype("float32")
                 )
 
-    return result
+    return pd.concat([result, pd.DataFrame(additions, index=result.index)], axis=1)
