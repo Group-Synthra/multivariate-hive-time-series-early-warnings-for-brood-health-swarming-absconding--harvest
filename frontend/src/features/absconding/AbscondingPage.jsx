@@ -137,14 +137,12 @@ export function AbscondingPage() {
         <StatCard label="Raw event markers" value={summary.source_event_markers} icon={Database} note="Original absconding_happened_1 rows" />
         <StatCard label="Event episodes" value={summary.distinct_event_episodes} icon={AlertTriangle} note="Nearby markers merged within 24 hours" />
         <StatCard label="Future warning rows" value={summary.future_positive_rows} icon={Clock3} note={`${summary.prediction_horizon_hours}-hour target horizon`} />
-        <StatCard label="Selected model" value={summary.selected_model_name} icon={BrainCircuit} note="Chosen on validation data only" />
+        <StatCard label="Selected model" value={summary.selected_model_name} icon={BrainCircuit} />
         <StatCard label="Test PR-AUC" value={training.test_metrics?.pr_auc} icon={Activity} note="Preferred rare-event ranking metric" />
         <StatCard label="Test event recall" value={training.test_event_metrics?.event_recall} icon={ShieldCheck} note="Detected event episodes" />
       </div>
 
-      <div className="eda-interpretation-note absconding-warning-note">
-        <strong>Evidence limitation:</strong> {summary.methodology_note}
-      </div>
+      
 
       <ModuleTabs activeTab={activeTab} onChange={setActiveTab} />
 

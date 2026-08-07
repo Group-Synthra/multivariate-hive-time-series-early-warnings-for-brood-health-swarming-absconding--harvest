@@ -354,7 +354,7 @@ function Forecast24HourCard({
 
         <div className={`iot-forecast-stat-panel change-${changeClass}`}>
           <span>Probability change</span>
-          <strong>{signed(changePercentagePoints, 3, ' pp')}</strong>
+          <strong>{signed(changePercentagePoints, 1, ' pp')}</strong>
           <small>Percentage-point movement</small>
         </div>
 
@@ -652,27 +652,17 @@ export default function AbscondingLiveDashboard({
 
       <div className="iot-kpi-grid">
         <OutputStatusCard title="Current Absconding Risk" className="iot-probability-card">
-          <div className="iot-current-output-label">Current-state estimate</div>
+         
           <div className="iot-gauge-wrap" style={{ '--risk-color': color, '--risk-deg': `${gaugePercentage * 1.8}deg` }}>
             <div className="iot-gauge-arc" />
             <div className="iot-gauge-needle" style={{ transform: `rotate(${gaugePercentage * 1.8 - 90}deg)` }} />
             <div className="iot-gauge-value">
-              <strong style={{ color }}>{probabilityPercent(riskPercentage, 3)}</strong>
-              <span>{currentStateAvailable ? 'Estimated active-condition risk now' : 'Current-state model unavailable'}</span>
+              <strong style={{ color }}>{probabilityPercent(riskPercentage, 2)}</strong>
+    
+              <span>{currentStateAvailable ? '--|--' : 'Current-state model unavailable'}</span>
             </div>
           </div>
-          <div className="iot-mini-message" style={{ display: 'grid', gap: '0.35rem', textAlign: 'left' }}>
-            <span style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-              <span>Previous ({comparisonHours}h earlier)</span>
-              <strong>{probabilityPercent(previousPercentage, 2)}</strong>
-            </span>
-            <span style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-              <span>Change</span>
-              <strong style={{ color: probabilityChangePercentagePoints > 0 ? 'var(--accent-gold)' : probabilityChangePercentagePoints < 0 ? 'var(--accent-emerald)' : 'inherit' }}>
-                {signed(probabilityChangePercentagePoints, 3, ' pp')}
-              </strong>
-            </span>
-          </div>
+          
           <div className="iot-model-pill">Model: {currentModelName} {currentStateAvailable && <CheckCircle size={14} />}</div>
         </OutputStatusCard>
 
@@ -714,12 +704,7 @@ export default function AbscondingLiveDashboard({
             <TrendingUp className="iot-arm-trend-icon" size={28} />
           </div>
           <p className="iot-trend-text">Trend: {armTrend}</p>
-          <p className="iot-trend-sub">
-            {signed(probabilityChangePercentagePoints, 3, ' pp')} over {comparisonHours}h
-          </p>
-          <p className="iot-trend-sub">
-            {signed(armPerHour * 100, 4, ' pp/hour')}
-          </p>
+          
         </OutputStatusCard>
 
         <OutputStatusCard title="Current Condition Alert" className="iot-alert-status-card">
@@ -758,7 +743,7 @@ export default function AbscondingLiveDashboard({
       <div className="iot-chart-grid">
         <section className="iot-card iot-risk-chart-card">
           <div className="iot-card-title-row">
-            <h3>Current State vs Next 24-Hour Forecast</h3>
+            <h3>Current State Next 24-Hour Forecast</h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <div className="iot-range-buttons">
                 <button type="button" className={riskScaleMode === 'zoomed' ? 'active' : ''} onClick={() => setRiskScaleMode('zoomed')}>Zoomed</button>
@@ -893,7 +878,7 @@ export default function AbscondingLiveDashboard({
       </div>
 
       <div className="iot-footer-note">
-        <Info size={15} /> Predictions are based on live sensor data and machine learning models. Use insights to support, not replace, expert judgement.
+        <Info size={15} /> Predictions are based on live sensor data and machine learning models. 
         <button className="iot-refresh-mini" onClick={() => refetchIotLive?.(true)} disabled={iotLiveLoading}>
           <RefreshCw size={13} className={iotLiveLoading ? 'spin' : ''} /> Pull IoT Now
         </button>
