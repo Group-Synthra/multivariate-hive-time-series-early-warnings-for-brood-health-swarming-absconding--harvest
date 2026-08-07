@@ -34,10 +34,7 @@ def _json_safe(value: Any) -> Any:
 
 def _records(frame: pd.DataFrame) -> list[dict[str, Any]]:
     return [
-        {
-            key: _json_safe(value)
-            for key, value in row.items()
-        }
+        {key: _json_safe(value) for key, value in row.items()}
         for row in frame.to_dict(orient="records")
     ]
 
@@ -49,10 +46,7 @@ def _first_existing(
     for candidate in candidates:
         if candidate in columns:
             return candidate
-    raise ValueError(
-        "None of the expected columns exist: "
-        f"{candidates}"
-    )
+    raise ValueError(f"None of the expected columns exist: {candidates}")
 
 
 def _prepare_24h_series(
@@ -63,10 +57,7 @@ def _prepare_24h_series(
     required = {"timestamp", "hive_id"}
     missing = sorted(required.difference(predictions.columns))
     if missing:
-        raise ValueError(
-            "24-hour prediction file is missing columns: "
-            f"{missing}"
-        )
+        raise ValueError(f"24-hour prediction file is missing columns: {missing}")
 
     frame = predictions.copy()
     frame["timestamp"] = pd.to_datetime(
@@ -125,33 +116,24 @@ def _prepare_24h_series(
     ].rename(
         columns={
             current_weight: "current_weight_kg",
-            predicted_future_weight: (
-                "predicted_future_weight_kg"
-            ),
-            actual_future_weight: (
-                "actual_future_weight_kg"
-            ),
+            predicted_future_weight: ("predicted_future_weight_kg"),
+            actual_future_weight: ("actual_future_weight_kg"),
             predicted_delta: "predicted_delta_kg",
             actual_delta: "actual_delta_kg",
         }
     )
 
     selected["absolute_error_kg"] = (
-        selected["predicted_delta_kg"]
-        - selected["actual_delta_kg"]
+        selected["predicted_delta_kg"] - selected["actual_delta_kg"]
     ).abs()
 
     selected = (
-        selected.sort_values(
-            ["hive_id", "timestamp"]
-        )
+        selected.sort_values(["hive_id", "timestamp"])
         .groupby("hive_id", group_keys=False)
         .tail(rows_per_hive)
         .reset_index(drop=True)
     )
-    hives = sorted(
-        selected["hive_id"].astype(str).unique().tolist()
-    )
+    hives = sorted(selected["hive_id"].astype(str).unique().tolist())
     return _records(selected), hives
 
 
@@ -184,42 +166,20 @@ def main() -> None:
         else project_root / "frontend"
     )
 
-    report_root = (
-        backend_root
-        / "artifacts"
-        / "reports"
-        / "harvesting"
-        / "reviewed"
-    )
+    report_root = backend_root / "artifacts" / "reports" / "harvesting" / "reviewed"
 
-    decision = _read_json(
-        report_root / "final_research_decision.json"
-    )
-    classification = _read_json(
-        report_root
-        / "research_models"
-        / "selected_model_metrics.json"
-    )
-    alert_gate = _read_json(
-        report_root
-        / "alert_policy_gate"
-        / "research_gate_summary.json"
-    )
+    decision = _read_json(report_root / "final_research_decision.json")
+    classification = _read_json(report_root / "research_models" / "selected_model_metrics.json")
+    alert_gate = _read_json(report_root / "alert_policy_gate" / "research_gate_summary.json")
     robust_summary = _read_json(
-        report_root
-        / "robust_weight_forecasting"
-        / "robust_weight_forecasting_summary.json"
+        report_root / "robust_weight_forecasting" / "robust_weight_forecasting_summary.json"
     )
     robust_gate = _read_json(
-        report_root
-        / "robust_weight_forecasting"
-        / "forecasting_research_gate.json"
+        report_root / "robust_weight_forecasting" / "forecasting_research_gate.json"
     )
 
     predictions_path = (
-        report_root
-        / "robust_weight_forecasting"
-        / "selected_test_predictions_24h.parquet"
+        report_root / "robust_weight_forecasting" / "selected_test_predictions_24h.parquet"
     )
     predictions = pd.read_parquet(predictions_path)
     series, hives = _prepare_24h_series(
@@ -252,11 +212,7 @@ def main() -> None:
     }
 
     output_path = (
-        frontend_root
-        / "public"
-        / "data"
-        / "harvesting-research"
-        / "benchmark-dashboard.json"
+        frontend_root / "public" / "data" / "harvesting-research" / "benchmark-dashboard.json"
     )
     output_path.parent.mkdir(
         parents=True,

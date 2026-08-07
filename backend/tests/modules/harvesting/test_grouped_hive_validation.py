@@ -9,21 +9,10 @@ def test_grouped_folds_hold_out_one_positive_training_hive() -> None:
     features = pd.DataFrame(
         {
             "hive_id": (
-                ["h1"] * 10
-                + ["h2"] * 10
-                + ["h3"] * 10
-                + ["h4"] * 10
-                + ["h5"] * 10
-                + ["v1"] * 10
+                ["h1"] * 10 + ["h2"] * 10 + ["h3"] * 10 + ["h4"] * 10 + ["h5"] * 10 + ["v1"] * 10
             ),
-            "split": (
-                ["train"] * 50
-                + ["validation"] * 10
-            ),
-            "target": (
-                [0] * 9 + [1]
-            )
-            * 6,
+            "split": (["train"] * 50 + ["validation"] * 10),
+            "target": ([0] * 9 + [1]) * 6,
         }
     )
     events = pd.DataFrame(

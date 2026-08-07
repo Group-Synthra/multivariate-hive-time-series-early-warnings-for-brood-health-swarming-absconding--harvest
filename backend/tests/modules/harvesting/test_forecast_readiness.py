@@ -216,49 +216,36 @@ def test_provisional_score_is_finite_and_bounded() -> None:
         }
     )
     for horizon in (24, 48, 72):
-        frame[
-            f"predicted_rate_{horizon}h_kg_per_hour"
-        ] = (
-            frame[f"predicted_delta_{horizon}h_kg"]
-            / horizon
+        frame[f"predicted_rate_{horizon}h_kg_per_hour"] = (
+            frame[f"predicted_delta_{horizon}h_kg"] / horizon
         )
 
-    result, parameters, thresholds = (
-        build_provisional_readiness_scores(
-            frame,
-            horizons_hours=[24, 48, 72],
-            component_weights={
-                "recent_accumulation": 0.15,
-                "weight_position": 0.20,
-                "forecast_plateau": 0.25,
-                "forecast_slowdown": 0.20,
-                "forecast_agreement": 0.10,
-                "environmental_stability": 0.10,
-            },
-            lower_quantile=0.10,
-            upper_quantile=0.90,
-            plateau_rate_quantile=0.25,
-            stability_window_hours=24,
-            stability_minimum_periods=6,
-            rate_of_change_hours=6,
-            class_quantiles={
-                "approaching": 0.50,
-                "ready": 0.75,
-                "high_priority": 0.90,
-            },
-        )
+    result, parameters, thresholds = build_provisional_readiness_scores(
+        frame,
+        horizons_hours=[24, 48, 72],
+        component_weights={
+            "recent_accumulation": 0.15,
+            "weight_position": 0.20,
+            "forecast_plateau": 0.25,
+            "forecast_slowdown": 0.20,
+            "forecast_agreement": 0.10,
+            "environmental_stability": 0.10,
+        },
+        lower_quantile=0.10,
+        upper_quantile=0.90,
+        plateau_rate_quantile=0.25,
+        stability_window_hours=24,
+        stability_minimum_periods=6,
+        rate_of_change_hours=6,
+        class_quantiles={
+            "approaching": 0.50,
+            "ready": 0.75,
+            "high_priority": 0.90,
+        },
     )
 
-    assert result[
-        "provisional_readiness_score"
-    ].between(0.0, 100.0).all()
+    assert result["provisional_readiness_score"].between(0.0, 100.0).all()
     assert result["hrsi"].between(0.0, 100.0).all()
-    assert np.isfinite(
-        result["provisional_readiness_score"]
-    ).all()
+    assert np.isfinite(result["provisional_readiness_score"]).all()
     assert parameters["normalization_source_split"] == "train"
-    assert (
-        thresholds["approaching"]
-        <= thresholds["ready"]
-        <= thresholds["high_priority"]
-    )
+    assert thresholds["approaching"] <= thresholds["ready"] <= thresholds["high_priority"]

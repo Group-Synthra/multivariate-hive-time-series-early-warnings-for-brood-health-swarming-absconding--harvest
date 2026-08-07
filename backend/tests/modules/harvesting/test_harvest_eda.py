@@ -74,7 +74,5 @@ def test_relationship_effect_direction() -> None:
     events["weight_change_72h"] = [3.0, 4.0, 5.0]
     controls["weight_change_72h"] = [-1.0, 0.0, 1.0]
     relationships = calculate_variable_relationships(events, controls)
-    row = relationships.loc[
-        relationships["feature"].eq("weight_change_72h")
-    ].iloc[0]
+    row = relationships.loc[relationships["feature"].eq("weight_change_72h")].iloc[0]
     assert row["cliffs_delta"] > 0

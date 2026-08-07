@@ -8,10 +8,7 @@ import yaml
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Merge the forecast-readiness configuration into "
-            "config/harvesting.yaml."
-        )
+        description=("Merge the forecast-readiness configuration into config/harvesting.yaml.")
     )
     parser.add_argument(
         "--config",
@@ -30,17 +27,11 @@ def main() -> None:
     config_path = backend_root / arguments.config
     snippet_path = backend_root / arguments.snippet
 
-    config = yaml.safe_load(
-        config_path.read_text(encoding="utf-8")
-    )
-    snippet = yaml.safe_load(
-        snippet_path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    snippet = yaml.safe_load(snippet_path.read_text(encoding="utf-8"))
 
     if not isinstance(config, dict) or not isinstance(snippet, dict):
-        raise TypeError(
-            "Both YAML files must contain top-level mappings."
-        )
+        raise TypeError("Both YAML files must contain top-level mappings.")
 
     added: list[str] = []
     existing: list[str] = []

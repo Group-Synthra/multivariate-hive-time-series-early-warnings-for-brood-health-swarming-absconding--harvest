@@ -65,9 +65,7 @@ def _require_columns(
 ) -> None:
     missing = sorted(required.difference(frame.columns))
     if missing:
-        raise ValueError(
-            f"{frame_name} is missing required columns: {missing}"
-        )
+        raise ValueError(f"{frame_name} is missing required columns: {missing}")
 
 
 def _validate_unique_keys(frame: pd.DataFrame) -> None:
@@ -85,8 +83,7 @@ def _validate_unique_keys(frame: pd.DataFrame) -> None:
             .to_dict(orient="records")
         )
         raise ValueError(
-            "Feature source contains duplicate hive/timestamp keys. "
-            f"Examples: {examples}"
+            f"Feature source contains duplicate hive/timestamp keys. Examples: {examples}"
         )
 
 
@@ -100,10 +97,7 @@ def _add_contiguous_segment_id(
         .dt.total_seconds()
         .div(3600)
     )
-    starts_new_segment = (
-        hourly_difference.isna()
-        | hourly_difference.ne(1.0)
-    )
+    starts_new_segment = hourly_difference.isna() | hourly_difference.ne(1.0)
     result["_segment_id"] = (
         starts_new_segment.groupby(
             result[HIVE_COLUMN],
@@ -141,14 +135,9 @@ def _rolling_stat(
     elif statistic == "max":
         values = rolling.max()
     else:
-        raise ValueError(
-            f"Unsupported rolling statistic: {statistic}"
-        )
+        raise ValueError(f"Unsupported rolling statistic: {statistic}")
 
-    return (
-        values.reset_index(level=[0, 1], drop=True)
-        .reindex(frame.index)
-    )
+    return values.reset_index(level=[0, 1], drop=True).reindex(frame.index)
 
 
 def _group_shift(
@@ -222,9 +211,7 @@ def _build_weight_features(
             category="change",
             sensor="weight",
             lookback_hours=hours,
-            notes=(
-                f"Current weight minus weight {hours} hours earlier."
-            ),
+            notes=(f"Current weight minus weight {hours} hours earlier."),
         )
 
     rolling_cache: dict[tuple[int, str], pd.Series] = {}
@@ -261,10 +248,7 @@ def _build_weight_features(
             feature_frame,
             manifest,
             name=f"weight_range_{window}h_kg",
-            values=(
-                rolling_cache[(window, "max")]
-                - rolling_cache[(window, "min")]
-            ),
+            values=(rolling_cache[(window, "max")] - rolling_cache[(window, "min")]),
             category="rolling",
             sensor="weight",
             lookback_hours=window,
@@ -286,8 +270,7 @@ def _build_weight_features(
             sensor="weight",
             lookback_hours=hours,
             notes=(
-                "Endpoint rate of change using only the current "
-                f"and {hours}-hour lagged weight."
+                f"Endpoint rate of change using only the current and {hours}-hour lagged weight."
             ),
         )
 
@@ -303,9 +286,7 @@ def _build_weight_features(
             category="domain",
             sensor="weight",
             lookback_hours=window,
-            notes=(
-                f"Distance below the rolling {window}-hour maximum."
-            ),
+            notes=(f"Distance below the rolling {window}-hour maximum."),
         )
 
     for window in (72, 168):
@@ -321,10 +302,7 @@ def _build_weight_features(
             category="domain",
             sensor="weight",
             lookback_hours=window,
-            notes=(
-                f"Current weight divided by the rolling {window}-hour "
-                "maximum."
-            ),
+            notes=(f"Current weight divided by the rolling {window}-hour maximum."),
         )
 
 
@@ -365,9 +343,7 @@ def _build_environmental_features(
             category="change",
             sensor=sensor_name,
             lookback_hours=hours,
-            notes=(
-                f"Current reading minus the reading {hours} hours earlier."
-            ),
+            notes=(f"Current reading minus the reading {hours} hours earlier."),
         )
 
     for window in windows:
@@ -443,10 +419,7 @@ def _build_environmental_features(
             category="trend",
             sensor=sensor_name,
             lookback_hours=hours,
-            notes=(
-                "Endpoint rate of change using the current "
-                f"and {hours}-hour lagged reading."
-            ),
+            notes=(f"Endpoint rate of change using the current and {hours}-hour lagged reading."),
         )
 
 
@@ -484,11 +457,7 @@ def build_reviewed_feature_dataset(
         frame_name="Continuous sensor history",
     )
 
-    modelling_frame = (
-        history.copy()
-        if modelling is None
-        else modelling.copy()
-    )
+    modelling_frame = history.copy() if modelling is None else modelling.copy()
     modelling_required = {
         HIVE_COLUMN,
         TIMESTAMP_COLUMN,
@@ -502,41 +471,33 @@ def build_reviewed_feature_dataset(
     )
 
     if minimum_history_hours <= 0:
-        raise ValueError(
-            "minimum_history_hours must be greater than zero"
-        )
+        raise ValueError("minimum_history_hours must be greater than zero")
 
     frame = history.copy()
     frame[TIMESTAMP_COLUMN] = pd.to_datetime(
         frame[TIMESTAMP_COLUMN],
         errors="raise",
     )
-    frame = frame.sort_values(
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    ).reset_index(drop=True)
+    frame = frame.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN]).reset_index(drop=True)
     _validate_unique_keys(frame)
 
     modelling_frame[TIMESTAMP_COLUMN] = pd.to_datetime(
         modelling_frame[TIMESTAMP_COLUMN],
         errors="raise",
     )
-    modelling_frame = modelling_frame.sort_values(
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    ).reset_index(drop=True)
+    modelling_frame = modelling_frame.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN]).reset_index(
+        drop=True
+    )
     _validate_unique_keys(modelling_frame)
 
-    key_check = modelling_frame[
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    ].merge(
+    key_check = modelling_frame[[HIVE_COLUMN, TIMESTAMP_COLUMN]].merge(
         frame[[HIVE_COLUMN, TIMESTAMP_COLUMN]],
         on=[HIVE_COLUMN, TIMESTAMP_COLUMN],
         how="left",
         indicator=True,
         validate="one_to_one",
     )
-    unmatched_key_count = int(
-        key_check["_merge"].ne("both").sum()
-    )
+    unmatched_key_count = int(key_check["_merge"].ne("both").sum())
     if unmatched_key_count:
         raise ValueError(
             "Some modelling rows do not exist in the continuous "
@@ -546,18 +507,9 @@ def build_reviewed_feature_dataset(
     frame = _add_contiguous_segment_id(frame)
 
     gap_rows = int(
-        frame["_hours_since_previous"]
-        .notna()
-        .mul(
-            frame["_hours_since_previous"].ne(1.0)
-        )
-        .sum()
+        frame["_hours_since_previous"].notna().mul(frame["_hours_since_previous"].ne(1.0)).sum()
     )
-    segment_count = int(
-        frame[[HIVE_COLUMN, "_segment_id"]]
-        .drop_duplicates()
-        .shape[0]
-    )
+    segment_count = int(frame[[HIVE_COLUMN, "_segment_id"]].drop_duplicates().shape[0])
 
     feature_frame = pd.DataFrame(index=frame.index)
     manifest: list[FeatureDefinition] = []
@@ -583,9 +535,7 @@ def build_reviewed_feature_dataset(
         )
 
     hour = frame[TIMESTAMP_COLUMN].dt.hour.to_numpy()
-    day_of_week = (
-        frame[TIMESTAMP_COLUMN].dt.dayofweek.to_numpy()
-    )
+    day_of_week = frame[TIMESTAMP_COLUMN].dt.dayofweek.to_numpy()
 
     _append_feature(
         feature_frame,
@@ -634,11 +584,7 @@ def build_reviewed_feature_dataset(
         feature_frame,
         manifest,
         name="co2_flatline_24h_1",
-        values=(
-            co2_std_24
-            .le(co2_flatline_std_threshold)
-            .astype("float64")
-        ),
+        values=(co2_std_24.le(co2_flatline_std_threshold).astype("float64")),
         category="quality",
         sensor="co2",
         lookback_hours=24,
@@ -651,11 +597,7 @@ def build_reviewed_feature_dataset(
         feature_frame,
         manifest,
         name="co2_flatline_72h_1",
-        values=(
-            co2_std_72
-            .le(co2_flatline_std_threshold)
-            .astype("float64")
-        ),
+        values=(co2_std_72.le(co2_flatline_std_threshold).astype("float64")),
         category="quality",
         sensor="co2",
         lookback_hours=72,
@@ -694,9 +636,7 @@ def build_reviewed_feature_dataset(
         category="domain",
         sensor="environment",
         lookback_hours=72,
-        notes=(
-            "Unscaled environmental variability proxy over 72 hours."
-        ),
+        notes=("Unscaled environmental variability proxy over 72 hours."),
     )
 
     feature_frame = feature_frame.replace(
@@ -705,14 +645,9 @@ def build_reviewed_feature_dataset(
     )
 
     feature_columns = list(feature_frame.columns)
-    prohibited = sorted(
-        set(feature_columns).intersection(BANNED_MODEL_COLUMNS)
-    )
+    prohibited = sorted(set(feature_columns).intersection(BANNED_MODEL_COLUMNS))
     if prohibited:
-        raise ValueError(
-            "Leakage columns were included in the feature frame: "
-            f"{prohibited}"
-        )
+        raise ValueError(f"Leakage columns were included in the feature frame: {prohibited}")
 
     complete_history_mask = (
         frame.groupby(
@@ -754,32 +689,18 @@ def build_reviewed_feature_dataset(
         validate="one_to_one",
     )
 
-    missing_feature_mask = output[
-        feature_columns
-    ].isna().any(axis=1)
-    output = output.loc[
-        ~missing_feature_mask
-    ].copy()
+    missing_feature_mask = output[feature_columns].isna().any(axis=1)
+    output = output.loc[~missing_feature_mask].copy()
 
-    output = output.sort_values(
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    ).reset_index(drop=True)
+    output = output.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN]).reset_index(drop=True)
 
     if output.empty:
-        raise ValueError(
-            "No rows remained after feature-history filtering."
-        )
+        raise ValueError("No rows remained after feature-history filtering.")
 
-    manifest_frame = pd.DataFrame(
-        [definition.as_dict() for definition in manifest]
-    )
+    manifest_frame = pd.DataFrame([definition.as_dict() for definition in manifest])
 
-    source_positive_rows = int(
-        modelling_frame[target_column].sum()
-    )
-    output_positive_rows = int(
-        output[target_column].sum()
-    )
+    source_positive_rows = int(modelling_frame[target_column].sum())
+    output_positive_rows = int(output[target_column].sum())
 
     split_balance = (
         output.groupby(
@@ -796,9 +717,7 @@ def build_reviewed_feature_dataset(
         "history_rows": len(frame),
         "source_rows": len(modelling_frame),
         "output_rows": len(output),
-        "rows_removed_for_history_or_missing_features": int(
-            len(modelling_frame) - len(output)
-        ),
+        "rows_removed_for_history_or_missing_features": int(len(modelling_frame) - len(output)),
         "feature_count": len(feature_columns),
         "minimum_history_hours": minimum_history_hours,
         "contiguous_segment_count": segment_count,
@@ -806,12 +725,8 @@ def build_reviewed_feature_dataset(
         "modelling_rows_without_history_key": unmatched_key_count,
         "source_positive_rows": source_positive_rows,
         "output_positive_rows": output_positive_rows,
-        "positive_rows_removed": (
-            source_positive_rows - output_positive_rows
-        ),
-        "output_positive_rate": float(
-            output[target_column].mean()
-        ),
+        "positive_rows_removed": (source_positive_rows - output_positive_rows),
+        "output_positive_rate": float(output[target_column].mean()),
         "feature_columns": feature_columns,
         "split_balance": split_balance,
         "leakage_columns_present": prohibited,
@@ -830,6 +745,7 @@ def build_reviewed_feature_dataset(
 
     return output, manifest_frame, audit
 
+
 def run_reviewed_features_from_config(
     *,
     backend_root: str | Path,
@@ -840,9 +756,7 @@ def run_reviewed_features_from_config(
     if not path.is_absolute():
         path = root / path
 
-    config = yaml.safe_load(
-        path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
 
     settings = config["reviewed_features"]
     target_column = config["reviewed_target"]["output_column"]
@@ -875,42 +789,16 @@ def run_reviewed_features_from_config(
         history,
         source,
         target_column=target_column,
-        minimum_history_hours=int(
-            settings["minimum_history_hours"]
-        ),
-        weight_windows_hours=[
-            int(value)
-            for value in settings["weight_windows_hours"]
-        ],
+        minimum_history_hours=int(settings["minimum_history_hours"]),
+        weight_windows_hours=[int(value) for value in settings["weight_windows_hours"]],
         environmental_windows_hours=[
-            int(value)
-            for value in settings[
-                "environmental_windows_hours"
-            ]
+            int(value) for value in settings["environmental_windows_hours"]
         ],
-        weight_delta_hours=[
-            int(value)
-            for value in settings["weight_delta_hours"]
-        ],
-        environmental_delta_hours=[
-            int(value)
-            for value in settings[
-                "environmental_delta_hours"
-            ]
-        ],
-        weight_trend_hours=[
-            int(value)
-            for value in settings["weight_trend_hours"]
-        ],
-        environmental_trend_hours=[
-            int(value)
-            for value in settings[
-                "environmental_trend_hours"
-            ]
-        ],
-        co2_flatline_std_threshold=float(
-            settings["co2_flatline_std_threshold"]
-        ),
+        weight_delta_hours=[int(value) for value in settings["weight_delta_hours"]],
+        environmental_delta_hours=[int(value) for value in settings["environmental_delta_hours"]],
+        weight_trend_hours=[int(value) for value in settings["weight_trend_hours"]],
+        environmental_trend_hours=[int(value) for value in settings["environmental_trend_hours"]],
+        co2_flatline_std_threshold=float(settings["co2_flatline_std_threshold"]),
     )
 
     output_path.parent.mkdir(

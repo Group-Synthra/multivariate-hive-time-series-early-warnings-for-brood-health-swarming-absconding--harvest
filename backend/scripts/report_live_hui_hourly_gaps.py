@@ -71,9 +71,7 @@ def main() -> None:
                 "first_hour": group[TIMESTAMP_COLUMN].min().isoformat(),
                 "latest_hour": group[TIMESTAMP_COLUMN].max().isoformat(),
                 "hourly_rows": len(group),
-                "latest_contiguous_hourly_rows": diagnostic[
-                    "latest_contiguous_hourly_rows"
-                ],
+                "latest_contiguous_hourly_rows": diagnostic["latest_contiguous_hourly_rows"],
                 "hours_needed_for_current_hui": max(
                     0,
                     168 - int(diagnostic["latest_contiguous_hourly_rows"]),

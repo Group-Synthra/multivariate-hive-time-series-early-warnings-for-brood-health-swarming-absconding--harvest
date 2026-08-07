@@ -14,14 +14,10 @@ def add_future_harvest_target(
 ) -> pd.DataFrame:
     """Create a future harvest target that excludes the current timestamp."""
     if horizon_hours <= 0:
-        raise ValueError(
-            "horizon_hours must be greater than zero"
-        )
+        raise ValueError("horizon_hours must be greater than zero")
 
     if event_start_column not in df.columns:
-        raise ValueError(
-            f"Missing event-start column: {event_start_column}"
-        )
+        raise ValueError(f"Missing event-start column: {event_start_column}")
 
     return make_future_event_target(
         df,

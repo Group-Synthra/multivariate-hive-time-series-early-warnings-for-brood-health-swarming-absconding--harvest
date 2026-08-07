@@ -44,9 +44,7 @@ def test_robust_target_uses_trailing_median_endpoints() -> None:
         target_window_hours=6,
     )
 
-    assert result[
-        "robust_weight_delta_next_24h_kg"
-    ].eq(24.0).all()
+    assert result["robust_weight_delta_next_24h_kg"].eq(24.0).all()
 
 
 def test_robust_target_does_not_cross_split() -> None:

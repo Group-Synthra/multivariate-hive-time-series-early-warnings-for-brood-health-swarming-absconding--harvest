@@ -52,25 +52,13 @@ def _target_balance_by_split(
         .reset_index()
     )
 
-    balance["target_positives"] = (
-        balance["target_positives"]
-        .astype("int64")
-    )
+    balance["target_positives"] = balance["target_positives"].astype("int64")
 
-    balance["event_starts"] = (
-        balance["event_starts"]
-        .astype("int64")
-    )
+    balance["event_starts"] = balance["event_starts"].astype("int64")
 
-    balance["target_negatives"] = (
-        balance["rows"]
-        - balance["target_positives"]
-    )
+    balance["target_negatives"] = balance["rows"] - balance["target_positives"]
 
-    balance["positive_rate"] = (
-        balance["target_positives"]
-        / balance["rows"]
-    )
+    balance["positive_rate"] = balance["target_positives"] / balance["rows"]
 
     return balance
 
@@ -88,11 +76,7 @@ def build_harvest_modelling_dataset(
     if not config_file.is_absolute():
         config_file = root / config_file
 
-    config = yaml.safe_load(
-        config_file.read_text(
-            encoding="utf-8"
-        )
-    )
+    config = yaml.safe_load(config_file.read_text(encoding="utf-8"))
 
     clean_path = _resolve_path(
         root,
@@ -128,17 +112,11 @@ def build_harvest_modelling_dataset(
     target_config = config["target"]
 
     source_column = event_config["source_column"]
-    event_start_column = event_config[
-        "event_start_column"
-    ]
-    event_id_column = event_config[
-        "event_id_column"
-    ]
+    event_start_column = event_config["event_start_column"]
+    event_id_column = event_config["event_id_column"]
 
     target_column = target_config["output_column"]
-    horizon_hours = int(
-        target_config["horizon_hours"]
-    )
+    horizon_hours = int(target_config["horizon_hours"])
 
     common = read_table(clean_path)
     manifest = read_table(manifest_path)
@@ -163,14 +141,10 @@ def build_harvest_modelling_dataset(
     )
 
     if prepared["split"].isna().any():
-        raise ValueError(
-            "Some rows did not match the common split manifest."
-        )
+        raise ValueError("Some rows did not match the common split manifest.")
 
     if prepared["is_boundary_gap"].isna().any():
-        raise ValueError(
-            "Some rows are missing the boundary-gap flag."
-        )
+        raise ValueError("Some rows are missing the boundary-gap flag.")
 
     event_table = build_harvest_event_table(
         prepared,
@@ -179,13 +153,9 @@ def build_harvest_modelling_dataset(
         event_id_column=event_id_column,
     )
 
-    source_positive_rows = int(
-        prepared[source_column].sum()
-    )
+    source_positive_rows = int(prepared[source_column].sum())
 
-    consolidated_events = int(
-        prepared[event_start_column].sum()
-    )
+    consolidated_events = int(prepared[event_start_column].sum())
 
     positive_hives = int(
         prepared.loc[
@@ -194,37 +164,21 @@ def build_harvest_modelling_dataset(
         ].nunique()
     )
 
-    unavailable_future_rows = int(
-        prepared[target_column].isna().sum()
-    )
+    unavailable_future_rows = int(prepared[target_column].isna().sum())
 
-    boundary_gap_rows = int(
-        prepared["is_boundary_gap"].sum()
-    )
+    boundary_gap_rows = int(prepared["is_boundary_gap"].sum())
 
     # Remove the rows reserved around train/validation/test
     # boundaries.
-    model_data = remove_target_leakage_boundaries(
-        prepared
-    )
+    model_data = remove_target_leakage_boundaries(prepared)
 
     # The last 72 hours of each hive have no complete future
     # observation window, so their target remains unknown.
-    model_data = model_data.dropna(
-        subset=[target_column]
-    ).copy()
+    model_data = model_data.dropna(subset=[target_column]).copy()
 
-    model_data[target_column] = (
-        model_data[target_column]
-        .astype("int8")
-    )
+    model_data[target_column] = model_data[target_column].astype("int8")
 
-    model_data = (
-        model_data.sort_values(
-            [HIVE_COLUMN, "timestamp"]
-        )
-        .reset_index(drop=True)
-    )
+    model_data = model_data.sort_values([HIVE_COLUMN, "timestamp"]).reset_index(drop=True)
 
     target_balance = _target_balance_by_split(
         model_data,
@@ -232,11 +186,7 @@ def build_harvest_modelling_dataset(
         event_start_column=event_start_column,
     )
 
-    eligible_events = event_table.loc[
-        ~event_table[
-            "is_boundary_gap"
-        ].fillna(False)
-    ]
+    eligible_events = event_table.loc[~event_table["is_boundary_gap"].fillna(False)]
 
     events_by_split = {
         str(split): int(count)
@@ -257,18 +207,11 @@ def build_harvest_modelling_dataset(
         "source_positive_rows": source_positive_rows,
         "consolidated_event_count": consolidated_events,
         "positive_hives": positive_hives,
-        "rows_with_unavailable_future_target": (
-            unavailable_future_rows
-        ),
+        "rows_with_unavailable_future_target": (unavailable_future_rows),
         "boundary_gap_rows_removed": boundary_gap_rows,
         "final_modelling_rows": len(model_data),
-        "target_positive_rows": int(
-            model_data[target_column].sum()
-        ),
-        "target_negative_rows": int(
-            len(model_data)
-            - model_data[target_column].sum()
-        ),
+        "target_positive_rows": int(model_data[target_column].sum()),
+        "target_negative_rows": int(len(model_data) - model_data[target_column].sum()),
         "event_starts_by_split": events_by_split,
         "warning": (
             "Harvest markers are generated labels. "
@@ -293,15 +236,11 @@ def build_harvest_modelling_dataset(
     )
 
     target_balance.to_csv(
-        report_directory
-        / "target_balance_by_split.csv",
+        report_directory / "target_balance_by_split.csv",
         index=False,
     )
 
-    (
-        report_directory
-        / "target_audit.json"
-    ).write_text(
+    (report_directory / "target_audit.json").write_text(
         json.dumps(
             audit,
             indent=2,

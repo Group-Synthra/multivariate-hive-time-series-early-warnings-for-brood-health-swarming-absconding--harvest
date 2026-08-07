@@ -8,9 +8,7 @@ from multivari.modules.harvesting.eda import run_harvest_research_eda
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run research-grade, event-aware harvesting EDA."
-    )
+    parser = argparse.ArgumentParser(description="Run research-grade, event-aware harvesting EDA.")
     parser.add_argument(
         "--config",
         default="config/harvesting.yaml",

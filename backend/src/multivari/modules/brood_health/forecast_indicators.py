@@ -99,12 +99,8 @@ def forecast_bhsi(
 
     diagnostics = trajectory_diagnostics(current_scores, future_scores)
     ref = {**DEFAULT_FORECAST_STABILITY_REFERENCE, **(reference or {})}
-    residual_ratio = diagnostics["residual_rmse"] / max(
-        float(ref["residual_rmse_scale"]), 1e-6
-    )
-    step_ratio = diagnostics["step_change_std"] / max(
-        float(ref["step_change_std_scale"]), 1e-6
-    )
+    residual_ratio = diagnostics["residual_rmse"] / max(float(ref["residual_rmse_scale"]), 1e-6)
+    step_ratio = diagnostics["step_change_std"] / max(float(ref["step_change_std_scale"]), 1e-6)
     instability = 0.60 * residual_ratio + 0.40 * step_ratio
     return np.clip(100.0 * np.exp(-instability), 0.0, 100.0)
 
@@ -156,9 +152,7 @@ def interpolate_forecast_trajectory(
         {
             "offset_minutes": int(minutes),
             "horizon_hours": float(minutes / 60.0),
-            "forecast_timestamp": (
-                anchor + pd.Timedelta(minutes=int(minutes))
-            ).isoformat(),
+            "forecast_timestamp": (anchor + pd.Timedelta(minutes=int(minutes))).isoformat(),
             "score": float(np.clip(score, 1.0, 100.0)),
             "is_native_model_point": bool(minutes % 60 == 0),
             "value_kind": (
@@ -214,16 +208,10 @@ def indicator_metrics(
 
     return {
         "forecast_bhsi_mae": float(np.mean(np.abs(actual_bhsi - predicted_bhsi))),
-        "forecast_bhsi_rmse": float(
-            np.sqrt(np.mean((actual_bhsi - predicted_bhsi) ** 2))
-        ),
-        "forecast_bhsi_level_accuracy": float(
-            np.mean(actual_stability == predicted_stability)
-        ),
+        "forecast_bhsi_rmse": float(np.sqrt(np.mean((actual_bhsi - predicted_bhsi) ** 2))),
+        "forecast_bhsi_level_accuracy": float(np.mean(actual_stability == predicted_stability)),
         "forecast_rod_mae": float(np.mean(np.abs(actual_rod - predicted_rod))),
-        "forecast_rod_rmse": float(
-            np.sqrt(np.mean((actual_rod - predicted_rod) ** 2))
-        ),
+        "forecast_rod_rmse": float(np.sqrt(np.mean((actual_rod - predicted_rod) ** 2))),
         "forecast_trend_accuracy": float(np.mean(actual_trend == predicted_trend)),
     }
 

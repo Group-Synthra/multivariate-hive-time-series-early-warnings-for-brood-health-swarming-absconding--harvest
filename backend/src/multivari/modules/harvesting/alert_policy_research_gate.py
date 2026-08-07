@@ -67,10 +67,7 @@ def add_operational_metrics(
     }
     missing = sorted(required.difference(sweep.columns))
     if missing:
-        raise ValueError(
-            "Alert-policy sweep is missing required columns: "
-            f"{missing}"
-        )
+        raise ValueError(f"Alert-policy sweep is missing required columns: {missing}")
 
     result = sweep.copy()
     total_rows = (
@@ -79,21 +76,12 @@ def add_operational_metrics(
         + result["false_negatives"]
         + result["true_negatives"]
     )
-    negative_rows = (
-        result["false_positives"] + result["true_negatives"]
-    )
+    negative_rows = result["false_positives"] + result["true_negatives"]
 
-    result["alert_fraction"] = (
-        result["alert_rows"] / total_rows.replace(0, np.nan)
-    )
-    result["false_positive_rate"] = (
-        result["false_positives"]
-        / negative_rows.replace(0, np.nan)
-    )
+    result["alert_fraction"] = result["alert_rows"] / total_rows.replace(0, np.nan)
+    result["false_positive_rate"] = result["false_positives"] / negative_rows.replace(0, np.nan)
     result["precision_lift_over_prevalence"] = (
-        result["precision"] / prevalence
-        if prevalence > 0
-        else np.nan
+        result["precision"] / prevalence if prevalence > 0 else np.nan
     )
     return result
 
@@ -124,38 +112,24 @@ def select_research_safe_policy(
             "true_negatives",
         )
     )
-    baseline_alert_fraction = (
-        float(baseline_metrics["alert_rows"])
-        / baseline_total_rows
-    )
+    baseline_alert_fraction = float(baseline_metrics["alert_rows"]) / baseline_total_rows
     baseline_precision = float(baseline_metrics["precision"])
-    baseline_false_positives = int(
-        baseline_metrics["false_positives"]
-    )
+    baseline_false_positives = int(baseline_metrics["false_positives"])
 
     eligibility = (
         enriched["event_recall"].ge(minimum_event_recall)
-        & enriched["median_lead_hours"]
-        .fillna(-np.inf)
-        .ge(minimum_median_lead_hours)
-        & enriched["precision_lift_over_prevalence"]
-        .ge(minimum_precision_lift)
+        & enriched["median_lead_hours"].fillna(-np.inf).ge(minimum_median_lead_hours)
+        & enriched["precision_lift_over_prevalence"].ge(minimum_precision_lift)
     )
 
     if require_precision_at_least_baseline:
-        eligibility &= enriched["precision"].ge(
-            baseline_precision
-        )
+        eligibility &= enriched["precision"].ge(baseline_precision)
 
     if require_false_positive_rows_no_worse_than_baseline:
-        eligibility &= enriched["false_positives"].le(
-            baseline_false_positives
-        )
+        eligibility &= enriched["false_positives"].le(baseline_false_positives)
 
     if require_alert_fraction_no_worse_than_baseline:
-        eligibility &= enriched["alert_fraction"].le(
-            baseline_alert_fraction
-        )
+        eligibility &= enriched["alert_fraction"].le(baseline_alert_fraction)
 
     eligible = enriched.loc[eligibility].copy()
     eligible = eligible.sort_values(
@@ -187,12 +161,8 @@ def select_research_safe_policy(
         "baseline_false_positives": baseline_false_positives,
         "baseline_alert_fraction": baseline_alert_fraction,
         "minimum_event_recall": minimum_event_recall,
-        "minimum_median_lead_hours": (
-            minimum_median_lead_hours
-        ),
-        "minimum_precision_lift_over_prevalence": (
-            minimum_precision_lift
-        ),
+        "minimum_median_lead_hours": (minimum_median_lead_hours),
+        "minimum_precision_lift_over_prevalence": (minimum_precision_lift),
         "candidate_count": len(enriched),
         "eligible_candidate_count": len(eligible),
     }
@@ -213,9 +183,7 @@ def run_alert_policy_research_gate_from_config(
     if not path.is_absolute():
         path = root / path
 
-    config = yaml.safe_load(
-        path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
     settings = config["alert_policy_research_gate"]
 
     sweep_path = _resolve_path(
@@ -254,13 +222,9 @@ def run_alert_policy_research_gate_from_config(
     events = pd.read_csv(events_path)
 
     target_column = str(settings["target_column"])
-    probability_column = str(
-        settings["probability_column"]
-    )
+    probability_column = str(settings["probability_column"])
     horizon_hours = int(settings["horizon_hours"])
-    false_alert_gap_hours = int(
-        settings["false_alert_gap_hours"]
-    )
+    false_alert_gap_hours = int(settings["false_alert_gap_hours"])
 
     for frame in (validation, test):
         frame[TIMESTAMP_COLUMN] = pd.to_datetime(
@@ -273,44 +237,22 @@ def run_alert_policy_research_gate_from_config(
     )
 
     prevalence = float(validation[target_column].mean())
-    baseline_metrics = prior_summary[
-        "baseline_validation_policy"
-    ]
+    baseline_metrics = prior_summary["baseline_validation_policy"]
 
-    selected, enriched, gate_summary = (
-        select_research_safe_policy(
-            sweep,
-            prevalence=prevalence,
-            baseline_metrics=baseline_metrics,
-            minimum_event_recall=float(
-                settings[
-                    "minimum_validation_event_recall"
-                ]
-            ),
-            minimum_median_lead_hours=float(
-                settings["minimum_median_lead_hours"]
-            ),
-            minimum_precision_lift=float(
-                settings[
-                    "minimum_precision_lift_over_prevalence"
-                ]
-            ),
-            require_precision_at_least_baseline=bool(
-                settings[
-                    "require_precision_at_least_baseline"
-                ]
-            ),
-            require_false_positive_rows_no_worse_than_baseline=bool(
-                settings[
-                    "require_false_positive_rows_no_worse_than_baseline"
-                ]
-            ),
-            require_alert_fraction_no_worse_than_baseline=bool(
-                settings[
-                    "require_alert_fraction_no_worse_than_baseline"
-                ]
-            ),
-        )
+    selected, enriched, gate_summary = select_research_safe_policy(
+        sweep,
+        prevalence=prevalence,
+        baseline_metrics=baseline_metrics,
+        minimum_event_recall=float(settings["minimum_validation_event_recall"]),
+        minimum_median_lead_hours=float(settings["minimum_median_lead_hours"]),
+        minimum_precision_lift=float(settings["minimum_precision_lift_over_prevalence"]),
+        require_precision_at_least_baseline=bool(settings["require_precision_at_least_baseline"]),
+        require_false_positive_rows_no_worse_than_baseline=bool(
+            settings["require_false_positive_rows_no_worse_than_baseline"]
+        ),
+        require_alert_fraction_no_worse_than_baseline=bool(
+            settings["require_alert_fraction_no_worse_than_baseline"]
+        ),
     )
 
     output_directory.mkdir(parents=True, exist_ok=True)
@@ -319,31 +261,27 @@ def run_alert_policy_research_gate_from_config(
         exist_ok=True,
     )
     enriched.to_csv(
-        output_directory
-        / "policy_sweep_with_operational_metrics.csv",
+        output_directory / "policy_sweep_with_operational_metrics.csv",
         index=False,
     )
 
     if selected is None:
-        closest = enriched.loc[
-            enriched["event_recall"].ge(
-                float(
-                    settings[
-                        "minimum_validation_event_recall"
-                    ]
-                )
+        closest = (
+            enriched.loc[
+                enriched["event_recall"].ge(float(settings["minimum_validation_event_recall"]))
+            ]
+            .sort_values(
+                [
+                    "f1",
+                    "precision",
+                    "false_positives",
+                ],
+                ascending=[False, False, True],
             )
-        ].sort_values(
-            [
-                "f1",
-                "precision",
-                "false_positives",
-            ],
-            ascending=[False, False, True],
-        ).head(100)
+            .head(100)
+        )
         closest.to_csv(
-            output_directory
-            / "closest_non_deployable_policies.csv",
+            output_directory / "closest_non_deployable_policies.csv",
             index=False,
         )
 
@@ -358,8 +296,7 @@ def run_alert_policy_research_gate_from_config(
                 "occupancy."
             ),
             "recommended_next_stage": (
-                "Freeze the event classifier as a benchmark and run "
-                "future hive-weight forecasting."
+                "Freeze the event classifier as a benchmark and run future hive-weight forecasting."
             ),
         }
         _write_json(
@@ -376,12 +313,8 @@ def run_alert_policy_research_gate_from_config(
         return result
 
     policy = {
-        "smoothing_window_hours": int(
-            selected["smoothing_window_hours"]
-        ),
-        "minimum_consecutive_hours": int(
-            selected["minimum_consecutive_hours"]
-        ),
+        "smoothing_window_hours": int(selected["smoothing_window_hours"]),
+        "minimum_consecutive_hours": int(selected["minimum_consecutive_hours"]),
         "threshold": float(selected["threshold"]),
     }
 
@@ -390,17 +323,13 @@ def run_alert_policy_research_gate_from_config(
         probability_column=probability_column,
         **policy,
     )
-    validation_metrics, validation_detection = (
-        evaluate_policy(
-            validation_policy,
-            events,
-            split="validation",
-            target_column=target_column,
-            false_alert_gap_hours=(
-                false_alert_gap_hours
-            ),
-            horizon_hours=horizon_hours,
-        )
+    validation_metrics, validation_detection = evaluate_policy(
+        validation_policy,
+        events,
+        split="validation",
+        target_column=target_column,
+        false_alert_gap_hours=(false_alert_gap_hours),
+        horizon_hours=horizon_hours,
     )
 
     test_policy = apply_alert_policy(
@@ -418,13 +347,11 @@ def run_alert_policy_research_gate_from_config(
     )
 
     validation_detection.to_csv(
-        output_directory
-        / "research_safe_validation_event_detection.csv",
+        output_directory / "research_safe_validation_event_detection.csv",
         index=False,
     )
     test_detection.to_csv(
-        output_directory
-        / "research_safe_test_event_detection.csv",
+        output_directory / "research_safe_test_event_detection.csv",
         index=False,
     )
 

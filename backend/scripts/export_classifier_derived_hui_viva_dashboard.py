@@ -208,8 +208,8 @@ def _recent_hui_slope(group: pd.DataFrame, *, window_rows: int = 6) -> float:
         return 0.0
 
     elapsed = (
-        recent[TIMESTAMP_COLUMN] - recent[TIMESTAMP_COLUMN].iloc[0]
-    ).dt.total_seconds().div(3600.0)
+        (recent[TIMESTAMP_COLUMN] - recent[TIMESTAMP_COLUMN].iloc[0]).dt.total_seconds().div(3600.0)
+    )
     values = pd.to_numeric(recent[CURRENT_HUI_COLUMN], errors="coerce")
     valid = elapsed.notna() & values.notna()
     if valid.sum() < 2 or float(elapsed[valid].max()) == 0.0:
@@ -282,11 +282,7 @@ def _confidence(
     else:
         calibration_component = 25.0
 
-    score = (
-        0.40 * calibration_component
-        + 0.35 * hrsi
-        + 0.25 * completeness
-    )
+    score = 0.40 * calibration_component + 0.35 * hrsi + 0.25 * completeness
     score = float(np.clip(score, 0.0, 100.0))
 
     # A High label would overstate the evidence while the probability-
@@ -375,9 +371,7 @@ def _build_latest_records(
             if column is not None:
                 available_sensor_values.append(pd.notna(latest.get(column)))
         completeness = (
-            100.0 * float(np.mean(available_sensor_values))
-            if available_sensor_values
-            else 0.0
+            100.0 * float(np.mean(available_sensor_values)) if available_sensor_values else 0.0
         )
         confidence_score, confidence_label = _confidence(
             calibration_gate=calibration_gate,
@@ -394,9 +388,7 @@ def _build_latest_records(
             )
             if sensor_columns["internal_temperature_c"]
             else None,
-            "internal_humidity_pct": _json_safe(
-                latest.get(sensor_columns["internal_humidity_pct"])
-            )
+            "internal_humidity_pct": _json_safe(latest.get(sensor_columns["internal_humidity_pct"]))
             if sensor_columns["internal_humidity_pct"]
             else None,
             "co2_ppm": _json_safe(latest.get(sensor_columns["co2_ppm"]))
@@ -471,18 +463,11 @@ def _series_records(data: pd.DataFrame, *, rows_per_hive: int) -> list[dict[str,
 
 def main() -> None:
     backend_root = Path(__file__).resolve().parents[1]
-    report_root = (
-        backend_root
-        / "artifacts/reports/harvesting/reviewed/classifier_derived_hui"
-    )
+    report_root = backend_root / "artifacts/reports/harvesting/reviewed/classifier_derived_hui"
     calibration_root = (
-        backend_root
-        / "artifacts/reports/harvesting/reviewed/probability_calibration"
+        backend_root / "artifacts/reports/harvesting/reviewed/probability_calibration"
     )
-    research_model_root = (
-        backend_root
-        / "artifacts/reports/harvesting/reviewed/research_models"
-    )
+    research_model_root = backend_root / "artifacts/reports/harvesting/reviewed/research_models"
 
     regression_summary = _read_json(report_root / "future_hui_regression_summary.json")
     regression_gate = _read_json(report_root / "future_hui_regression_gate.json")
@@ -511,9 +496,7 @@ def main() -> None:
     series_records = _series_records(merged, rows_per_hive=168)
 
     calibration_comparison = pd.read_csv(comparison_path)
-    calibration_comparison = calibration_comparison.loc[
-        calibration_comparison["status"].eq("ok")
-    ]
+    calibration_comparison = calibration_comparison.loc[calibration_comparison["status"].eq("ok")]
     calibration_records = [
         {key: _json_safe(value) for key, value in record.items()}
         for record in calibration_comparison.to_dict(orient="records")
@@ -554,9 +537,7 @@ def main() -> None:
             "probability_calibration_operationally_validated": bool(
                 calibration_gate.get("gate_passed")
             ),
-            "future_hui_research_gate_passed": bool(
-                regression_gate.get("gate_passed")
-            ),
+            "future_hui_research_gate_passed": bool(regression_gate.get("gate_passed")),
         },
         "hui_definition": hui_definition,
         "classifier_evaluation": classifier_metrics,
@@ -575,9 +556,7 @@ def main() -> None:
         "historical_test_series": series_records,
         "top_classifier_features": feature_records,
         "decision_support_definition": {
-            "hrsi": (
-                "100 × (1 − recent 24-hour HUI standard deviation / 20), clipped to 0–100."
-            ),
+            "hrsi": ("100 × (1 − recent 24-hour HUI standard deviation / 20), clipped to 0–100."),
             "rate_of_change": (
                 "Least-squares HUI slope across the latest six hourly records; "
                 "Increasing above +0.5 points/hour, Decreasing below −0.5, otherwise Stable."

@@ -31,12 +31,8 @@ def test_close_events_are_grouped_into_one_session() -> None:
         session_gap_hours=12,
     )
 
-    assert result.loc[0, "harvest_session_id"] == (
-        result.loc[1, "harvest_session_id"]
-    )
-    assert result.loc[1, "harvest_session_id"] != (
-        result.loc[2, "harvest_session_id"]
-    )
+    assert result.loc[0, "harvest_session_id"] == (result.loc[1, "harvest_session_id"])
+    assert result.loc[1, "harvest_session_id"] != (result.loc[2, "harvest_session_id"])
 
 
 def test_positive_rows_attach_to_future_event_only() -> None:
@@ -107,9 +103,7 @@ def test_session_balanced_weights_equalize_sessions() -> None:
     rows["weight"] = weights
 
     positive_by_session = (
-        rows.loc[rows["target"].eq(1)]
-        .groupby("harvest_session_id")["weight"]
-        .sum()
+        rows.loc[rows["target"].eq(1)].groupby("harvest_session_id")["weight"].sum()
     )
 
     assert np.isclose(weights.mean(), 1.0)

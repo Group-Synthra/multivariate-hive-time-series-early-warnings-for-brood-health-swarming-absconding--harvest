@@ -62,16 +62,11 @@ class RecentTrendDeltaRegressor(RegressorMixin, BaseEstimator):
     ) -> RecentTrendDeltaRegressor:
         del target
         if self.trend_feature not in features.columns:
-            raise ValueError(
-                f"Trend feature not found: {self.trend_feature}"
-            )
+            raise ValueError(f"Trend feature not found: {self.trend_feature}")
         return self
 
     def predict(self, features: pd.DataFrame) -> np.ndarray:
-        return (
-            features[self.trend_feature].to_numpy(dtype=float)
-            * self.horizon_hours
-        )
+        return features[self.trend_feature].to_numpy(dtype=float) * self.horizon_hours
 
 
 def _resolve_path(root: Path, configured_path: str) -> Path:
@@ -118,9 +113,7 @@ def _require_columns(
 ) -> None:
     missing = sorted(required.difference(frame.columns))
     if missing:
-        raise ValueError(
-            f"{frame_name} is missing required columns: {missing}"
-        )
+        raise ValueError(f"{frame_name} is missing required columns: {missing}")
 
 
 def build_feature_sets(
@@ -134,42 +127,29 @@ def build_feature_sets(
         if bool(settings.get("include_all", False)):
             selected = available.copy()
         else:
-            prefixes = [
-                str(value)
-                for value in settings.get("include_prefixes", [])
-            ]
+            prefixes = [str(value) for value in settings.get("include_prefixes", [])]
             selected = [
                 feature
                 for feature in available
                 if any(feature.startswith(prefix) for prefix in prefixes)
             ]
 
-        excluded_prefixes = [
-            str(value)
-            for value in settings.get("exclude_prefixes", [])
-        ]
+        excluded_prefixes = [str(value) for value in settings.get("exclude_prefixes", [])]
         selected = [
             feature
             for feature in selected
-            if not any(
-                feature.startswith(prefix)
-                for prefix in excluded_prefixes
-            )
+            if not any(feature.startswith(prefix) for prefix in excluded_prefixes)
         ]
         selected = list(dict.fromkeys(selected))
         if not selected:
-            raise ValueError(
-                f"Feature set '{name}' contains no features."
-            )
+            raise ValueError(f"Feature set '{name}' contains no features.")
         result[name] = selected
 
     return result
 
 
 def _add_contiguous_segment_id(frame: pd.DataFrame) -> pd.DataFrame:
-    result = frame.sort_values(
-        [HIVE_COLUMN, SPLIT_COLUMN, TIMESTAMP_COLUMN]
-    ).reset_index(drop=True)
+    result = frame.sort_values([HIVE_COLUMN, SPLIT_COLUMN, TIMESTAMP_COLUMN]).reset_index(drop=True)
     elapsed = (
         result.groupby([HIVE_COLUMN, SPLIT_COLUMN])[TIMESTAMP_COLUMN]
         .diff()
@@ -221,30 +201,23 @@ def build_robust_future_targets(
     clean = clean_rows.copy()
     manifest = split_manifest.copy()
     for frame in (features, clean, manifest):
-        frame[TIMESTAMP_COLUMN] = pd.to_datetime(
-            frame[TIMESTAMP_COLUMN], errors="raise"
-        )
+        frame[TIMESTAMP_COLUMN] = pd.to_datetime(frame[TIMESTAMP_COLUMN], errors="raise")
 
-    clean_with_split = clean[
-        [HIVE_COLUMN, TIMESTAMP_COLUMN, WEIGHT_COLUMN]
-    ].merge(
+    clean_with_split = clean[[HIVE_COLUMN, TIMESTAMP_COLUMN, WEIGHT_COLUMN]].merge(
         manifest[[HIVE_COLUMN, TIMESTAMP_COLUMN, SPLIT_COLUMN]],
         on=[HIVE_COLUMN, TIMESTAMP_COLUMN],
         how="inner",
         validate="one_to_one",
     )
     clean_with_split = _add_contiguous_segment_id(clean_with_split)
-    clean_with_split["robust_endpoint_weight_kg"] = (
-        clean_with_split.groupby(
-            [HIVE_COLUMN, SPLIT_COLUMN, "_segment_id"],
-            sort=False,
-        )[WEIGHT_COLUMN]
-        .transform(
-            lambda values: values.rolling(
-                window=target_window_hours,
-                min_periods=target_window_hours,
-            ).median()
-        )
+    clean_with_split["robust_endpoint_weight_kg"] = clean_with_split.groupby(
+        [HIVE_COLUMN, SPLIT_COLUMN, "_segment_id"],
+        sort=False,
+    )[WEIGHT_COLUMN].transform(
+        lambda values: values.rolling(
+            window=target_window_hours,
+            min_periods=target_window_hours,
+        ).median()
     )
 
     endpoint = clean_with_split[
@@ -256,13 +229,7 @@ def build_robust_future_targets(
         ]
     ].copy()
     result = features.merge(
-        endpoint.rename(
-            columns={
-                "robust_endpoint_weight_kg": (
-                    "robust_reference_weight_kg"
-                )
-            }
-        ),
+        endpoint.rename(columns={"robust_endpoint_weight_kg": ("robust_reference_weight_kg")}),
         on=[HIVE_COLUMN, TIMESTAMP_COLUMN, SPLIT_COLUMN],
         how="left",
         validate="one_to_one",
@@ -272,13 +239,9 @@ def build_robust_future_targets(
         if horizon <= 0:
             raise ValueError("Forecast horizons must be positive.")
         future = endpoint.copy()
-        future[TIMESTAMP_COLUMN] = (
-            future[TIMESTAMP_COLUMN] - pd.Timedelta(hours=horizon)
-        )
+        future[TIMESTAMP_COLUMN] = future[TIMESTAMP_COLUMN] - pd.Timedelta(hours=horizon)
         future_column = f"robust_future_weight_{horizon}h_kg"
-        future = future.rename(
-            columns={"robust_endpoint_weight_kg": future_column}
-        )
+        future = future.rename(columns={"robust_endpoint_weight_kg": future_column})
         result = result.merge(
             future,
             on=[HIVE_COLUMN, TIMESTAMP_COLUMN, SPLIT_COLUMN],
@@ -286,8 +249,7 @@ def build_robust_future_targets(
             validate="one_to_one",
         )
         result[f"robust_weight_delta_next_{horizon}h_kg"] = (
-            result[future_column]
-            - result["robust_reference_weight_kg"]
+            result[future_column] - result["robust_reference_weight_kg"]
         )
 
     return result
@@ -303,9 +265,7 @@ def calculate_regression_metrics(
     return {
         "mae": float(mean_absolute_error(actual, predicted)),
         "rmse": float(math.sqrt(mean_squared_error(actual, predicted))),
-        "median_absolute_error": float(
-            median_absolute_error(actual, predicted)
-        ),
+        "median_absolute_error": float(median_absolute_error(actual, predicted)),
         "bias": float(error.mean()),
         "r2": float(r2_score(actual, predicted)),
         "within_0_5kg_fraction": float((np.abs(error) <= 0.5).mean()),
@@ -348,9 +308,7 @@ def _make_estimator(
         try:
             from xgboost import XGBRegressor
         except ImportError as error:
-            raise ImportError(
-                "XGBoost is not installed. Run: pip install xgboost"
-            ) from error
+            raise ImportError("XGBoost is not installed. Run: pip install xgboost") from error
         return XGBRegressor(
             n_estimators=int(settings["n_estimators"]),
             learning_rate=float(settings["learning_rate"]),
@@ -369,9 +327,7 @@ def _make_estimator(
         try:
             from lightgbm import LGBMRegressor
         except ImportError as error:
-            raise ImportError(
-                "LightGBM is not installed. Run: pip install lightgbm"
-            ) from error
+            raise ImportError("LightGBM is not installed. Run: pip install lightgbm") from error
         return LGBMRegressor(
             n_estimators=int(settings["n_estimators"]),
             learning_rate=float(settings["learning_rate"]),
@@ -409,9 +365,7 @@ def _feature_manifest_names(feature_manifest: pd.DataFrame) -> list[str]:
     for column in ("feature_name", "feature"):
         if column in feature_manifest.columns:
             return feature_manifest[column].astype(str).tolist()
-    raise ValueError(
-        "Feature manifest must contain 'feature_name' or 'feature'."
-    )
+    raise ValueError("Feature manifest must contain 'feature_name' or 'feature'.")
 
 
 def run_robust_weight_forecasting_from_config(
@@ -426,21 +380,11 @@ def run_robust_weight_forecasting_from_config(
     config = yaml.safe_load(path.read_text(encoding="utf-8"))
     settings = config["robust_weight_forecasting"]
 
-    feature_rows = pd.read_parquet(
-        _resolve_path(root, settings["feature_dataset_path"])
-    )
-    clean_rows = pd.read_parquet(
-        _resolve_path(root, settings["clean_data_path"])
-    )
-    split_manifest = pd.read_parquet(
-        _resolve_path(root, settings["split_manifest_path"])
-    )
-    feature_manifest = pd.read_csv(
-        _resolve_path(root, settings["feature_manifest_path"])
-    )
-    output_directory = _resolve_path(
-        root, settings["output_directory"]
-    )
+    feature_rows = pd.read_parquet(_resolve_path(root, settings["feature_dataset_path"]))
+    clean_rows = pd.read_parquet(_resolve_path(root, settings["clean_data_path"]))
+    split_manifest = pd.read_parquet(_resolve_path(root, settings["split_manifest_path"]))
+    feature_manifest = pd.read_csv(_resolve_path(root, settings["feature_manifest_path"]))
+    output_directory = _resolve_path(root, settings["output_directory"])
     model_directory = _resolve_path(root, settings["model_directory"])
     output_directory.mkdir(parents=True, exist_ok=True)
     model_directory.mkdir(parents=True, exist_ok=True)
@@ -470,9 +414,7 @@ def run_robust_weight_forecasting_from_config(
         validation = rows.loc[rows[SPLIT_COLUMN].eq("validation")]
         test = rows.loc[rows[SPLIT_COLUMN].eq("test")]
         if train.empty or validation.empty or test.empty:
-            raise ValueError(
-                f"Horizon {horizon}h lacks train, validation or test rows."
-            )
+            raise ValueError(f"Horizon {horizon}h lacks train, validation or test rows.")
 
         candidates: list[
             tuple[
@@ -513,9 +455,7 @@ def run_robust_weight_forecasting_from_config(
                         sampled_train[target_column],
                     )
                     training_seconds = time.perf_counter() - started
-                    validation_prediction = estimator.predict(
-                        model_validation[selected_features]
-                    )
+                    validation_prediction = estimator.predict(model_validation[selected_features])
                     validation_metrics = calculate_regression_metrics(
                         model_validation[target_column],
                         validation_prediction,
@@ -582,9 +522,7 @@ def run_robust_weight_forecasting_from_config(
                     )
 
         if not candidates:
-            raise RuntimeError(
-                f"No robust forecasting candidate completed at {horizon}h."
-            )
+            raise RuntimeError(f"No robust forecasting candidate completed at {horizon}h.")
 
         (
             _,
@@ -595,21 +533,11 @@ def run_robust_weight_forecasting_from_config(
             validation_metrics,
         ) = min(candidates, key=lambda item: item[0])
 
-        validation_complete = validation.dropna(
-            subset=selected_features + [target_column]
-        )
-        test_complete = test.dropna(
-            subset=selected_features + [target_column]
-        )
-        validation_prediction = selected_estimator.predict(
-            validation_complete[selected_features]
-        )
-        test_prediction = selected_estimator.predict(
-            test_complete[selected_features]
-        )
-        test_metrics = calculate_regression_metrics(
-            test_complete[target_column], test_prediction
-        )
+        validation_complete = validation.dropna(subset=selected_features + [target_column])
+        test_complete = test.dropna(subset=selected_features + [target_column])
+        validation_prediction = selected_estimator.predict(validation_complete[selected_features])
+        test_prediction = selected_estimator.predict(test_complete[selected_features])
+        test_metrics = calculate_regression_metrics(test_complete[target_column], test_prediction)
 
         def build_predictions(
             frame: pd.DataFrame,
@@ -633,17 +561,12 @@ def run_robust_weight_forecasting_from_config(
             )
             result["predicted_delta_kg"] = prediction
             result["actual_future_weight_kg"] = (
-                result["robust_reference_weight_kg"]
-                + result["actual_delta_kg"]
+                result["robust_reference_weight_kg"] + result["actual_delta_kg"]
             )
             result["predicted_future_weight_kg"] = (
-                result["robust_reference_weight_kg"]
-                + result["predicted_delta_kg"]
+                result["robust_reference_weight_kg"] + result["predicted_delta_kg"]
             )
-            result["error_kg"] = (
-                result["predicted_delta_kg"]
-                - result["actual_delta_kg"]
-            )
+            result["error_kg"] = result["predicted_delta_kg"] - result["actual_delta_kg"]
             return result
 
         build_predictions(
@@ -651,8 +574,7 @@ def run_robust_weight_forecasting_from_config(
             validation_prediction,
             target_column_name=target_column,
         ).to_parquet(
-            output_directory
-            / f"selected_validation_predictions_{horizon}h.parquet",
+            output_directory / f"selected_validation_predictions_{horizon}h.parquet",
             index=False,
         )
         build_predictions(
@@ -660,19 +582,16 @@ def run_robust_weight_forecasting_from_config(
             test_prediction,
             target_column_name=target_column,
         ).to_parquet(
-            output_directory
-            / f"selected_test_predictions_{horizon}h.parquet",
+            output_directory / f"selected_test_predictions_{horizon}h.parquet",
             index=False,
         )
 
         joblib.dump(
             selected_estimator,
-            model_directory
-            / f"selected_weight_forecaster_{horizon}h.joblib",
+            model_directory / f"selected_weight_forecaster_{horizon}h.joblib",
         )
         _write_json(
-            model_directory
-            / f"selected_weight_forecaster_{horizon}h.json",
+            model_directory / f"selected_weight_forecaster_{horizon}h.json",
             {
                 "horizon_hours": horizon,
                 "model": selected_model,
@@ -719,10 +638,7 @@ def run_robust_weight_forecasting_from_config(
                 "This reformulation reduces endpoint sensor noise but "
                 "does not verify honey maturity."
             ),
-            (
-                "The readiness prototype remains blocked unless the "
-                "research gate passes."
-            ),
+            ("The readiness prototype remains blocked unless the research gate passes."),
         ],
     }
     _write_json(
@@ -742,9 +658,7 @@ def run_robust_weight_forecasting_from_config(
                     "rows": int(
                         dataset.loc[
                             dataset[SPLIT_COLUMN].eq(split)
-                            & dataset[
-                                f"robust_weight_delta_next_{horizon}h_kg"
-                            ].notna()
+                            & dataset[f"robust_weight_delta_next_{horizon}h_kg"].notna()
                         ].shape[0]
                     ),
                 }
@@ -761,12 +675,8 @@ def run_robust_weight_forecasting_from_config(
     return {
         "status": "completed",
         "horizons": summary_by_horizon,
-        "comparison_path": str(
-            output_directory / "robust_weight_forecasting_comparison.csv"
-        ),
-        "summary_path": str(
-            output_directory / "robust_weight_forecasting_summary.json"
-        ),
+        "comparison_path": str(output_directory / "robust_weight_forecasting_comparison.csv"),
+        "summary_path": str(output_directory / "robust_weight_forecasting_summary.json"),
     }
 
 
@@ -782,31 +692,19 @@ def run_robust_forecasting_research_gate_from_config(
     config = yaml.safe_load(path.read_text(encoding="utf-8"))
     settings = config["robust_weight_forecasting"]
     output_directory = _resolve_path(root, settings["output_directory"])
-    comparison = pd.read_csv(
-        output_directory / "robust_weight_forecasting_comparison.csv"
-    )
-    summary = _read_json(
-        output_directory / "robust_weight_forecasting_summary.json"
-    )
+    comparison = pd.read_csv(output_directory / "robust_weight_forecasting_comparison.csv")
+    summary = _read_json(output_directory / "robust_weight_forecasting_summary.json")
     gate = settings["research_gate"]
     result = evaluate_forecasting_research_gate(
         comparison,
         summary,
-        horizons_hours=[
-            int(value) for value in settings["horizons_hours"]
-        ],
+        horizons_hours=[int(value) for value in settings["horizons_hours"]],
         minimum_validation_mae_improvement_fraction=float(
             gate["minimum_validation_mae_improvement_fraction"]
         ),
-        required_improved_horizons=int(
-            gate["required_improved_horizons"]
-        ),
-        require_72h_not_worse_than_persistence=bool(
-            gate["require_72h_not_worse_than_persistence"]
-        ),
-        maximum_test_to_validation_mae_ratio=float(
-            gate["maximum_test_to_validation_mae_ratio"]
-        ),
+        required_improved_horizons=int(gate["required_improved_horizons"]),
+        require_72h_not_worse_than_persistence=bool(gate["require_72h_not_worse_than_persistence"]),
+        maximum_test_to_validation_mae_ratio=float(gate["maximum_test_to_validation_mae_ratio"]),
     )
     result["target_definition"] = summary["target_definition"]
     result["research_decision"] = (

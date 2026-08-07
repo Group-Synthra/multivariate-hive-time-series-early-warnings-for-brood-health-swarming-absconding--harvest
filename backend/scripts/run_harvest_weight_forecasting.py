@@ -12,8 +12,7 @@ from multivari.modules.harvesting.weight_forecasting import (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Compare future hive-weight forecasting models at "
-            "24, 48 and 72-hour horizons."
+            "Compare future hive-weight forecasting models at 24, 48 and 72-hour horizons."
         )
     )
     parser.add_argument(

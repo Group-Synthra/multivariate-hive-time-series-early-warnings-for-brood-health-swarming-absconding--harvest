@@ -25,9 +25,7 @@ def _require_columns(
 ) -> None:
     missing = sorted(required.difference(frame.columns))
     if missing:
-        raise ValueError(
-            f"{frame_name} is missing required columns: {missing}"
-        )
+        raise ValueError(f"{frame_name} is missing required columns: {missing}")
 
 
 def _validate_unique_keys(
@@ -49,8 +47,7 @@ def _validate_unique_keys(
             .to_dict(orient="records")
         )
         raise ValueError(
-            f"{frame_name} contains duplicate hive/timestamp keys. "
-            f"Examples: {examples}"
+            f"{frame_name} contains duplicate hive/timestamp keys. Examples: {examples}"
         )
 
 
@@ -72,9 +69,7 @@ def make_future_reviewed_event_target(
     different datetime resolutions.
     """
     if horizon_hours <= 0:
-        raise ValueError(
-            "horizon_hours must be greater than zero"
-        )
+        raise ValueError("horizon_hours must be greater than zero")
 
     _require_columns(
         rows,
@@ -92,25 +87,17 @@ def make_future_reviewed_event_target(
         result[TIMESTAMP_COLUMN],
         errors="raise",
     )
-    result = result.sort_values(
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    ).reset_index(drop=True)
+    result = result.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN]).reset_index(drop=True)
 
-    event_frame = events[
-        [HIVE_COLUMN, "event_start"]
-    ].copy()
+    event_frame = events[[HIVE_COLUMN, "event_start"]].copy()
     event_frame["event_start"] = pd.to_datetime(
         event_frame["event_start"],
         errors="raise",
     )
-    event_frame = event_frame.drop_duplicates().sort_values(
-        [HIVE_COLUMN, "event_start"]
-    )
+    event_frame = event_frame.drop_duplicates().sort_values([HIVE_COLUMN, "event_start"])
 
     event_times_by_hive = {
-        hive_id: group["event_start"].to_numpy(
-            dtype="datetime64[ns]"
-        )
+        hive_id: group["event_start"].to_numpy(dtype="datetime64[ns]")
         for hive_id, group in event_frame.groupby(
             HIVE_COLUMN,
             sort=False,
@@ -132,25 +119,19 @@ def make_future_reviewed_event_target(
         sort=False,
     ):
         indices = group.index.to_numpy()
-        times = group[TIMESTAMP_COLUMN].to_numpy(
-            dtype="datetime64[ns]"
-        )
+        times = group[TIMESTAMP_COLUMN].to_numpy(dtype="datetime64[ns]")
 
         if len(times) == 0:
             continue
 
-        complete_future_available = (
-            times + horizon <= times[-1]
-        )
+        complete_future_available = times + horizon <= times[-1]
         hive_event_times = event_times_by_hive.get(
             hive_id,
             np.array([], dtype="datetime64[ns]"),
         )
 
         if len(hive_event_times) == 0:
-            target[
-                indices[complete_future_available]
-            ] = 0
+            target[indices[complete_future_available]] = 0
             continue
 
         next_event_positions = np.searchsorted(
@@ -158,36 +139,19 @@ def make_future_reviewed_event_target(
             times,
             side="right",
         )
-        has_next_event = (
-            next_event_positions
-            < len(hive_event_times)
-        )
+        has_next_event = next_event_positions < len(hive_event_times)
 
         next_event_times = np.full(
             len(times),
             np.datetime64("NaT", "ns"),
             dtype="datetime64[ns]",
         )
-        next_event_times[has_next_event] = (
-            hive_event_times[
-                next_event_positions[has_next_event]
-            ]
-        )
+        next_event_times[has_next_event] = hive_event_times[next_event_positions[has_next_event]]
 
-        within_horizon = (
-            has_next_event
-            & (
-                next_event_times
-                <= times + horizon
-            )
-        )
+        within_horizon = has_next_event & (next_event_times <= times + horizon)
 
-        valid_indices = indices[
-            complete_future_available
-        ]
-        target[valid_indices] = within_horizon[
-            complete_future_available
-        ].astype(np.int8)
+        valid_indices = indices[complete_future_available]
+        target[valid_indices] = within_horizon[complete_future_available].astype(np.int8)
 
     result[output_column] = target
     return result
@@ -207,9 +171,7 @@ def add_reviewed_event_columns(
             "harvest_event_id",
         ]
     ].copy()
-    event_keys = event_keys.rename(
-        columns={"event_start": TIMESTAMP_COLUMN}
-    )
+    event_keys = event_keys.rename(columns={"event_start": TIMESTAMP_COLUMN})
     event_keys[TIMESTAMP_COLUMN] = pd.to_datetime(
         event_keys[TIMESTAMP_COLUMN],
         errors="raise",
@@ -220,9 +182,7 @@ def add_reviewed_event_columns(
         keep=False,
     )
     if duplicates.any():
-        raise ValueError(
-            "Reviewed event table contains duplicate event timestamps."
-        )
+        raise ValueError("Reviewed event table contains duplicate event timestamps.")
 
     result = rows.merge(
         event_keys,
@@ -230,11 +190,7 @@ def add_reviewed_event_columns(
         how="left",
         validate="one_to_one",
     )
-    result[indicator_column] = (
-        result["harvest_event_id"]
-        .notna()
-        .astype("int8")
-    )
+    result[indicator_column] = result["harvest_event_id"].notna().astype("int8")
     return result
 
 
@@ -255,9 +211,7 @@ def add_post_event_recovery_gap(
     calculation remains correct across pandas versions.
     """
     if recovery_hours < 0:
-        raise ValueError(
-            "recovery_hours cannot be negative"
-        )
+        raise ValueError("recovery_hours cannot be negative")
 
     result = rows.copy()
     result[TIMESTAMP_COLUMN] = pd.to_datetime(
@@ -273,9 +227,7 @@ def add_post_event_recovery_gap(
     )
 
     event_times_by_hive = {
-        hive_id: group["event_start"]
-        .sort_values()
-        .to_numpy(dtype="datetime64[ns]")
+        hive_id: group["event_start"].sort_values().to_numpy(dtype="datetime64[ns]")
         for hive_id, group in event_frame.groupby(
             HIVE_COLUMN,
             sort=False,
@@ -299,9 +251,7 @@ def add_post_event_recovery_gap(
             continue
 
         indices = group.index.to_numpy()
-        times = group[TIMESTAMP_COLUMN].to_numpy(
-            dtype="datetime64[ns]"
-        )
+        times = group[TIMESTAMP_COLUMN].to_numpy(dtype="datetime64[ns]")
 
         previous_positions = (
             np.searchsorted(
@@ -319,15 +269,9 @@ def add_post_event_recovery_gap(
         )
 
         if has_previous.any():
-            elapsed = (
-                times[has_previous]
-                - event_times[
-                    previous_positions[has_previous]
-                ]
-            )
-            in_recovery[has_previous] = (
-                (elapsed >= np.timedelta64(0, "h"))
-                & (elapsed <= recovery_interval)
+            elapsed = times[has_previous] - event_times[previous_positions[has_previous]]
+            in_recovery[has_previous] = (elapsed >= np.timedelta64(0, "h")) & (
+                elapsed <= recovery_interval
             )
 
         result.loc[
@@ -335,10 +279,7 @@ def add_post_event_recovery_gap(
             "is_post_event_recovery_gap",
         ] = True
 
-    result["is_post_event_recovery_gap"] = (
-        result["is_post_event_recovery_gap"]
-        .astype(bool)
-    )
+    result["is_post_event_recovery_gap"] = result["is_post_event_recovery_gap"].astype(bool)
     return result
 
 
@@ -404,13 +345,10 @@ def build_reviewed_harvest_dataset(
     )
     if events.empty:
         raise ValueError(
-            "Reviewed event table is empty. "
-            "At least one probable harvest event is required."
+            "Reviewed event table is empty. At least one probable harvest event is required."
         )
 
-    common_keys = common_frame[
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    ]
+    common_keys = common_frame[[HIVE_COLUMN, TIMESTAMP_COLUMN]]
     event_match = events.merge(
         common_keys,
         left_on=[HIVE_COLUMN, "event_start"],
@@ -418,17 +356,10 @@ def build_reviewed_harvest_dataset(
         how="left",
         indicator=True,
     )
-    unmatched_events = event_match.loc[
-        event_match["_merge"].ne("both")
-    ]
+    unmatched_events = event_match.loc[event_match["_merge"].ne("both")]
     if not unmatched_events.empty:
-        ids = unmatched_events[
-            "harvest_event_id"
-        ].astype(str).tolist()
-        raise ValueError(
-            "Reviewed events do not match common sensor rows: "
-            f"{ids}"
-        )
+        ids = unmatched_events["harvest_event_id"].astype(str).tolist()
+        raise ValueError(f"Reviewed events do not match common sensor rows: {ids}")
 
     manifest_columns = [
         HIVE_COLUMN,
@@ -456,17 +387,11 @@ def build_reviewed_harvest_dataset(
     )
 
     if base["split"].isna().any():
-        raise ValueError(
-            "Some common rows did not match the split manifest."
-        )
+        raise ValueError("Some common rows did not match the split manifest.")
 
     if "is_boundary_gap" not in base.columns:
         base["is_boundary_gap"] = False
-    base["is_boundary_gap"] = (
-        base["is_boundary_gap"]
-        .fillna(False)
-        .astype(bool)
-    )
+    base["is_boundary_gap"] = base["is_boundary_gap"].fillna(False).astype(bool)
 
     prepared = make_future_reviewed_event_target(
         base,
@@ -485,17 +410,9 @@ def build_reviewed_harvest_dataset(
         recovery_hours=post_event_recovery_hours,
     )
 
-    unavailable_target_rows = int(
-        prepared[target_column].isna().sum()
-    )
-    boundary_gap_rows = int(
-        prepared["is_boundary_gap"].sum()
-    )
-    recovery_gap_rows = int(
-        prepared[
-            "is_post_event_recovery_gap"
-        ].sum()
-    )
+    unavailable_target_rows = int(prepared[target_column].isna().sum())
+    boundary_gap_rows = int(prepared["is_boundary_gap"].sum())
+    recovery_gap_rows = int(prepared["is_post_event_recovery_gap"].sum())
 
     modelling = prepared.loc[
         prepared[target_column].notna()
@@ -503,9 +420,7 @@ def build_reviewed_harvest_dataset(
         & ~prepared["is_post_event_recovery_gap"]
     ].copy()
 
-    modelling[target_column] = modelling[
-        target_column
-    ].astype("int8")
+    modelling[target_column] = modelling[target_column].astype("int8")
 
     balance = (
         modelling.groupby(
@@ -518,45 +433,23 @@ def build_reviewed_harvest_dataset(
     )
 
     event_counts = (
-        events.groupby("split", observed=True)
-        .size()
-        .to_dict()
-        if "split" in events.columns
-        else {}
+        events.groupby("split", observed=True).size().to_dict() if "split" in events.columns else {}
     )
 
     audit: dict[str, Any] = {
         "source_rows": len(common_frame),
         "reviewed_event_count": len(events),
-        "reviewed_positive_hives": int(
-            events[HIVE_COLUMN].nunique()
-        ),
+        "reviewed_positive_hives": int(events[HIVE_COLUMN].nunique()),
         "prediction_horizon_hours": horizon_hours,
-        "post_event_recovery_hours": (
-            post_event_recovery_hours
-        ),
-        "rows_with_unavailable_future_target": (
-            unavailable_target_rows
-        ),
+        "post_event_recovery_hours": (post_event_recovery_hours),
+        "rows_with_unavailable_future_target": (unavailable_target_rows),
         "boundary_gap_rows_removed": boundary_gap_rows,
-        "post_event_recovery_rows_removed": (
-            recovery_gap_rows
-        ),
+        "post_event_recovery_rows_removed": (recovery_gap_rows),
         "final_modelling_rows": len(modelling),
-        "target_positive_rows": int(
-            modelling[target_column].sum()
-        ),
-        "target_negative_rows": int(
-            len(modelling)
-            - modelling[target_column].sum()
-        ),
-        "target_positive_rate": float(
-            modelling[target_column].mean()
-        ),
-        "reviewed_events_by_split": {
-            str(key): int(value)
-            for key, value in event_counts.items()
-        },
+        "target_positive_rows": int(modelling[target_column].sum()),
+        "target_negative_rows": int(len(modelling) - modelling[target_column].sum()),
+        "target_positive_rate": float(modelling[target_column].mean()),
+        "reviewed_events_by_split": {str(key): int(value) for key, value in event_counts.items()},
         "warning": (
             "Reviewed events remain probable pseudo-harvest events, "
             "not beekeeper-confirmed ground truth. Report independent "
@@ -564,9 +457,7 @@ def build_reviewed_harvest_dataset(
         ),
     }
 
-    modelling = modelling.sort_values(
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    ).reset_index(drop=True)
+    modelling = modelling.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN]).reset_index(drop=True)
 
     return modelling, audit, balance
 
@@ -581,9 +472,7 @@ def run_reviewed_dataset_from_config(
     if not path.is_absolute():
         path = root / path
 
-    config = yaml.safe_load(
-        path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
 
     common_path = _resolve_path(
         root,
@@ -610,26 +499,14 @@ def run_reviewed_dataset_from_config(
     manifest = pd.read_parquet(manifest_path)
     events = pd.read_parquet(event_path)
 
-    modelling, audit, balance = (
-        build_reviewed_harvest_dataset(
-            common,
-            manifest,
-            events,
-            horizon_hours=int(
-                config["target"]["horizon_hours"]
-            ),
-            target_column=config[
-                "reviewed_target"
-            ]["output_column"],
-            event_indicator_column=config[
-                "reviewed_target"
-            ]["event_start_indicator_column"],
-            post_event_recovery_hours=int(
-                config["reviewed_target"][
-                    "post_event_recovery_hours"
-                ]
-            ),
-        )
+    modelling, audit, balance = build_reviewed_harvest_dataset(
+        common,
+        manifest,
+        events,
+        horizon_hours=int(config["target"]["horizon_hours"]),
+        target_column=config["reviewed_target"]["output_column"],
+        event_indicator_column=config["reviewed_target"]["event_start_indicator_column"],
+        post_event_recovery_hours=int(config["reviewed_target"]["post_event_recovery_hours"]),
     )
 
     output_path.parent.mkdir(
@@ -646,13 +523,10 @@ def run_reviewed_dataset_from_config(
         index=False,
     )
     balance.to_csv(
-        report_directory
-        / "target_balance_by_split.csv",
+        report_directory / "target_balance_by_split.csv",
         index=False,
     )
-    (
-        report_directory / "target_audit.json"
-    ).write_text(
+    (report_directory / "target_audit.json").write_text(
         json.dumps(audit, indent=2),
         encoding="utf-8",
     )

@@ -12,8 +12,7 @@ from multivari.modules.harvesting.robust_weight_forecasting import (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Forecast robust future hive-weight change using "
-            "trailing-median endpoint targets."
+            "Forecast robust future hive-weight change using trailing-median endpoint targets."
         )
     )
     parser.add_argument("--config", default="config/harvesting.yaml")

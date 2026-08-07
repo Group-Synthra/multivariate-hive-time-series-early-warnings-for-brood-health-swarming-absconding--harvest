@@ -11,10 +11,7 @@ from multivari.modules.harvesting.reviewed_dataset import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Rebuild the 72-hour harvest dataset from "
-            "manually reviewed probable events."
-        )
+        description=("Rebuild the 72-hour harvest dataset from manually reviewed probable events.")
     )
     parser.add_argument(
         "--config",

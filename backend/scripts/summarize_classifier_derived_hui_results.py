@@ -8,14 +8,9 @@ import pandas as pd
 
 def main() -> None:
     backend_root = Path(__file__).resolve().parents[1]
-    report_root = (
-        backend_root
-        / "artifacts/reports/harvesting/reviewed/classifier_derived_hui"
-    )
+    report_root = backend_root / "artifacts/reports/harvesting/reviewed/classifier_derived_hui"
 
-    distribution_path = (
-        report_root / "classifier_derived_hui_distribution.csv"
-    )
+    distribution_path = report_root / "classifier_derived_hui_distribution.csv"
     summary_path = report_root / "future_hui_regression_summary.json"
     gate_path = report_root / "future_hui_regression_gate.json"
 

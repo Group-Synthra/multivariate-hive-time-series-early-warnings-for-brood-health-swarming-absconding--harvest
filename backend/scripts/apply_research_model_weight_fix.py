@@ -12,9 +12,7 @@ def replace_once(
 ) -> str:
     count = text.count(old)
     if count != 1:
-        raise RuntimeError(
-            f"Expected exactly one {description}; found {count}."
-        )
+        raise RuntimeError(f"Expected exactly one {description}; found {count}.")
     return text.replace(old, new, 1)
 
 
@@ -30,24 +28,20 @@ def main() -> None:
         / "research_model_comparison.py"
     )
     test_path = (
-        backend_root
-        / "tests"
-        / "modules"
-        / "harvesting"
-        / "test_research_model_comparison.py"
+        backend_root / "tests" / "modules" / "harvesting" / "test_research_model_comparison.py"
     )
 
     module_text = module_path.read_text(encoding="utf-8")
 
-    old_module = '''    if not math.isclose(weights.sum(), 1.0, rel_tol=1e-9):
+    old_module = """    if not math.isclose(weights.sum(), 1.0, rel_tol=1e-9):
         raise RuntimeError(
             "Session-balanced sample weights do not sum to one."
         )
 
     return weights
-'''
+"""
 
-    new_module = '''    # Preserve the relative class/session/event weighting while
+    new_module = """    # Preserve the relative class/session/event weighting while
     # keeping the average sample weight equal to one. Normalizing the
     # complete vector to sum to one makes regularization dominate
     # Logistic Regression and prevents XGBoost/LightGBM tree splits
@@ -60,7 +54,7 @@ def main() -> None:
         )
 
     return weights
-'''
+"""
 
     module_text = replace_once(
         module_text,
@@ -99,10 +93,7 @@ def main() -> None:
 
     print("Patched:", module_path)
     print("Patched:", test_path)
-    print(
-        "Session-balanced weights now retain mean 1.0 instead of "
-        "summing to 1.0."
-    )
+    print("Session-balanced weights now retain mean 1.0 instead of summing to 1.0.")
 
 
 if __name__ == "__main__":

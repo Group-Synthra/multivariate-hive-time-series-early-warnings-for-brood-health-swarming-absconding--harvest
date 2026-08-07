@@ -76,9 +76,7 @@ def test_force_refresh_calls_repository_again(tmp_path) -> None:
 
 
 def test_unavailable_monitor_exposes_configuration_error() -> None:
-    monitor = UnavailableLiveHuiMonitor(
-        LiveSensorConfigurationError("DATABASE_URL is missing")
-    )
+    monitor = UnavailableLiveHuiMonitor(LiveSensorConfigurationError("DATABASE_URL is missing"))
 
     assert monitor.status_payload()["status"] == "configuration_error"
     with pytest.raises(LiveSensorConfigurationError):

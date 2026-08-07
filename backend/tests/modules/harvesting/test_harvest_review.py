@@ -24,14 +24,20 @@ def test_template_suggests_candidate_for_delayed_event() -> None:
 
     template = create_manual_review_template(audit)
 
-    assert template.loc[
-        0,
-        "suggested_include_for_training",
-    ] == 1
-    assert template.loc[
-        0,
-        "suggested_reviewed_event_start",
-    ] == "2024-01-01 10:00:00"
+    assert (
+        template.loc[
+            0,
+            "suggested_include_for_training",
+        ]
+        == 1
+    )
+    assert (
+        template.loc[
+            0,
+            "suggested_reviewed_event_start",
+        ]
+        == "2024-01-01 10:00:00"
+    )
 
 
 def test_incomplete_review_is_rejected() -> None:
@@ -57,9 +63,7 @@ def test_reviewed_event_must_match_common_timestamp() -> None:
             "harvest_event_id": ["event_1"],
             "manual_event_type": ["probable_harvest"],
             "manual_include_for_training": [1],
-            "manual_reviewed_event_start": [
-                "2024-01-01 10:30:00"
-            ],
+            "manual_reviewed_event_start": ["2024-01-01 10:30:00"],
             "manual_review_complete": [1],
             "alignment_status": ["marker_delayed"],
             "marker_event_start": ["2024-01-03 10:00:00"],
@@ -72,9 +76,7 @@ def test_reviewed_event_must_match_common_timestamp() -> None:
     common = pd.DataFrame(
         {
             "hive_id": ["h1"],
-            "timestamp": pd.to_datetime(
-                ["2024-01-01 10:00:00"]
-            ),
+            "timestamp": pd.to_datetime(["2024-01-01 10:00:00"]),
         }
     )
     manifest = common.assign(

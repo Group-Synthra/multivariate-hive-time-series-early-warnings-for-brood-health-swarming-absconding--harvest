@@ -31,17 +31,11 @@ def main() -> None:
     config_path = backend_root / arguments.config
     snippet_path = backend_root / arguments.snippet
 
-    config = yaml.safe_load(
-        config_path.read_text(encoding="utf-8")
-    )
-    snippet = yaml.safe_load(
-        snippet_path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    snippet = yaml.safe_load(snippet_path.read_text(encoding="utf-8"))
 
     if not isinstance(config, dict) or not isinstance(snippet, dict):
-        raise TypeError(
-            "Both YAML files must contain top-level mappings."
-        )
+        raise TypeError("Both YAML files must contain top-level mappings.")
 
     changed: list[str] = []
     unchanged: list[str] = []

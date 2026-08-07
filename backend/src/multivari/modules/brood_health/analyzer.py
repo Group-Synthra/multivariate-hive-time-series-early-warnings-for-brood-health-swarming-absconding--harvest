@@ -59,9 +59,7 @@ def _rolling_linear_slope(values: pd.Series, window: int) -> pd.Series:
         x = np.arange(valid.size, dtype=float)
         return float(np.polyfit(x, valid, 1)[0])
 
-    return values.rolling(window, min_periods=max(2, window // 2)).apply(
-        slope, raw=True
-    )
+    return values.rolling(window, min_periods=max(2, window // 2)).apply(slope, raw=True)
 
 
 def add_stability_and_trend(
@@ -228,9 +226,8 @@ def _beekeeper_actions(
             "Check that the entrance and ventilation paths are not blocked and verify the CO₂ sensor position/calibration.",
         )
 
-    weight_signal_low = (
-        (weight_change_pct_24h is not None and weight_change_pct_24h <= -3.0)
-        or (weight_component is not None and weight_component < 50.0)
+    weight_signal_low = (weight_change_pct_24h is not None and weight_change_pct_24h <= -3.0) or (
+        weight_component is not None and weight_component < 50.0
     )
     if weight_signal_low:
         _append_unique(
@@ -285,9 +282,7 @@ def build_warning_payload(
     minimum_score = float(np.clip(safety_minimum_score, 1.0, 100.0))
     forecast_bhsi = float(
         np.clip(
-            forecast_bhsi
-            if forecast_bhsi is not None
-            else (bhsi if bhsi is not None else 100.0),
+            forecast_bhsi if forecast_bhsi is not None else (bhsi if bhsi is not None else 100.0),
             0.0,
             100.0,
         )
@@ -307,9 +302,8 @@ def build_warning_payload(
     maximum_drop = max(exact_drop, safety_drop)
 
     score_levels = {current_level, exact_level, minimum_level}
-    rapid_unstable_decline = (
-        maximum_drop >= 20.0
-        and (forecast_bhsi < 40.0 or forecast_rod_points_per_hour < -3.0)
+    rapid_unstable_decline = maximum_drop >= 20.0 and (
+        forecast_bhsi < 40.0 or forecast_rod_points_per_hour < -3.0
     )
 
     if "Critical" in score_levels or rapid_unstable_decline:
@@ -321,11 +315,7 @@ def build_warning_payload(
         or forecast_rod_points_per_hour < -3.0
     ):
         severity = "Warning"
-    elif (
-        maximum_drop >= 5.0
-        or forecast_bhsi < 70.0
-        or forecast_rod_points_per_hour < -0.5
-    ):
+    elif maximum_drop >= 5.0 or forecast_bhsi < 70.0 or forecast_rod_points_per_hour < -0.5:
         severity = "Watch"
     else:
         severity = "Normal"
@@ -334,38 +324,25 @@ def build_warning_payload(
     if current_level in {"Poor", "Critical"}:
         reasons.append(f"Current health is {current_level} ({current_score:.2f}/100).")
     if exact_level in {"Poor", "Critical"}:
-        reasons.append(
-            f"Exact +6-hour health is {exact_level} ({exact_score:.2f}/100)."
-        )
-    if (
-        minimum_level in {"Poor", "Critical"}
-        and minimum_score < exact_score - 0.005
-    ):
+        reasons.append(f"Exact +6-hour health is {exact_level} ({exact_score:.2f}/100).")
+    if minimum_level in {"Poor", "Critical"} and minimum_score < exact_score - 0.005:
         reasons.append(
             f"The predicted path reaches a {minimum_level} safety minimum of "
             f"{minimum_score:.2f}/100."
         )
     if maximum_drop >= 5.0:
-        reasons.append(
-            f"The predicted six-hour path drops by up to {maximum_drop:.2f} points."
-        )
+        reasons.append(f"The predicted six-hour path drops by up to {maximum_drop:.2f} points.")
     if forecast_bhsi < 40.0:
-        reasons.append(
-            f"Forecast BHSI is {forecast_bhsi:.2f}/100 (Low stability)."
-        )
+        reasons.append(f"Forecast BHSI is {forecast_bhsi:.2f}/100 (Low stability).")
     elif forecast_bhsi < 70.0:
-        reasons.append(
-            f"Forecast BHSI is {forecast_bhsi:.2f}/100 (Moderate stability)."
-        )
+        reasons.append(f"Forecast BHSI is {forecast_bhsi:.2f}/100 (Moderate stability).")
     if forecast_rod_points_per_hour < -3.0:
         reasons.append(
-            f"Forecast RoD is {forecast_rod_points_per_hour:.2f} points/hour "
-            "(Rapid Declining)."
+            f"Forecast RoD is {forecast_rod_points_per_hour:.2f} points/hour (Rapid Declining)."
         )
     elif forecast_rod_points_per_hour < -0.5:
         reasons.append(
-            f"Forecast RoD is {forecast_rod_points_per_hour:.2f} points/hour "
-            "(Slow Declining)."
+            f"Forecast RoD is {forecast_rod_points_per_hour:.2f} points/hour (Slow Declining)."
         )
 
     if not reasons:
@@ -431,9 +408,7 @@ def build_warning_payload(
             "safety_minimum_score": round(minimum_score, 2),
             "maximum_drop_points": round(maximum_drop, 2),
             "forecast_bhsi": round(forecast_bhsi, 2),
-            "forecast_rod_points_per_hour": round(
-                forecast_rod_points_per_hour, 2
-            ),
+            "forecast_rod_points_per_hour": round(forecast_rod_points_per_hour, 2),
         },
     }
 

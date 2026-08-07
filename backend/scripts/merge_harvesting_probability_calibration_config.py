@@ -8,24 +8,15 @@ import yaml
 def main() -> None:
     backend_root = Path(__file__).resolve().parents[1]
     target_path = backend_root / "config/harvesting.yaml"
-    section_path = (
-        backend_root
-        / "config/harvesting_probability_calibration_section.yaml"
-    )
+    section_path = backend_root / "config/harvesting_probability_calibration_section.yaml"
 
     if not target_path.exists():
         raise FileNotFoundError(f"Missing target config: {target_path}")
     if not section_path.exists():
-        raise FileNotFoundError(
-            f"Missing calibration section: {section_path}"
-        )
+        raise FileNotFoundError(f"Missing calibration section: {section_path}")
 
-    target = yaml.safe_load(
-        target_path.read_text(encoding="utf-8")
-    )
-    section = yaml.safe_load(
-        section_path.read_text(encoding="utf-8")
-    )
+    target = yaml.safe_load(target_path.read_text(encoding="utf-8"))
+    section = yaml.safe_load(section_path.read_text(encoding="utf-8"))
     if not isinstance(target, dict) or not isinstance(section, dict):
         raise TypeError("Both YAML files must contain mappings.")
 

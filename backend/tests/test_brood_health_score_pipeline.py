@@ -87,7 +87,9 @@ def test_feature_schema_leakage_audit_rejects_target_and_identifiers():
     safe = feature_leakage_audit(["temperature_c", "co2_ppm_lag_6h", "weight_change_pct_24h"])
     assert safe["passed"] is True
 
-    unsafe = feature_leakage_audit(["temperature_c", TARGET_COLUMN, "hive_id", "future_temperature"])
+    unsafe = feature_leakage_audit(
+        ["temperature_c", TARGET_COLUMN, "hive_id", "future_temperature"]
+    )
     assert unsafe["passed"] is False
     assert TARGET_COLUMN in unsafe["target_columns_in_features"]
     assert "hive_id" in unsafe["hive_identifier_features"]

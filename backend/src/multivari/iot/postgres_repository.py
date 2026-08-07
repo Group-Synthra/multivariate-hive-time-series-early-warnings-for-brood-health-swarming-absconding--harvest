@@ -35,8 +35,7 @@ def _env_float(name: str, default: float) -> float:
 def _validate_identifier(value: str, *, setting_name: str) -> str:
     if not _IDENTIFIER_PATTERN.fullmatch(value):
         raise LiveSensorConfigurationError(
-            f"{setting_name} must be a simple PostgreSQL identifier. "
-            f"Received: {value!r}"
+            f"{setting_name} must be a simple PostgreSQL identifier. Received: {value!r}"
         )
     return value
 
@@ -72,9 +71,7 @@ class PostgresSensorSettings:
     def from_env(cls) -> PostgresSensorSettings:
         database_url = os.getenv("DATABASE_URL", "").strip()
         if not database_url:
-            raise LiveSensorConfigurationError(
-                "DATABASE_URL is required for live HUI inference."
-            )
+            raise LiveSensorConfigurationError("DATABASE_URL is required for live HUI inference.")
 
         history_hours = int(os.getenv("IOT_HISTORY_HOURS", "336"))
         if history_hours < 192:
@@ -90,9 +87,7 @@ class PostgresSensorSettings:
                 "IOT_HISTORY_REFERENCE must be either 'now' or 'database_latest'."
             )
 
-        minimum_readings_per_hour = int(
-            os.getenv("IOT_MIN_READINGS_PER_HOUR", "1")
-        )
+        minimum_readings_per_hour = int(os.getenv("IOT_MIN_READINGS_PER_HOUR", "1"))
         if minimum_readings_per_hour <= 0:
             raise LiveSensorConfigurationError(
                 "IOT_MIN_READINGS_PER_HOUR must be a positive integer."
@@ -102,38 +97,23 @@ class PostgresSensorSettings:
         # A blank value disables the optional reading_at column.
         reading_at = os.getenv("IOT_READING_AT_COLUMN", "").strip() or None
         external_temperature = (
-            os.getenv("IOT_EXTERNAL_TEMPERATURE_COLUMN", "external_temp").strip()
-            or None
+            os.getenv("IOT_EXTERNAL_TEMPERATURE_COLUMN", "external_temp").strip() or None
         )
         external_humidity = (
-            os.getenv("IOT_EXTERNAL_HUMIDITY_COLUMN", "external_humidity").strip()
-            or None
+            os.getenv("IOT_EXTERNAL_HUMIDITY_COLUMN", "external_humidity").strip() or None
         )
-        battery_voltage = (
-            os.getenv("IOT_BATTERY_VOLTAGE_COLUMN", "battery_voltage").strip()
-            or None
-        )
+        battery_voltage = os.getenv("IOT_BATTERY_VOLTAGE_COLUMN", "battery_voltage").strip() or None
 
         identifier_values: dict[str, str | None] = {
             "IOT_SCHEMA": os.getenv("IOT_SCHEMA", "public").strip(),
-            "IOT_SENSOR_TABLE": os.getenv(
-                "IOT_SENSOR_TABLE", "beehive_readings"
-            ).strip(),
+            "IOT_SENSOR_TABLE": os.getenv("IOT_SENSOR_TABLE", "beehive_readings").strip(),
             "IOT_HIVE_COLUMN": os.getenv("IOT_HIVE_COLUMN", "device_id").strip(),
-            "IOT_TIMESTAMP_COLUMN": os.getenv(
-                "IOT_TIMESTAMP_COLUMN", "recorded_at"
-            ).strip(),
+            "IOT_TIMESTAMP_COLUMN": os.getenv("IOT_TIMESTAMP_COLUMN", "recorded_at").strip(),
             "IOT_READING_AT_COLUMN": reading_at,
-            "IOT_TEMPERATURE_COLUMN": os.getenv(
-                "IOT_TEMPERATURE_COLUMN", "internal_temp"
-            ).strip(),
-            "IOT_HUMIDITY_COLUMN": os.getenv(
-                "IOT_HUMIDITY_COLUMN", "internal_humidity"
-            ).strip(),
+            "IOT_TEMPERATURE_COLUMN": os.getenv("IOT_TEMPERATURE_COLUMN", "internal_temp").strip(),
+            "IOT_HUMIDITY_COLUMN": os.getenv("IOT_HUMIDITY_COLUMN", "internal_humidity").strip(),
             "IOT_CO2_COLUMN": os.getenv("IOT_CO2_COLUMN", "internal_co2").strip(),
-            "IOT_WEIGHT_COLUMN": os.getenv(
-                "IOT_WEIGHT_COLUMN", "total_weight"
-            ).strip(),
+            "IOT_WEIGHT_COLUMN": os.getenv("IOT_WEIGHT_COLUMN", "total_weight").strip(),
             "IOT_EXTERNAL_TEMPERATURE_COLUMN": external_temperature,
             "IOT_EXTERNAL_HUMIDITY_COLUMN": external_humidity,
             "IOT_BATTERY_VOLTAGE_COLUMN": battery_voltage,
@@ -141,9 +121,7 @@ class PostgresSensorSettings:
         validated: dict[str, str | None] = {}
         for setting_name, value in identifier_values.items():
             validated[setting_name] = (
-                None
-                if value is None
-                else _validate_identifier(value, setting_name=setting_name)
+                None if value is None else _validate_identifier(value, setting_name=setting_name)
             )
 
         configured_hive = os.getenv("IOT_HIVE_ID", "").strip() or None
@@ -160,15 +138,11 @@ class PostgresSensorSettings:
             humidity_column=str(validated["IOT_HUMIDITY_COLUMN"]),
             co2_column=str(validated["IOT_CO2_COLUMN"]),
             weight_column=str(validated["IOT_WEIGHT_COLUMN"]),
-            external_temperature_column=validated[
-                "IOT_EXTERNAL_TEMPERATURE_COLUMN"
-            ],
+            external_temperature_column=validated["IOT_EXTERNAL_TEMPERATURE_COLUMN"],
             external_humidity_column=validated["IOT_EXTERNAL_HUMIDITY_COLUMN"],
             battery_voltage_column=validated["IOT_BATTERY_VOLTAGE_COLUMN"],
             timestamps_are_utc=_env_bool("IOT_TIMESTAMPS_ARE_UTC", True),
-            feature_timezone=os.getenv(
-                "IOT_FEATURE_TIMEZONE", "Asia/Colombo"
-            ).strip()
+            feature_timezone=os.getenv("IOT_FEATURE_TIMEZONE", "Asia/Colombo").strip()
             or "Asia/Colombo",
             history_hours=history_hours,
             history_reference=history_reference,
@@ -195,8 +169,7 @@ class PostgresSensorRepository:
             from psycopg.rows import dict_row
         except ImportError as error:
             raise LiveSensorConfigurationError(
-                "psycopg is not installed. Run: "
-                "pip install 'psycopg[binary]>=3.2,<4.0'"
+                "psycopg is not installed. Run: pip install 'psycopg[binary]>=3.2,<4.0'"
             ) from error
         return psycopg, sql, dict_row
 
@@ -288,9 +261,7 @@ class PostgresSensorRepository:
         )
         parameters: list[Any] = []
         if hive_id:
-            query += sql.SQL(" WHERE {} = %s").format(
-                sql.Identifier(str(resolved["hive"]))
-            )
+            query += sql.SQL(" WHERE {} = %s").format(sql.Identifier(str(resolved["hive"])))
             parameters.append(hive_id)
 
         with connection.cursor() as cursor:
@@ -298,9 +269,7 @@ class PostgresSensorRepository:
             row = cursor.fetchone()
         value = None if row is None else row.get("reference_timestamp")
         if value is None:
-            raise LiveSensorDatabaseError(
-                "No timestamp is available in the configured IoT table."
-            )
+            raise LiveSensorDatabaseError("No timestamp is available in the configured IoT table.")
         parsed = pd.Timestamp(value)
         if parsed.tzinfo is None:
             parsed = parsed.tz_localize("UTC")
@@ -341,9 +310,7 @@ class PostgresSensorRepository:
                 timestamp_expression = self._timestamp_expression(sql, resolved)
 
                 selections: list[Any] = [
-                    sql.SQL("{} AS source_hive_id").format(
-                        sql.Identifier(str(resolved["hive"]))
-                    ),
+                    sql.SQL("{} AS source_hive_id").format(sql.Identifier(str(resolved["hive"]))),
                     sql.SQL("{} AS source_timestamp").format(timestamp_expression),
                     sql.SQL("{} AS source_recorded_at").format(
                         sql.Identifier(str(resolved["timestamp"]))
@@ -354,12 +321,8 @@ class PostgresSensorRepository:
                     sql.SQL("{} AS internal_humidity").format(
                         sql.Identifier(str(resolved["humidity"]))
                     ),
-                    sql.SQL("{} AS internal_co2").format(
-                        sql.Identifier(str(resolved["co2"]))
-                    ),
-                    sql.SQL("{} AS total_weight").format(
-                        sql.Identifier(str(resolved["weight"]))
-                    ),
+                    sql.SQL("{} AS internal_co2").format(sql.Identifier(str(resolved["co2"]))),
+                    sql.SQL("{} AS total_weight").format(sql.Identifier(str(resolved["weight"]))),
                     self._optional_selection(
                         sql,
                         resolved["reading_at"],
@@ -397,9 +360,7 @@ class PostgresSensorRepository:
                 parameters: list[Any] = [start_utc, reference_timestamp]
 
                 if selected_hive:
-                    query += sql.SQL(" AND {} = %s").format(
-                        sql.Identifier(str(resolved["hive"]))
-                    )
+                    query += sql.SQL(" AND {} = %s").format(sql.Identifier(str(resolved["hive"])))
                     parameters.append(selected_hive)
 
                 query += sql.SQL(" ORDER BY {}, {}").format(
@@ -443,9 +404,7 @@ class PostgresSensorRepository:
                 )
                 parameters: list[Any] = []
                 if selected_hive:
-                    query += sql.SQL(" WHERE {} = %s").format(
-                        sql.Identifier(str(resolved["hive"]))
-                    )
+                    query += sql.SQL(" WHERE {} = %s").format(sql.Identifier(str(resolved["hive"])))
                     parameters.append(selected_hive)
                 with connection.cursor() as cursor:
                     cursor.execute(query, parameters)

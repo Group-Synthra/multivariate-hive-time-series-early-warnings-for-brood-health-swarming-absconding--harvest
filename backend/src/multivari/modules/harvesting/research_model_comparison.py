@@ -63,9 +63,7 @@ def _require_columns(
 ) -> None:
     missing = sorted(required.difference(frame.columns))
     if missing:
-        raise ValueError(
-            f"{frame_name} is missing required columns: {missing}"
-        )
+        raise ValueError(f"{frame_name} is missing required columns: {missing}")
 
 
 def _json_safe(value: Any) -> Any:
@@ -129,9 +127,7 @@ def cluster_harvest_sessions(
     gap = result["event_start"].diff().dt.total_seconds().div(3600)
     starts_new = gap.isna() | gap.gt(session_gap_hours)
     session_number = starts_new.cumsum().astype(int)
-    result[SESSION_ID_COLUMN] = session_number.map(
-        lambda value: f"harvest_session_{value:03d}"
-    )
+    result[SESSION_ID_COLUMN] = session_number.map(lambda value: f"harvest_session_{value:03d}")
     return result
 
 
@@ -182,10 +178,7 @@ def attach_future_event_metadata(
 
     event_lookup: dict[str, pd.DataFrame] = {}
     for hive_id, group in events.groupby(HIVE_COLUMN, sort=False):
-        event_lookup[str(hive_id)] = (
-            group.sort_values("event_start")
-            .reset_index(drop=True)
-        )
+        event_lookup[str(hive_id)] = group.sort_values("event_start").reset_index(drop=True)
 
     positive_mask = result[target_column].eq(1)
     positive_rows = result.loc[positive_mask]
@@ -197,16 +190,11 @@ def attach_future_event_metadata(
         hive_events = event_lookup.get(str(hive_id))
         if hive_events is None or hive_events.empty:
             raise ValueError(
-                f"Positive rows exist for hive {hive_id}, "
-                "but no reviewed event is available."
+                f"Positive rows exist for hive {hive_id}, but no reviewed event is available."
             )
 
-        event_times = hive_events["event_start"].to_numpy(
-            dtype="datetime64[ns]"
-        )
-        row_times = group[TIMESTAMP_COLUMN].to_numpy(
-            dtype="datetime64[ns]"
-        )
+        event_times = hive_events["event_start"].to_numpy(dtype="datetime64[ns]")
+        row_times = group[TIMESTAMP_COLUMN].to_numpy(dtype="datetime64[ns]")
         next_positions = np.searchsorted(
             event_times,
             row_times,
@@ -216,35 +204,22 @@ def attach_future_event_metadata(
         valid = next_positions < len(event_times)
         if not valid.all():
             raise ValueError(
-                f"Some positive rows for hive {hive_id} have "
-                "no future reviewed event."
+                f"Some positive rows for hive {hive_id} have no future reviewed event."
             )
 
         matched_times = event_times[next_positions]
-        hours_to_event = (
-            matched_times - row_times
-        ) / np.timedelta64(1, "h")
+        hours_to_event = (matched_times - row_times) / np.timedelta64(1, "h")
 
-        valid_horizon = (
-            (hours_to_event > 0)
-            & (hours_to_event <= horizon_hours)
-        )
+        valid_horizon = (hours_to_event > 0) & (hours_to_event <= horizon_hours)
         if not valid_horizon.all():
             raise ValueError(
-                f"Positive rows for hive {hive_id} do not match "
-                "the configured future horizon."
+                f"Positive rows for hive {hive_id} do not match the configured future horizon."
             )
 
         matched = hive_events.iloc[next_positions]
-        result.loc[group.index, EVENT_ID_COLUMN] = (
-            matched[EVENT_ID_COLUMN].to_numpy()
-        )
-        result.loc[group.index, SESSION_ID_COLUMN] = (
-            matched[SESSION_ID_COLUMN].to_numpy()
-        )
-        result.loc[group.index, "matched_event_start"] = (
-            matched["event_start"].to_numpy()
-        )
+        result.loc[group.index, EVENT_ID_COLUMN] = matched[EVENT_ID_COLUMN].to_numpy()
+        result.loc[group.index, SESSION_ID_COLUMN] = matched[SESSION_ID_COLUMN].to_numpy()
+        result.loc[group.index, "matched_event_start"] = matched["event_start"].to_numpy()
 
     return result
 
@@ -264,44 +239,27 @@ def build_feature_sets(
             requested = [str(value) for value in settings["include"]]
             missing = sorted(set(requested).difference(available_set))
             if missing:
-                raise ValueError(
-                    f"Feature set '{name}' requests missing features: "
-                    f"{missing}"
-                )
+                raise ValueError(f"Feature set '{name}' requests missing features: {missing}")
             selected = requested
         else:
-            include_prefixes = [
-                str(value)
-                for value in settings.get("include_prefixes", [])
-            ]
+            include_prefixes = [str(value) for value in settings.get("include_prefixes", [])]
             selected = [
                 feature
                 for feature in available
-                if any(
-                    feature.startswith(prefix)
-                    for prefix in include_prefixes
-                )
+                if any(feature.startswith(prefix) for prefix in include_prefixes)
             ]
 
-        exclude_prefixes = [
-            str(value)
-            for value in settings.get("exclude_prefixes", [])
-        ]
+        exclude_prefixes = [str(value) for value in settings.get("exclude_prefixes", [])]
         if exclude_prefixes:
             selected = [
                 feature
                 for feature in selected
-                if not any(
-                    feature.startswith(prefix)
-                    for prefix in exclude_prefixes
-                )
+                if not any(feature.startswith(prefix) for prefix in exclude_prefixes)
             ]
 
         selected = list(dict.fromkeys(selected))
         if not selected:
-            raise ValueError(
-                f"Feature set '{name}' contains no features."
-            )
+            raise ValueError(f"Feature set '{name}' contains no features.")
         result[name] = selected
 
     return result
@@ -315,25 +273,15 @@ def sample_training_rows(
     random_state: int,
 ) -> pd.DataFrame:
     if maximum_negative_to_positive_ratio <= 0:
-        raise ValueError(
-            "maximum_negative_to_positive_ratio must be positive"
-        )
+        raise ValueError("maximum_negative_to_positive_ratio must be positive")
 
-    positives = training_rows.loc[
-        training_rows[target_column].eq(1)
-    ]
-    negatives = training_rows.loc[
-        training_rows[target_column].eq(0)
-    ]
+    positives = training_rows.loc[training_rows[target_column].eq(1)]
+    negatives = training_rows.loc[training_rows[target_column].eq(0)]
 
     if positives.empty or negatives.empty:
-        raise ValueError(
-            "Training data must contain both positive and negative rows."
-        )
+        raise ValueError("Training data must contain both positive and negative rows.")
 
-    maximum_negatives = (
-        len(positives) * maximum_negative_to_positive_ratio
-    )
+    maximum_negatives = len(positives) * maximum_negative_to_positive_ratio
     if len(negatives) > maximum_negatives:
         negatives = negatives.sample(
             n=maximum_negatives,
@@ -383,36 +331,25 @@ def calculate_session_balanced_weights(
 
     sessions = positive_rows[SESSION_ID_COLUMN].dropna().unique()
     if len(sessions) == 0 or negative_count == 0:
-        raise ValueError(
-            "Session-balanced weights require positive sessions "
-            "and negative rows."
-        )
+        raise ValueError("Session-balanced weights require positive sessions and negative rows.")
 
     positive_total_weight = 0.5
     negative_total_weight = 0.5
     session_weight = positive_total_weight / len(sessions)
 
     for session_id in sessions:
-        session_rows = positive_rows.loc[
-            positive_rows[SESSION_ID_COLUMN].eq(session_id)
-        ]
+        session_rows = positive_rows.loc[positive_rows[SESSION_ID_COLUMN].eq(session_id)]
         events = session_rows[EVENT_ID_COLUMN].dropna().unique()
         if len(events) == 0:
-            raise ValueError(
-                f"Session {session_id} contains no event IDs."
-            )
+            raise ValueError(f"Session {session_id} contains no event IDs.")
         event_weight = session_weight / len(events)
 
         for event_id in events:
-            event_indices = session_rows.loc[
-                session_rows[EVENT_ID_COLUMN].eq(event_id)
-            ].index
+            event_indices = session_rows.loc[session_rows[EVENT_ID_COLUMN].eq(event_id)].index
             per_row_weight = event_weight / len(event_indices)
             weights[event_indices.to_numpy()] = per_row_weight
 
-    weights[np.flatnonzero(negative_mask)] = (
-        negative_total_weight / negative_count
-    )
+    weights[np.flatnonzero(negative_mask)] = negative_total_weight / negative_count
 
     # Preserve the relative class/session/event weighting while
     # keeping the average sample weight equal to one. Normalizing the
@@ -422,9 +359,7 @@ def calculate_session_balanced_weights(
     weights *= len(rows)
 
     if not math.isclose(weights.mean(), 1.0, rel_tol=1e-9):
-        raise RuntimeError(
-            "Session-balanced sample weights do not have mean one."
-        )
+        raise RuntimeError("Session-balanced sample weights do not have mean one.")
 
     return weights
 
@@ -456,9 +391,7 @@ def _make_estimator(
         return RandomForestClassifier(
             n_estimators=int(settings["n_estimators"]),
             max_depth=int(settings["max_depth"]),
-            min_samples_leaf=int(
-                settings["min_samples_leaf"]
-            ),
+            min_samples_leaf=int(settings["min_samples_leaf"]),
             max_features=settings["max_features"],
             max_samples=float(settings["max_samples"]),
             n_jobs=-1,
@@ -469,21 +402,15 @@ def _make_estimator(
         try:
             from xgboost import XGBClassifier
         except ImportError as error:
-            raise ImportError(
-                "XGBoost is not installed. Run: pip install xgboost"
-            ) from error
+            raise ImportError("XGBoost is not installed. Run: pip install xgboost") from error
 
         return XGBClassifier(
             n_estimators=int(settings["n_estimators"]),
             learning_rate=float(settings["learning_rate"]),
             max_depth=int(settings["max_depth"]),
-            min_child_weight=float(
-                settings["min_child_weight"]
-            ),
+            min_child_weight=float(settings["min_child_weight"]),
             subsample=float(settings["subsample"]),
-            colsample_bytree=float(
-                settings["colsample_bytree"]
-            ),
+            colsample_bytree=float(settings["colsample_bytree"]),
             reg_alpha=float(settings["reg_alpha"]),
             reg_lambda=float(settings["reg_lambda"]),
             objective="binary:logistic",
@@ -497,22 +424,16 @@ def _make_estimator(
         try:
             from lightgbm import LGBMClassifier
         except ImportError as error:
-            raise ImportError(
-                "LightGBM is not installed. Run: pip install lightgbm"
-            ) from error
+            raise ImportError("LightGBM is not installed. Run: pip install lightgbm") from error
 
         return LGBMClassifier(
             n_estimators=int(settings["n_estimators"]),
             learning_rate=float(settings["learning_rate"]),
             num_leaves=int(settings["num_leaves"]),
             max_depth=int(settings["max_depth"]),
-            min_child_samples=int(
-                settings["min_child_samples"]
-            ),
+            min_child_samples=int(settings["min_child_samples"]),
             subsample=float(settings["subsample"]),
-            colsample_bytree=float(
-                settings["colsample_bytree"]
-            ),
+            colsample_bytree=float(settings["colsample_bytree"]),
             reg_alpha=float(settings["reg_alpha"]),
             reg_lambda=float(settings["reg_lambda"]),
             objective="binary",
@@ -550,9 +471,7 @@ def _positive_probabilities(
 ) -> np.ndarray:
     probabilities = estimator.predict_proba(features)
     if probabilities.ndim != 2 or probabilities.shape[1] != 2:
-        raise ValueError(
-            "Classifier predict_proba must return two columns."
-        )
+        raise ValueError("Classifier predict_proba must return two columns.")
     return probabilities[:, 1].astype(float)
 
 
@@ -573,13 +492,9 @@ def calculate_row_metrics(
     ).ravel()
 
     return {
-        "pr_auc": float(
-            average_precision_score(y_true, y_prob)
-        ),
+        "pr_auc": float(average_precision_score(y_true, y_prob)),
         "roc_auc": float(roc_auc_score(y_true, y_prob)),
-        "brier_score": float(
-            brier_score_loss(y_true, y_prob)
-        ),
+        "brier_score": float(brier_score_loss(y_true, y_prob)),
         "precision": float(
             precision_score(
                 y_true,
@@ -617,21 +532,15 @@ def count_false_alert_episodes(
     gap_hours: int,
 ) -> int:
     false_alerts = predictions.loc[
-        predictions[target_column].eq(0)
-        & predictions[probability_column].ge(threshold)
+        predictions[target_column].eq(0) & predictions[probability_column].ge(threshold)
     ].copy()
 
     if false_alerts.empty:
         return 0
 
-    false_alerts = false_alerts.sort_values(
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    )
+    false_alerts = false_alerts.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN])
     elapsed = (
-        false_alerts.groupby(HIVE_COLUMN)[TIMESTAMP_COLUMN]
-        .diff()
-        .dt.total_seconds()
-        .div(3600)
+        false_alerts.groupby(HIVE_COLUMN)[TIMESTAMP_COLUMN].diff().dt.total_seconds().div(3600)
     )
     starts_episode = elapsed.isna() | elapsed.gt(gap_hours)
     return int(starts_episode.sum())
@@ -646,9 +555,7 @@ def build_event_detection_table(
     threshold: float,
     horizon_hours: int,
 ) -> pd.DataFrame:
-    split_events = events.loc[
-        events[SPLIT_COLUMN].eq(split)
-    ].sort_values("event_start")
+    split_events = events.loc[events[SPLIT_COLUMN].eq(split)].sort_values("event_start")
 
     records: list[dict[str, Any]] = []
     horizon = pd.Timedelta(hours=horizon_hours)
@@ -657,30 +564,15 @@ def build_event_detection_table(
         event_start = event.event_start
         event_rows = predictions.loc[
             predictions[HIVE_COLUMN].eq(event.hive_id)
-            & predictions[TIMESTAMP_COLUMN].ge(
-                event_start - horizon
-            )
+            & predictions[TIMESTAMP_COLUMN].ge(event_start - horizon)
             & predictions[TIMESTAMP_COLUMN].lt(event_start)
         ].sort_values(TIMESTAMP_COLUMN)
 
-        alert_rows = event_rows.loc[
-            event_rows[probability_column].ge(threshold)
-        ]
+        alert_rows = event_rows.loc[event_rows[probability_column].ge(threshold)]
         detected = not alert_rows.empty
 
-        first_alert_time = (
-            alert_rows[TIMESTAMP_COLUMN].iloc[0]
-            if detected
-            else pd.NaT
-        )
-        lead_hours = (
-            (
-                event_start - first_alert_time
-            ).total_seconds()
-            / 3600
-            if detected
-            else np.nan
-        )
+        first_alert_time = alert_rows[TIMESTAMP_COLUMN].iloc[0] if detected else pd.NaT
+        lead_hours = (event_start - first_alert_time).total_seconds() / 3600 if detected else np.nan
 
         records.append(
             {
@@ -695,9 +587,7 @@ def build_event_detection_table(
                 "first_alert_time": first_alert_time,
                 "lead_hours": lead_hours,
                 "maximum_probability": (
-                    float(event_rows[probability_column].max())
-                    if not event_rows.empty
-                    else np.nan
+                    float(event_rows[probability_column].max()) if not event_rows.empty else np.nan
                 ),
             }
         )
@@ -716,9 +606,7 @@ def select_operating_threshold(
     threshold_grid_points: int,
     minimum_event_recall: float,
 ) -> tuple[float, pd.DataFrame, pd.DataFrame]:
-    probabilities = validation_predictions[
-        probability_column
-    ].to_numpy(dtype=float)
+    probabilities = validation_predictions[probability_column].to_numpy(dtype=float)
 
     quantiles = np.quantile(
         probabilities,
@@ -758,9 +646,7 @@ def select_operating_threshold(
             horizon_hours=horizon_hours,
         )
         event_recall = (
-            float(event_detection["detected"].mean())
-            if not event_detection.empty
-            else 0.0
+            float(event_detection["detected"].mean()) if not event_detection.empty else 0.0
         )
         false_alert_episodes = count_false_alert_episodes(
             validation_predictions,
@@ -777,14 +663,10 @@ def select_operating_threshold(
             "false_alert_episodes": false_alert_episodes,
         }
         records.append(record)
-        detection_by_threshold[float(threshold)] = (
-            event_detection
-        )
+        detection_by_threshold[float(threshold)] = event_detection
 
     sweep = pd.DataFrame(records)
-    eligible = sweep.loc[
-        sweep["event_recall"].ge(minimum_event_recall)
-    ]
+    eligible = sweep.loc[sweep["event_recall"].ge(minimum_event_recall)]
 
     if eligible.empty:
         ranked = sweep.sort_values(
@@ -821,9 +703,7 @@ def _candidate_selection_key(
     *,
     minimum_event_recall: float,
 ) -> tuple[Any, ...]:
-    event_recall = float(
-        candidate.validation_metrics["event_recall"]
-    )
+    event_recall = float(candidate.validation_metrics["event_recall"])
     eligible = int(event_recall >= minimum_event_recall)
 
     model_complexity = {
@@ -836,11 +716,7 @@ def _candidate_selection_key(
     return (
         eligible,
         float(candidate.validation_metrics["pr_auc"]),
-        -int(
-            candidate.validation_metrics[
-                "false_alert_episodes"
-            ]
-        ),
+        -int(candidate.validation_metrics["false_alert_episodes"]),
         -len(candidate.feature_columns),
         -model_complexity,
     )
@@ -858,9 +734,7 @@ def _extract_feature_importance(
         values = np.asarray(fitted.coef_).reshape(-1)
         importance_type = "coefficient"
     elif hasattr(fitted, "feature_importances_"):
-        values = np.asarray(
-            fitted.feature_importances_
-        ).reshape(-1)
+        values = np.asarray(fitted.feature_importances_).reshape(-1)
         importance_type = "feature_importance"
     else:
         return pd.DataFrame(
@@ -899,34 +773,23 @@ def _run_grouped_hive_robustness(
     horizon_hours: int,
     false_alert_gap_hours: int,
 ) -> pd.DataFrame:
-    positive_hives = sorted(
-        training_events[HIVE_COLUMN].unique().tolist()
-    )
+    positive_hives = sorted(training_events[HIVE_COLUMN].unique().tolist())
     records: list[dict[str, Any]] = []
 
     for fold_number, held_out_hive in enumerate(
         positive_hives,
         start=1,
     ):
-        fold_train = training_rows.loc[
-            training_rows[HIVE_COLUMN].ne(held_out_hive)
-        ].copy()
-        fold_validation = training_rows.loc[
-            training_rows[HIVE_COLUMN].eq(held_out_hive)
-        ].copy()
+        fold_train = training_rows.loc[training_rows[HIVE_COLUMN].ne(held_out_hive)].copy()
+        fold_validation = training_rows.loc[training_rows[HIVE_COLUMN].eq(held_out_hive)].copy()
 
-        if (
-            fold_train[target_column].nunique() < 2
-            or fold_validation[target_column].nunique() < 2
-        ):
+        if fold_train[target_column].nunique() < 2 or fold_validation[target_column].nunique() < 2:
             continue
 
         sampled = sample_training_rows(
             fold_train,
             target_column=target_column,
-            maximum_negative_to_positive_ratio=(
-                maximum_negative_to_positive_ratio
-            ),
+            maximum_negative_to_positive_ratio=(maximum_negative_to_positive_ratio),
             random_state=random_state + fold_number,
         )
         weights = calculate_session_balanced_weights(
@@ -964,9 +827,7 @@ def _run_grouped_hive_robustness(
             probabilities,
             threshold=threshold,
         )
-        fold_events = training_events.loc[
-            training_events[HIVE_COLUMN].eq(held_out_hive)
-        ].copy()
+        fold_events = training_events.loc[training_events[HIVE_COLUMN].eq(held_out_hive)].copy()
         fold_events[SPLIT_COLUMN] = "validation"
         fold_predictions[SPLIT_COLUMN] = "validation"
         event_detection = build_event_detection_table(
@@ -990,9 +851,7 @@ def _run_grouped_hive_robustness(
                 "recall": row_metrics["recall"],
                 "f1": row_metrics["f1"],
                 "event_recall": (
-                    float(event_detection["detected"].mean())
-                    if not event_detection.empty
-                    else 0.0
+                    float(event_detection["detected"].mean()) if not event_detection.empty else 0.0
                 ),
                 "false_alert_episodes": (
                     count_false_alert_episodes(
@@ -1019,9 +878,7 @@ def run_research_model_comparison_from_config(
     if not path.is_absolute():
         path = root / path
 
-    config = yaml.safe_load(
-        path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
     settings = config["research_model_comparison"]
 
     feature_path = _resolve_path(
@@ -1052,18 +909,10 @@ def run_research_model_comparison_from_config(
     horizon_hours = int(settings["horizon_hours"])
     random_state = int(settings["random_state"])
     session_gap_hours = int(settings["session_gap_hours"])
-    false_alert_gap_hours = int(
-        settings["false_alert_gap_hours"]
-    )
-    negative_ratio = int(
-        settings["maximum_negative_to_positive_ratio"]
-    )
-    minimum_event_recall = float(
-        settings["minimum_validation_event_recall"]
-    )
-    threshold_grid_points = int(
-        settings["threshold_grid_points"]
-    )
+    false_alert_gap_hours = int(settings["false_alert_gap_hours"])
+    negative_ratio = int(settings["maximum_negative_to_positive_ratio"])
+    minimum_event_recall = float(settings["minimum_validation_event_recall"])
+    threshold_grid_points = int(settings["threshold_grid_points"])
 
     features = pd.read_parquet(feature_path)
     events = pd.read_parquet(event_path)
@@ -1102,24 +951,12 @@ def run_research_model_comparison_from_config(
         horizon_hours=horizon_hours,
     )
 
-    train_rows = rows.loc[
-        rows[SPLIT_COLUMN].eq("train")
-    ].copy()
-    validation_rows = rows.loc[
-        rows[SPLIT_COLUMN].eq("validation")
-    ].copy()
-    test_rows = rows.loc[
-        rows[SPLIT_COLUMN].eq("test")
-    ].copy()
+    train_rows = rows.loc[rows[SPLIT_COLUMN].eq("train")].copy()
+    validation_rows = rows.loc[rows[SPLIT_COLUMN].eq("validation")].copy()
+    test_rows = rows.loc[rows[SPLIT_COLUMN].eq("test")].copy()
 
-    if (
-        train_rows.empty
-        or validation_rows.empty
-        or test_rows.empty
-    ):
-        raise ValueError(
-            "Train, validation and test rows must all be present."
-        )
+    if train_rows.empty or validation_rows.empty or test_rows.empty:
+        raise ValueError("Train, validation and test rows must all be present.")
 
     feature_sets = build_feature_sets(
         feature_columns,
@@ -1165,15 +1002,11 @@ def run_research_model_comparison_from_config(
                     sampled_train[target_column],
                     weights,
                 )
-                training_seconds = (
-                    time.perf_counter() - started
-                )
+                training_seconds = time.perf_counter() - started
 
-                validation_probabilities = (
-                    _positive_probabilities(
-                        estimator,
-                        validation_rows[selected_features],
-                    )
+                validation_probabilities = _positive_probabilities(
+                    estimator,
+                    validation_rows[selected_features],
                 )
                 validation_predictions = validation_rows[
                     [
@@ -1183,27 +1016,17 @@ def run_research_model_comparison_from_config(
                         target_column,
                     ]
                 ].copy()
-                validation_predictions["probability"] = (
-                    validation_probabilities
-                )
+                validation_predictions["probability"] = validation_probabilities
 
-                threshold, sweep, event_detection = (
-                    select_operating_threshold(
-                        validation_predictions,
-                        session_events,
-                        target_column=target_column,
-                        probability_column="probability",
-                        horizon_hours=horizon_hours,
-                        false_alert_gap_hours=(
-                            false_alert_gap_hours
-                        ),
-                        threshold_grid_points=(
-                            threshold_grid_points
-                        ),
-                        minimum_event_recall=(
-                            minimum_event_recall
-                        ),
-                    )
+                threshold, sweep, event_detection = select_operating_threshold(
+                    validation_predictions,
+                    session_events,
+                    target_column=target_column,
+                    probability_column="probability",
+                    horizon_hours=horizon_hours,
+                    false_alert_gap_hours=(false_alert_gap_hours),
+                    threshold_grid_points=(threshold_grid_points),
+                    minimum_event_recall=(minimum_event_recall),
                 )
                 row_metrics = calculate_row_metrics(
                     validation_rows[target_column],
@@ -1211,49 +1034,36 @@ def run_research_model_comparison_from_config(
                     threshold=threshold,
                 )
                 event_recall = (
-                    float(event_detection["detected"].mean())
-                    if not event_detection.empty
-                    else 0.0
+                    float(event_detection["detected"].mean()) if not event_detection.empty else 0.0
                 )
-                false_alert_episodes = (
-                    count_false_alert_episodes(
-                        validation_predictions,
-                        target_column=target_column,
-                        probability_column="probability",
-                        threshold=threshold,
-                        gap_hours=false_alert_gap_hours,
-                    )
+                false_alert_episodes = count_false_alert_episodes(
+                    validation_predictions,
+                    target_column=target_column,
+                    probability_column="probability",
+                    threshold=threshold,
+                    gap_hours=false_alert_gap_hours,
                 )
 
                 validation_metrics = {
                     **row_metrics,
                     "event_recall": event_recall,
-                    "false_alert_episodes": (
-                        false_alert_episodes
-                    ),
+                    "false_alert_episodes": (false_alert_episodes),
                 }
                 candidate = CandidateResult(
                     model_name=model_name,
                     feature_set_name=feature_set_name,
                     feature_columns=selected_features,
                     estimator=estimator,
-                    validation_probabilities=(
-                        validation_probabilities
-                    ),
+                    validation_probabilities=(validation_probabilities),
                     validation_metrics=validation_metrics,
                     threshold=threshold,
                     threshold_sweep=sweep,
-                    validation_event_detection=(
-                        event_detection
-                    ),
+                    validation_event_detection=(event_detection),
                     training_seconds=training_seconds,
                     training_rows=len(sampled_train),
-                    training_positive_rows=int(
-                        sampled_train[target_column].sum()
-                    ),
+                    training_positive_rows=int(sampled_train[target_column].sum()),
                     training_negative_rows=int(
-                        len(sampled_train)
-                        - sampled_train[target_column].sum()
+                        len(sampled_train) - sampled_train[target_column].sum()
                     ),
                 )
                 candidates.append(candidate)
@@ -1265,35 +1075,20 @@ def run_research_model_comparison_from_config(
                         "status": "ok",
                         "feature_count": len(selected_features),
                         "training_rows": len(sampled_train),
-                        "training_positive_rows": int(
-                            sampled_train[target_column].sum()
-                        ),
+                        "training_positive_rows": int(sampled_train[target_column].sum()),
                         "training_negative_rows": int(
-                            len(sampled_train)
-                            - sampled_train[target_column].sum()
+                            len(sampled_train) - sampled_train[target_column].sum()
                         ),
                         "training_seconds": training_seconds,
                         "validation_threshold": threshold,
-                        "validation_pr_auc": row_metrics[
-                            "pr_auc"
-                        ],
-                        "validation_roc_auc": row_metrics[
-                            "roc_auc"
-                        ],
-                        "validation_brier_score": row_metrics[
-                            "brier_score"
-                        ],
-                        "validation_precision": row_metrics[
-                            "precision"
-                        ],
-                        "validation_recall": row_metrics[
-                            "recall"
-                        ],
+                        "validation_pr_auc": row_metrics["pr_auc"],
+                        "validation_roc_auc": row_metrics["roc_auc"],
+                        "validation_brier_score": row_metrics["brier_score"],
+                        "validation_precision": row_metrics["precision"],
+                        "validation_recall": row_metrics["recall"],
                         "validation_f1": row_metrics["f1"],
                         "validation_event_recall": event_recall,
-                        "validation_false_alert_episodes": (
-                            false_alert_episodes
-                        ),
+                        "validation_false_alert_episodes": (false_alert_episodes),
                     }
                 )
             except ImportError as error:
@@ -1323,8 +1118,7 @@ def run_research_model_comparison_from_config(
 
     if not candidates:
         raise RuntimeError(
-            "No model candidate completed successfully. "
-            "Inspect model_feature_set_comparison.csv."
+            "No model candidate completed successfully. Inspect model_feature_set_comparison.csv."
         )
 
     selected = max(
@@ -1343,13 +1137,9 @@ def run_research_model_comparison_from_config(
             target_column,
         ]
     ].copy()
-    validation_predictions["raw_probability"] = (
-        selected.validation_probabilities
-    )
+    validation_predictions["raw_probability"] = selected.validation_probabilities
     validation_predictions["predicted_alert"] = (
-        validation_predictions["raw_probability"]
-        .ge(selected.threshold)
-        .astype("int8")
+        validation_predictions["raw_probability"].ge(selected.threshold).astype("int8")
     )
 
     test_probabilities = _positive_probabilities(
@@ -1366,9 +1156,7 @@ def run_research_model_comparison_from_config(
     ].copy()
     test_predictions["raw_probability"] = test_probabilities
     test_predictions["predicted_alert"] = (
-        test_predictions["raw_probability"]
-        .ge(selected.threshold)
-        .astype("int8")
+        test_predictions["raw_probability"].ge(selected.threshold).astype("int8")
     )
 
     test_row_metrics = calculate_row_metrics(
@@ -1385,9 +1173,7 @@ def run_research_model_comparison_from_config(
         horizon_hours=horizon_hours,
     )
     test_event_recall = (
-        float(test_event_detection["detected"].mean())
-        if not test_event_detection.empty
-        else 0.0
+        float(test_event_detection["detected"].mean()) if not test_event_detection.empty else 0.0
     )
     test_false_alert_episodes = count_false_alert_episodes(
         test_predictions,
@@ -1400,12 +1186,8 @@ def run_research_model_comparison_from_config(
     grouped_robustness = _run_grouped_hive_robustness(
         selected=selected,
         training_rows=train_rows,
-        training_events=session_events.loc[
-            session_events[SPLIT_COLUMN].eq("train")
-        ],
-        model_settings=settings["models"][
-            selected.model_name
-        ],
+        training_events=session_events.loc[session_events[SPLIT_COLUMN].eq("train")],
+        model_settings=settings["models"][selected.model_name],
         target_column=target_column,
         maximum_negative_to_positive_ratio=negative_ratio,
         random_state=random_state,
@@ -1429,9 +1211,7 @@ def run_research_model_comparison_from_config(
             session_end=("event_start", "max"),
             hive_event_count=(EVENT_ID_COLUMN, "count"),
             unique_hives=(HIVE_COLUMN, "nunique"),
-            splits=(SPLIT_COLUMN, lambda values: "|".join(
-                sorted(set(values.astype(str)))
-            )),
+            splits=(SPLIT_COLUMN, lambda values: "|".join(sorted(set(values.astype(str))))),
         )
         .reset_index()
     )
@@ -1449,8 +1229,7 @@ def run_research_model_comparison_from_config(
         index=False,
     )
     selected.validation_event_detection.to_csv(
-        output_directory
-        / "selected_validation_event_detection.csv",
+        output_directory / "selected_validation_event_detection.csv",
         index=False,
     )
     test_event_detection.to_csv(
@@ -1489,21 +1268,15 @@ def run_research_model_comparison_from_config(
     grouped_summary = {
         "fold_count": len(grouped_robustness),
         "mean_pr_auc": (
-            float(grouped_robustness["pr_auc"].mean())
-            if not grouped_robustness.empty
-            else None
+            float(grouped_robustness["pr_auc"].mean()) if not grouped_robustness.empty else None
         ),
         "mean_event_recall": (
-            float(
-                grouped_robustness["event_recall"].mean()
-            )
+            float(grouped_robustness["event_recall"].mean())
             if not grouped_robustness.empty
             else None
         ),
         "minimum_event_recall": (
-            float(
-                grouped_robustness["event_recall"].min()
-            )
+            float(grouped_robustness["event_recall"].min())
             if not grouped_robustness.empty
             else None
         ),
@@ -1516,9 +1289,7 @@ def run_research_model_comparison_from_config(
         ),
         "selected_model": selected.model_name,
         "selected_feature_set": selected.feature_set_name,
-        "selected_feature_count": len(
-            selected.feature_columns
-        ),
+        "selected_feature_count": len(selected.feature_columns),
         "selected_threshold": selected.threshold,
         "selection_rule": (
             "Require the configured validation event recall when "
@@ -1530,27 +1301,18 @@ def run_research_model_comparison_from_config(
         "test": {
             **test_row_metrics,
             "event_recall": test_event_recall,
-            "false_alert_episodes": (
-                test_false_alert_episodes
-            ),
+            "false_alert_episodes": (test_false_alert_episodes),
             "event_count": len(test_event_detection),
         },
         "grouped_hive_robustness": grouped_summary,
         "event_counts": {
             key: int(value)
-            for key, value in session_events[
-                SPLIT_COLUMN
-            ].value_counts().to_dict().items()
+            for key, value in session_events[SPLIT_COLUMN].value_counts().to_dict().items()
         },
         "session_counts": {
             key: int(value)
             for key, value in (
-                session_events.groupby(SPLIT_COLUMN)[
-                    SESSION_ID_COLUMN
-                ]
-                .nunique()
-                .to_dict()
-                .items()
+                session_events.groupby(SPLIT_COLUMN)[SESSION_ID_COLUMN].nunique().to_dict().items()
             )
         },
         "warnings": [
@@ -1602,32 +1364,15 @@ def run_research_model_comparison_from_config(
         "selected_model": selected.model_name,
         "selected_feature_set": selected.feature_set_name,
         "selected_threshold": selected.threshold,
-        "validation_pr_auc": selected.validation_metrics[
-            "pr_auc"
-        ],
-        "validation_event_recall": selected.validation_metrics[
-            "event_recall"
-        ],
-        "validation_false_alert_episodes": (
-            selected.validation_metrics[
-                "false_alert_episodes"
-            ]
-        ),
+        "validation_pr_auc": selected.validation_metrics["pr_auc"],
+        "validation_event_recall": selected.validation_metrics["event_recall"],
+        "validation_false_alert_episodes": (selected.validation_metrics["false_alert_episodes"]),
         "test_pr_auc": test_row_metrics["pr_auc"],
         "test_event_recall": test_event_recall,
         "test_event_count": len(test_event_detection),
         "hive_level_event_count": len(session_events),
-        "temporal_session_count": int(
-            session_events[SESSION_ID_COLUMN].nunique()
-        ),
-        "comparison_path": str(
-            output_directory
-            / "model_feature_set_comparison.csv"
-        ),
-        "metrics_path": str(
-            output_directory / "selected_model_metrics.json"
-        ),
-        "model_path": str(
-            model_directory / "selected_model.joblib"
-        ),
+        "temporal_session_count": int(session_events[SESSION_ID_COLUMN].nunique()),
+        "comparison_path": str(output_directory / "model_feature_set_comparison.csv"),
+        "metrics_path": str(output_directory / "selected_model_metrics.json"),
+        "model_path": str(model_directory / "selected_model.joblib"),
     }

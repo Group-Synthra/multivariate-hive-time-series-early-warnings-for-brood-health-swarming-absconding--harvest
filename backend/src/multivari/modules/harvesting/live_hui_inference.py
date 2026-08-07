@@ -208,9 +208,7 @@ class LiveHuiInferenceEngine:
         config = yaml.safe_load(settings.harvesting_config_path.read_text(encoding="utf-8"))
         self.reviewed_feature_config = dict(config["reviewed_features"])
         hui_config = dict(config["classifier_derived_hui"])
-        self.class_config = {
-            str(key): float(value) for key, value in hui_config["classes"].items()
-        }
+        self.class_config = {str(key): float(value) for key, value in hui_config["classes"].items()}
         self.probability_anchors = [
             float(anchor["calibrated_score"]) for anchor in hui_config["hui_anchors"]
         ]
@@ -255,8 +253,7 @@ class LiveHuiInferenceEngine:
         artifacts: dict[int, FutureModelArtifact] = {}
         for horizon in HORIZONS:
             model_path = (
-                model_directory
-                / f"selected_classifier_derived_hui_regressor_{horizon}h.joblib"
+                model_directory / f"selected_classifier_derived_hui_regressor_{horizon}h.joblib"
             )
             metadata_path = model_path.with_suffix(".json")
             if not model_path.exists() or not metadata_path.exists():
@@ -308,9 +305,7 @@ class LiveHuiInferenceEngine:
             )
 
         frame = raw.copy()
-        frame["source_timestamp_utc"] = self._parse_source_timestamp(
-            frame["source_timestamp"]
-        )
+        frame["source_timestamp_utc"] = self._parse_source_timestamp(frame["source_timestamp"])
         frame = frame.loc[frame["source_timestamp_utc"].notna()].copy()
         frame[HIVE_COLUMN] = frame["source_hive_id"].astype("string").str.strip()
         frame = frame.loc[frame[HIVE_COLUMN].notna() & frame[HIVE_COLUMN].ne("")]
@@ -336,15 +331,9 @@ class LiveHuiInferenceEngine:
             .dt.floor("h")
         )
         frame = frame.sort_values([HIVE_COLUMN, "source_timestamp_utc"])
-        frame = frame.drop_duplicates(
-            subset=[HIVE_COLUMN, "source_timestamp_utc"], keep="last"
-        )
+        frame = frame.drop_duplicates(subset=[HIVE_COLUMN, "source_timestamp_utc"], keep="last")
 
-        latest_raw = (
-            frame.groupby(HIVE_COLUMN, group_keys=False, sort=True)
-            .tail(1)
-            .copy()
-        )
+        latest_raw = frame.groupby(HIVE_COLUMN, group_keys=False, sort=True).tail(1).copy()
 
         hourly_columns = [
             "weight_kg",
@@ -369,10 +358,7 @@ class LiveHuiInferenceEngine:
 
         required_counts = grouped[list(REQUIRED_SENSOR_COLUMNS)].count().reset_index()
         required_counts = required_counts.rename(
-            columns={
-                column: f"{column}_reading_count"
-                for column in REQUIRED_SENSOR_COLUMNS
-            }
+            columns={column: f"{column}_reading_count" for column in REQUIRED_SENSOR_COLUMNS}
         )
         hourly = hourly.merge(
             required_counts,
@@ -396,30 +382,24 @@ class LiveHuiInferenceEngine:
             "IOT_HOURLY_INTERPOLATION_ENABLED",
             "false",
         ).strip().lower() in {"1", "true", "yes", "on"}
-        maximum_gap_hours = int(
-            os.getenv("IOT_MAX_INTERPOLATED_GAP_HOURS", "8")
-        )
+        maximum_gap_hours = int(os.getenv("IOT_MAX_INTERPOLATED_GAP_HOURS", "8"))
 
         if interpolation_enabled:
-            hourly, interpolation_summaries = (
-                interpolate_bounded_hourly_gaps(
-                    hourly,
-                    hive_column=HIVE_COLUMN,
-                    timestamp_column=TIMESTAMP_COLUMN,
-                    sensor_columns=[
-                        "weight_kg",
-                        "temperature_c",
-                        "humidity_pct",
-                        "co2_ppm",
-                        "external_temperature_c",
-                        "external_humidity_pct",
-                        "battery_voltage",
-                    ],
-                    required_sensor_columns=list(
-                        REQUIRED_SENSOR_COLUMNS
-                    ),
-                    max_gap_hours=maximum_gap_hours,
-                )
+            hourly, interpolation_summaries = interpolate_bounded_hourly_gaps(
+                hourly,
+                hive_column=HIVE_COLUMN,
+                timestamp_column=TIMESTAMP_COLUMN,
+                sensor_columns=[
+                    "weight_kg",
+                    "temperature_c",
+                    "humidity_pct",
+                    "co2_ppm",
+                    "external_temperature_c",
+                    "external_humidity_pct",
+                    "battery_voltage",
+                ],
+                required_sensor_columns=list(REQUIRED_SENSOR_COLUMNS),
+                max_gap_hours=maximum_gap_hours,
             )
         else:
             hourly["is_imputed_hour"] = False
@@ -427,10 +407,7 @@ class LiveHuiInferenceEngine:
             hourly["imputation_method"] = None
             interpolation_summaries = []
 
-        interpolation_lookup = {
-            item["hive_id"]: item
-            for item in interpolation_summaries
-        }
+        interpolation_lookup = {item["hive_id"]: item for item in interpolation_summaries}
 
         diagnostics: list[dict[str, Any]] = []
         for hive_id, group in hourly.groupby(HIVE_COLUMN, sort=True):
@@ -446,20 +423,14 @@ class LiveHuiInferenceEngine:
             latest_future_window = latest_segment.tail(192)
             latest_current_complete = bool(
                 len(latest_current_window) >= 168
-                and latest_current_window[list(REQUIRED_SENSOR_COLUMNS)]
-                .notna()
-                .all(axis=None)
+                and latest_current_window[list(REQUIRED_SENSOR_COLUMNS)].notna().all(axis=None)
             )
             latest_future_complete = bool(
                 len(latest_future_window) >= 192
-                and latest_future_window[list(REQUIRED_SENSOR_COLUMNS)]
-                .notna()
-                .all(axis=None)
+                and latest_future_window[list(REQUIRED_SENSOR_COLUMNS)].notna().all(axis=None)
             )
             latest_timestamp = group[TIMESTAMP_COLUMN].max()
-            latest_window_start = (
-                latest_timestamp - pd.Timedelta(hours=191)
-            )
+            latest_window_start = latest_timestamp - pd.Timedelta(hours=191)
             latest_window = group.loc[
                 group[TIMESTAMP_COLUMN].between(
                     latest_window_start,
@@ -467,9 +438,7 @@ class LiveHuiInferenceEngine:
                     inclusive="both",
                 )
             ]
-            latest_window_imputed_hours = int(
-                latest_window["is_imputed_hour"].fillna(False).sum()
-            )
+            latest_window_imputed_hours = int(latest_window["is_imputed_hour"].fillna(False).sum())
             interpolation_summary = interpolation_lookup.get(
                 str(hive_id),
                 {
@@ -494,25 +463,16 @@ class LiveHuiInferenceEngine:
                     "latest_hour": latest_timestamp.isoformat(),
                     "minimum_current_hui_hours": 168,
                     "minimum_required_hours": 192,
-                    "minimum_readings_per_hour": (
-                        self.sensor_settings.minimum_readings_per_hour
-                    ),
-                    "median_readings_per_hour": float(
-                        group["readings_in_hour"].median()
-                    ),
+                    "minimum_readings_per_hour": (self.sensor_settings.minimum_readings_per_hour),
+                    "median_readings_per_hour": float(group["readings_in_hour"].median()),
                     "ready_for_current_hui": latest_current_complete,
                     "ready_for_full_hui": latest_future_complete,
                     **interpolation_summary,
-                    "latest_192h_imputed_hours": (
-                        latest_window_imputed_hours
-                    ),
+                    "latest_192h_imputed_hours": (latest_window_imputed_hours),
                     "latest_192h_imputed_fraction": (
-                        latest_window_imputed_hours
-                        / max(len(latest_window), 1)
+                        latest_window_imputed_hours / max(len(latest_window), 1)
                     ),
-                    "imputed_input_active": (
-                        latest_window_imputed_hours > 0
-                    ),
+                    "imputed_input_active": (latest_window_imputed_hours > 0),
                 }
             )
 
@@ -530,13 +490,9 @@ class LiveHuiInferenceEngine:
                 int(value) for value in cfg["environmental_windows_hours"]
             ],
             weight_delta_hours=[int(value) for value in cfg["weight_delta_hours"]],
-            environmental_delta_hours=[
-                int(value) for value in cfg["environmental_delta_hours"]
-            ],
+            environmental_delta_hours=[int(value) for value in cfg["environmental_delta_hours"]],
             weight_trend_hours=[int(value) for value in cfg["weight_trend_hours"]],
-            environmental_trend_hours=[
-                int(value) for value in cfg["environmental_trend_hours"]
-            ],
+            environmental_trend_hours=[int(value) for value in cfg["environmental_trend_hours"]],
             co2_flatline_std_threshold=float(cfg["co2_flatline_std_threshold"]),
         )
         return feature_rows
@@ -632,17 +588,17 @@ class LiveHuiInferenceEngine:
                     dtype=float,
                 ).clip(0.0, 100.0)
                 result.loc[ready_mask, f"predicted_hui_{horizon}h"] = predictions
-            result[f"predicted_class_{horizon}h"] = pd.Series(pd.NA, index=result.index, dtype="string")
+            result[f"predicted_class_{horizon}h"] = pd.Series(
+                pd.NA, index=result.index, dtype="string"
+            )
             valid = result[f"predicted_hui_{horizon}h"].notna()
             if valid.any():
-                result.loc[valid, f"predicted_class_{horizon}h"] = (
-                    assign_harvest_readiness_class(
-                        result.loc[valid, f"predicted_hui_{horizon}h"],
-                        not_ready_upper=self.class_config["not_ready_upper"],
-                        approaching_upper=self.class_config["approaching_upper"],
-                        ready_upper=self.class_config["ready_upper"],
-                    ).to_numpy()
-                )
+                result.loc[valid, f"predicted_class_{horizon}h"] = assign_harvest_readiness_class(
+                    result.loc[valid, f"predicted_hui_{horizon}h"],
+                    not_ready_upper=self.class_config["not_ready_upper"],
+                    approaching_upper=self.class_config["approaching_upper"],
+                    ready_upper=self.class_config["ready_upper"],
+                ).to_numpy()
         return result
 
     @staticmethod
@@ -662,9 +618,7 @@ class LiveHuiInferenceEngine:
             ].sort_values(TIMESTAMP_COLUMN)
 
             latest_available = (
-                pd.Timestamp(hive_rows[TIMESTAMP_COLUMN].max())
-                if not hive_rows.empty
-                else None
+                pd.Timestamp(hive_rows[TIMESTAMP_COLUMN].max()) if not hive_rows.empty else None
             )
             diagnostic["latest_model_ready_hour"] = (
                 latest_available.isoformat() if latest_available is not None else None
@@ -721,8 +675,7 @@ class LiveHuiInferenceEngine:
             )
 
         important_shift = any(
-            check["sensor"] == "weight_kg"
-            and bool(check["outside_training_range"])
+            check["sensor"] == "weight_kg" and bool(check["outside_training_range"])
             for check in checks
         )
         return checks, important_shift
@@ -743,8 +696,10 @@ class LiveHuiInferenceEngine:
         if len(recent) < 2:
             return 0.0
         elapsed = (
-            recent[TIMESTAMP_COLUMN] - recent[TIMESTAMP_COLUMN].iloc[0]
-        ).dt.total_seconds().div(3600.0)
+            (recent[TIMESTAMP_COLUMN] - recent[TIMESTAMP_COLUMN].iloc[0])
+            .dt.total_seconds()
+            .div(3600.0)
+        )
         values = pd.to_numeric(recent[CURRENT_HUI_COLUMN], errors="coerce")
         valid = elapsed.notna() & values.notna()
         if valid.sum() < 2 or float(elapsed.loc[valid].max()) == 0.0:
@@ -809,7 +764,9 @@ class LiveHuiInferenceEngine:
             if self.calibration_gate.get("selected_method") not in (None, "identity")
             else 25.0
         )
-        freshness_factor = 1.0 if freshness_minutes <= self.artifact_settings.stale_after_minutes else 0.5
+        freshness_factor = (
+            1.0 if freshness_minutes <= self.artifact_settings.stale_after_minutes else 0.5
+        )
         adjusted_completeness = completeness * freshness_factor
         score = 0.40 * calibration_component + 0.35 * hrsi + 0.25 * adjusted_completeness
         score = float(np.clip(score, 0.0, 100.0))
@@ -852,10 +809,7 @@ class LiveHuiInferenceEngine:
         return factors[:4]
 
     def _latest_raw_lookup(self, latest_raw: pd.DataFrame) -> dict[str, pd.Series]:
-        return {
-            str(row[HIVE_COLUMN]): row
-            for _, row in latest_raw.iterrows()
-        }
+        return {str(row[HIVE_COLUMN]): row for _, row in latest_raw.iterrows()}
 
     def build_payload(self, raw: pd.DataFrame) -> dict[str, Any]:
         hourly, latest_raw, diagnostics = self.prepare_hourly_history(raw)
@@ -869,13 +823,13 @@ class LiveHuiInferenceEngine:
 
         current_rows = self._score_current_hui(feature_rows)
         predicted_rows = self._predict_future_hui(current_rows)
-        complete_future = predicted_rows[
-            [f"predicted_hui_{horizon}h" for horizon in HORIZONS]
-        ].notna().all(axis=1)
-        model_ready_rows = predicted_rows.loc[complete_future].copy()
-        ready, diagnostics = self._latest_aligned_ready_rows(
-            model_ready_rows, diagnostics
+        complete_future = (
+            predicted_rows[[f"predicted_hui_{horizon}h" for horizon in HORIZONS]]
+            .notna()
+            .all(axis=1)
         )
+        model_ready_rows = predicted_rows.loc[complete_future].copy()
+        ready, diagnostics = self._latest_aligned_ready_rows(model_ready_rows, diagnostics)
         if ready.empty:
             raise InsufficientLiveHistoryError(
                 "The latest IoT hour does not yet have 192 contiguous, complete hourly observations. "
@@ -884,9 +838,7 @@ class LiveHuiInferenceEngine:
             )
 
         latest_lookup = self._latest_raw_lookup(latest_raw)
-        diagnostic_lookup_for_records = {
-            item["hive_id"]: item for item in diagnostics
-        }
+        diagnostic_lookup_for_records = {item["hive_id"]: item for item in diagnostics}
         latest_records: list[dict[str, Any]] = []
         for hive_id, group in ready.groupby(HIVE_COLUMN, sort=True):
             group = group.sort_values(TIMESTAMP_COLUMN)
@@ -906,9 +858,7 @@ class LiveHuiInferenceEngine:
             hrsi = self._recent_hui_stability(
                 current_rows.loc[current_rows[HIVE_COLUMN].eq(hive_id)]
             )
-            slope = self._recent_hui_slope(
-                current_rows.loc[current_rows[HIVE_COLUMN].eq(hive_id)]
-            )
+            slope = self._recent_hui_slope(current_rows.loc[current_rows[HIVE_COLUMN].eq(hive_id)])
             freshness_minutes = float("inf")
             if raw_latest is not None:
                 raw_timestamp = pd.Timestamp(raw_latest["source_timestamp_utc"])
@@ -926,7 +876,9 @@ class LiveHuiInferenceEngine:
                     "co2_ppm",
                 ):
                     completeness_values.append(pd.notna(raw_latest.get(column)))
-            completeness = 100.0 * float(np.mean(completeness_values)) if completeness_values else 0.0
+            completeness = (
+                100.0 * float(np.mean(completeness_values)) if completeness_values else 0.0
+            )
             domain_checks, domain_shift = self._sensor_domain_checks(raw_latest)
             confidence_score, confidence_label = self._confidence(
                 hrsi=hrsi,
@@ -947,18 +899,31 @@ class LiveHuiInferenceEngine:
                     "Imputed-input research prediction: "
                     f"{imputed_input_hours} missing hourly sensor buckets "
                     "inside the latest 192-hour model window were reconstructed "
-                    "through bounded linear interpolation. "
-                    + recommendation
+                    "through bounded linear interpolation. " + recommendation
                 )
 
             sensor_status = {
-                "weight_kg": _json_safe(raw_latest.get("weight_kg")) if raw_latest is not None else None,
-                "internal_temperature_c": _json_safe(raw_latest.get("temperature_c")) if raw_latest is not None else None,
-                "internal_humidity_pct": _json_safe(raw_latest.get("humidity_pct")) if raw_latest is not None else None,
-                "co2_ppm": _json_safe(raw_latest.get("co2_ppm")) if raw_latest is not None else None,
-                "external_temperature_c": _json_safe(raw_latest.get("external_temperature_c")) if raw_latest is not None else None,
-                "external_humidity_pct": _json_safe(raw_latest.get("external_humidity_pct")) if raw_latest is not None else None,
-                "battery_voltage": _json_safe(raw_latest.get("battery_voltage")) if raw_latest is not None else None,
+                "weight_kg": _json_safe(raw_latest.get("weight_kg"))
+                if raw_latest is not None
+                else None,
+                "internal_temperature_c": _json_safe(raw_latest.get("temperature_c"))
+                if raw_latest is not None
+                else None,
+                "internal_humidity_pct": _json_safe(raw_latest.get("humidity_pct"))
+                if raw_latest is not None
+                else None,
+                "co2_ppm": _json_safe(raw_latest.get("co2_ppm"))
+                if raw_latest is not None
+                else None,
+                "external_temperature_c": _json_safe(raw_latest.get("external_temperature_c"))
+                if raw_latest is not None
+                else None,
+                "external_humidity_pct": _json_safe(raw_latest.get("external_humidity_pct"))
+                if raw_latest is not None
+                else None,
+                "battery_voltage": _json_safe(raw_latest.get("battery_voltage"))
+                if raw_latest is not None
+                else None,
                 "sensor_freshness": (
                     "Fresh"
                     if freshness_minutes <= self.artifact_settings.stale_after_minutes
@@ -988,9 +953,7 @@ class LiveHuiInferenceEngine:
                 {
                     "hive_id": str(hive_id),
                     "prediction_input_mode": (
-                        "bounded_hourly_interpolation"
-                        if imputation_applied
-                        else "observed_only"
+                        "bounded_hourly_interpolation" if imputation_applied else "observed_only"
                     ),
                     "imputation_applied": imputation_applied,
                     "imputed_hourly_rows": imputed_input_hours,
@@ -1016,15 +979,11 @@ class LiveHuiInferenceEngine:
                     "current_hui": float(latest[CURRENT_HUI_COLUMN]),
                     "current_class": str(latest[CURRENT_CLASS_COLUMN]),
                     **{
-                        f"predicted_hui_{horizon}h": float(
-                            latest[f"predicted_hui_{horizon}h"]
-                        )
+                        f"predicted_hui_{horizon}h": float(latest[f"predicted_hui_{horizon}h"])
                         for horizon in HORIZONS
                     },
                     **{
-                        f"predicted_class_{horizon}h": str(
-                            latest[f"predicted_class_{horizon}h"]
-                        )
+                        f"predicted_class_{horizon}h": str(latest[f"predicted_class_{horizon}h"])
                         for horizon in HORIZONS
                     },
                     "hrsi": hrsi,
@@ -1073,9 +1032,7 @@ class LiveHuiInferenceEngine:
                     segment_start, latest_hour, inclusive="both"
                 )
             ].sort_values(TIMESTAMP_COLUMN)
-            series_parts.append(
-                hive_series.tail(self.artifact_settings.series_rows_per_hive)
-            )
+            series_parts.append(hive_series.tail(self.artifact_settings.series_rows_per_hive))
         series = (
             pd.concat(series_parts, ignore_index=True)[series_columns].copy()
             if series_parts
@@ -1104,9 +1061,7 @@ class LiveHuiInferenceEngine:
                 else "live"
             ),
             "history_reference": self.sensor_settings.history_reference,
-            "minimum_readings_per_hour": (
-                self.sensor_settings.minimum_readings_per_hour
-            ),
+            "minimum_readings_per_hour": (self.sensor_settings.minimum_readings_per_hour),
             "feature_timezone": self.sensor_settings.feature_timezone,
             "available_hives": available_hives,
             "latest_by_hive": latest_records,
@@ -1131,12 +1086,13 @@ class LiveHuiInferenceEngine:
                     os.getenv(
                         "IOT_HOURLY_INTERPOLATION_ENABLED",
                         "false",
-                    ).strip().lower()
+                    )
+                    .strip()
+                    .lower()
                     in {"1", "true", "yes", "on"}
                 ),
                 "imputed_input_prediction": any(
-                    bool(record.get("imputation_applied"))
-                    for record in latest_records
+                    bool(record.get("imputation_applied")) for record in latest_records
                 ),
                 "interpolation_max_gap_hours": int(
                     os.getenv(

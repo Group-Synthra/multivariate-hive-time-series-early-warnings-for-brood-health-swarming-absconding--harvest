@@ -213,7 +213,11 @@ class SwarmingEDA:
         frame[self.config.timestamp_column] = pd.to_datetime(
             frame[self.config.timestamp_column], errors="coerce"
         )
-        for column in (*self.config.sensor_features, self.config.event_column, self.config.target_column):
+        for column in (
+            *self.config.sensor_features,
+            self.config.event_column,
+            self.config.target_column,
+        ):
             frame[column] = pd.to_numeric(frame[column], errors="coerce")
         for column in (self.config.event_column, self.config.target_column):
             invalid = frame[column].dropna().loc[lambda values: ~values.isin([0, 1])]
@@ -241,15 +245,19 @@ class SwarmingEDA:
                 "end": end,
                 "days": int((end - start).days) if pd.notna(start) and pd.notna(end) else 0,
             },
-            "sampling_granularity": self.data.get(
-                "data_granularity", pd.Series(dtype="object")
-            ).dropna().astype(str).value_counts().to_dict(),
+            "sampling_granularity": self.data.get("data_granularity", pd.Series(dtype="object"))
+            .dropna()
+            .astype(str)
+            .value_counts()
+            .to_dict(),
             "bee_stocks": sorted(
                 self.data.get("bee_stock", pd.Series(dtype="object")).dropna().astype(str).unique()
             ),
             "apiary_contexts": sorted(
                 self.data.get("apiary_context", pd.Series(dtype="object"))
-                .dropna().astype(str).unique()
+                .dropna()
+                .astype(str)
+                .unique()
             ),
         }
 
@@ -297,9 +305,7 @@ class SwarmingEDA:
             "outliers": outliers,
             "duplicate_records": duplicate_records,
             "duplicate_hive_timestamps": duplicate_hive_times,
-            "timestamp_parse_failures": int(
-                self.data[self.config.timestamp_column].isna().sum()
-            ),
+            "timestamp_parse_failures": int(self.data[self.config.timestamp_column].isna().sum()),
         }
 
     def _distribution_statistics(self) -> dict[str, Any]:
@@ -364,9 +370,7 @@ class SwarmingEDA:
             by_hive["swarm_next_72h"] / by_hive["total_records"] * 100,
             np.nan,
         )
-        by_hive = by_hive.sort_values(
-            ["swarm_rate", "swarm_events"], ascending=False
-        )
+        by_hive = by_hive.sort_values(["swarm_rate", "swarm_events"], ascending=False)
 
         by_stock: list[dict[str, Any]] = []
         if "bee_stock" in self.data:
@@ -412,7 +416,9 @@ class SwarmingEDA:
                     "n_swarm": len(positive),
                 }
             )
-        rows.sort(key=lambda row: abs(row["pearson"]) if pd.notna(row["pearson"]) else -1, reverse=True)
+        rows.sort(
+            key=lambda row: abs(row["pearson"]) if pd.notna(row["pearson"]) else -1, reverse=True
+        )
 
         matrix_columns = [*self.config.sensor_features, self.config.target_column]
         matrix = self.data[matrix_columns].corr(method="pearson")
@@ -465,17 +471,15 @@ class SwarmingEDA:
         )
         pd.DataFrame.from_dict(
             self.results["data_quality"]["outliers"], orient="index"
-        ).rename_axis("feature").reset_index().to_csv(
-            reports / "outlier_summary.csv", index=False
-        )
+        ).rename_axis("feature").reset_index().to_csv(reports / "outlier_summary.csv", index=False)
         pd.DataFrame.from_dict(
             self.results["distribution_stats"]["numeric"], orient="index"
         ).rename_axis("feature").reset_index().to_csv(
             reports / "sensor_descriptive_statistics.csv", index=False
         )
-        pd.DataFrame(
-            self.results["correlation_analysis"]["feature_correlations"]
-        ).to_csv(reports / "swarming_association_statistics.csv", index=False)
+        pd.DataFrame(self.results["correlation_analysis"]["feature_correlations"]).to_csv(
+            reports / "swarming_association_statistics.csv", index=False
+        )
         pd.DataFrame(self.results["swarming_analysis"]["by_hive"]).to_csv(
             reports / "swarming_by_hive.csv", index=False
         )
@@ -579,7 +583,15 @@ class SwarmingEDA:
             for column in range(len(labels)):
                 value = matrix.iloc[row, column]
                 text_color = "white" if abs(value) >= 0.55 else self.CHARCOAL
-                axis.text(column, row, f"{value:.2f}", ha="center", va="center", color=text_color, fontsize=8)
+                axis.text(
+                    column,
+                    row,
+                    f"{value:.2f}",
+                    ha="center",
+                    va="center",
+                    color=text_color,
+                    fontsize=8,
+                )
         axis.set_title("Pearson correlation matrix for swarming sensor variables", pad=12)
         figure.colorbar(image, ax=axis, label="Correlation coefficient", shrink=0.82)
         figure.tight_layout()
@@ -591,15 +603,26 @@ class SwarmingEDA:
         rows = rows.sort_values("pearson")
         positions = np.arange(len(rows))
         figure, axes = plt.subplots(1, 2, figsize=(12.5, 4.8), sharey=True)
-        axes[0].barh(positions - 0.17, rows["pearson"], height=0.32, color=self.NAVY, label="Pearson")
-        axes[0].barh(positions + 0.17, rows["spearman"], height=0.32, color=self.LIGHT_SLATE, label="Spearman")
+        axes[0].barh(
+            positions - 0.17, rows["pearson"], height=0.32, color=self.NAVY, label="Pearson"
+        )
+        axes[0].barh(
+            positions + 0.17,
+            rows["spearman"],
+            height=0.32,
+            color=self.LIGHT_SLATE,
+            label="Spearman",
+        )
         axes[0].axvline(0, color=self.CHARCOAL, linewidth=0.8)
         axes[0].set_yticks(positions, rows["label"])
         axes[0].set_xlabel("Correlation coefficient")
         axes[0].set_title("Sensor association with swarm ≤72 h")
         axes[0].legend(loc="lower right")
 
-        colors = [self.BURGUNDY if value < 0 else self.NAVY for value in rows["standardized_mean_difference"]]
+        colors = [
+            self.BURGUNDY if value < 0 else self.NAVY
+            for value in rows["standardized_mean_difference"]
+        ]
         axes[1].barh(positions, rows["standardized_mean_difference"], color=colors, height=0.55)
         axes[1].axvline(0, color=self.CHARCOAL, linewidth=0.8)
         axes[1].set_xlabel("Standardized mean difference (Cohen's d)")
@@ -629,9 +652,11 @@ class SwarmingEDA:
 
     def _plot_data_quality(self) -> None:
         missing = pd.DataFrame(self.results["data_quality"]["missing_values"])
-        outliers = pd.DataFrame.from_dict(
-            self.results["data_quality"]["outliers"], orient="index"
-        ).rename_axis("feature").reset_index()
+        outliers = (
+            pd.DataFrame.from_dict(self.results["data_quality"]["outliers"], orient="index")
+            .rename_axis("feature")
+            .reset_index()
+        )
         figure, axes = plt.subplots(1, 2, figsize=(12.5, 4.6))
         missing = missing.loc[missing["column"].isin(self.config.sensor_features)]
         missing["label"] = missing["column"].map(self.config.sensor_labels)

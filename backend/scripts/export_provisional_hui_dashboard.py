@@ -12,8 +12,7 @@ from multivari.modules.harvesting.provisional_hui_regression import (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Export current and projected Provisional HUI values "
-            "for the frontend prediction tab."
+            "Export current and projected Provisional HUI values for the frontend prediction tab."
         )
     )
     parser.add_argument(

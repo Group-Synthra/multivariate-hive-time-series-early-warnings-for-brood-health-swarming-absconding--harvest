@@ -53,9 +53,7 @@ def interpolate_bounded_hourly_gaps(
         if "split" in expanded.columns:
             expanded["split"] = expanded["split"].ffill().bfill()
         if "_live_target_placeholder" in expanded.columns:
-            expanded["_live_target_placeholder"] = (
-                expanded["_live_target_placeholder"].fillna(0)
-            )
+            expanded["_live_target_placeholder"] = expanded["_live_target_placeholder"].fillna(0)
 
         expanded["is_imputed_hour"] = False
         expanded["imputed_gap_size_hours"] = 0
@@ -110,11 +108,7 @@ def interpolate_bounded_hourly_gaps(
                 )[1:-1]
                 expanded.loc[gap_index, column] = values
 
-            required_complete = (
-                expanded.loc[gap_index, required_sensor_columns]
-                .notna()
-                .all(axis=1)
-            )
+            required_complete = expanded.loc[gap_index, required_sensor_columns].notna().all(axis=1)
             completed_index = required_complete.index[required_complete]
             if len(completed_index) != gap_size:
                 rejected_runs += 1
@@ -136,9 +130,7 @@ def interpolate_bounded_hourly_gaps(
                 expanded.loc[gap_index, "readings_in_hour"] = 0
 
             count_columns = [
-                column
-                for column in expanded.columns
-                if column.endswith("_reading_count")
+                column for column in expanded.columns if column.endswith("_reading_count")
             ]
             if count_columns:
                 expanded.loc[gap_index, count_columns] = 0

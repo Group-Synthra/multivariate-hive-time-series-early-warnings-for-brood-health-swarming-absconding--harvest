@@ -12,8 +12,7 @@ from multivari.modules.harvesting.robust_weight_forecasting import (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Review robust future-weight forecasting against its "
-            "robust persistence baseline."
+            "Review robust future-weight forecasting against its robust persistence baseline."
         )
     )
     parser.add_argument("--config", default="config/harvesting.yaml")

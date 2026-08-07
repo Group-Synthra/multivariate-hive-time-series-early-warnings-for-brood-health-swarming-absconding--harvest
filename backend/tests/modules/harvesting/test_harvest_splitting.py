@@ -30,10 +30,7 @@ def test_event_aware_folds_are_chronological() -> None:
     assert len(folds) >= 1
 
     for fold in folds:
-        assert (
-            fold.train_end
-            < fold.validation_start
-        )
+        assert fold.train_end < fold.validation_start
         assert fold.training_events >= 12
         assert fold.validation_events <= 6
 
@@ -41,11 +38,7 @@ def test_event_aware_folds_are_chronological() -> None:
 def test_only_official_training_events_are_used() -> None:
     events = pd.DataFrame(
         {
-            "split": (
-                ["train"] * 24
-                + ["validation"] * 3
-                + ["test"] * 2
-            ),
+            "split": (["train"] * 24 + ["validation"] * 3 + ["test"] * 2),
             "event_start": pd.date_range(
                 "2024-01-01",
                 periods=29,
@@ -66,7 +59,4 @@ def test_only_official_training_events_are_used() -> None:
     frame = folds_to_frame(folds)
 
     assert not frame.empty
-    assert (
-        frame["training_events"].max()
-        <= 24
-    )
+    assert frame["training_events"].max() <= 24

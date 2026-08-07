@@ -11,18 +11,12 @@ from multivari.modules.harvesting.label_audit import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Audit temporal alignment and sensor quality "
-            "of generated harvest markers."
-        )
+        description=("Audit temporal alignment and sensor quality of generated harvest markers.")
     )
     parser.add_argument(
         "--config",
         default="config/harvesting.yaml",
-        help=(
-            "Path relative to backend, "
-            "or an absolute YAML path."
-        ),
+        help=("Path relative to backend, or an absolute YAML path."),
     )
     return parser.parse_args()
 

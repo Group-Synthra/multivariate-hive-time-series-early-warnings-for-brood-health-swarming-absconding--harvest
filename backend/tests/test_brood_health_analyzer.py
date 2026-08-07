@@ -17,14 +17,16 @@ def test_health_level_boundaries():
 
 
 def test_condition_history_stays_in_range():
-    frame = pd.DataFrame({
-        "hive_id": ["h1"] * 12,
-        "timestamp": pd.date_range("2026-01-01", periods=12, freq="h"),
-        "temperature_c": [35.0] * 12,
-        "humidity_pct": [65.0] * 12,
-        "co2_ppm": [2500.0] * 12,
-        "weight_kg": [30.0] * 12,
-    })
+    frame = pd.DataFrame(
+        {
+            "hive_id": ["h1"] * 12,
+            "timestamp": pd.date_range("2026-01-01", periods=12, freq="h"),
+            "temperature_c": [35.0] * 12,
+            "humidity_pct": [65.0] * 12,
+            "co2_ppm": [2500.0] * 12,
+            "weight_kg": [30.0] * 12,
+        }
+    )
     result = compute_condition_history(frame)
     assert result["condition_score"].between(0, 100).all()
     assert result["bhsi"].between(0, 100).all()

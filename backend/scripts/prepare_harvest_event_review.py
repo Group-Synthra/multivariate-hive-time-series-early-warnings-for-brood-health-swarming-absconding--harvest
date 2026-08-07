@@ -10,9 +10,7 @@ from multivari.modules.harvesting.review import (
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Create the manual harvest-event review sheet."
-    )
+    parser = argparse.ArgumentParser(description="Create the manual harvest-event review sheet.")
     parser.add_argument(
         "--config",
         default="config/harvesting.yaml",

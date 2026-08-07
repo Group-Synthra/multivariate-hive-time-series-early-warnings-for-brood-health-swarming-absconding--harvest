@@ -11,18 +11,13 @@ from multivari.modules.harvesting.dataset import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Build the harvesting 72-hour modelling dataset."
-        )
+        description=("Build the harvesting 72-hour modelling dataset.")
     )
 
     parser.add_argument(
         "--config",
         default="config/harvesting.yaml",
-        help=(
-            "Path relative to backend, "
-            "or an absolute YAML path."
-        ),
+        help=("Path relative to backend, or an absolute YAML path."),
     )
 
     return parser.parse_args()
@@ -31,9 +26,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    backend_root = Path(
-        __file__
-    ).resolve().parents[1]
+    backend_root = Path(__file__).resolve().parents[1]
 
     audit = build_harvest_modelling_dataset(
         backend_root=backend_root,

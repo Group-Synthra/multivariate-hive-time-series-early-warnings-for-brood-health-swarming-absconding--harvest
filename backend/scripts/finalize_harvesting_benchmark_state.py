@@ -42,49 +42,22 @@ def main() -> None:
     backend_root = Path(__file__).resolve().parents[1]
     config_path = backend_root / arguments.config
 
-    report_root = (
-        backend_root
-        / "artifacts"
-        / "reports"
-        / "harvesting"
-        / "reviewed"
-    )
+    report_root = backend_root / "artifacts" / "reports" / "harvesting" / "reviewed"
 
-    alert_gate_path = (
-        report_root
-        / "alert_policy_gate"
-        / "research_gate_summary.json"
-    )
-    robust_gate_path = (
-        report_root
-        / "robust_weight_forecasting"
-        / "forecasting_research_gate.json"
-    )
+    alert_gate_path = report_root / "alert_policy_gate" / "research_gate_summary.json"
+    robust_gate_path = report_root / "robust_weight_forecasting" / "forecasting_research_gate.json"
     robust_summary_path = (
-        report_root
-        / "robust_weight_forecasting"
-        / "robust_weight_forecasting_summary.json"
+        report_root / "robust_weight_forecasting" / "robust_weight_forecasting_summary.json"
     )
-    classification_path = (
-        report_root
-        / "research_models"
-        / "selected_model_metrics.json"
-    )
+    classification_path = report_root / "research_models" / "selected_model_metrics.json"
 
     alert_gate = _read_json(alert_gate_path)
     robust_gate = _read_json(robust_gate_path)
     robust_summary = _read_json(robust_summary_path)
     classification = _read_json(classification_path)
 
-    classification_ready = (
-        alert_gate.get("ready_for_calibration") is True
-    )
-    forecasting_ready = (
-        robust_gate.get(
-            "ready_for_readiness_prototype"
-        )
-        is True
-    )
+    classification_ready = alert_gate.get("ready_for_calibration") is True
+    forecasting_ready = robust_gate.get("ready_for_readiness_prototype") is True
 
     if classification_ready or forecasting_ready:
         raise RuntimeError(
@@ -109,12 +82,8 @@ def main() -> None:
         "classification_branch": {
             "gate_status": alert_gate["status"],
             "ready_for_calibration": classification_ready,
-            "selected_model": classification.get(
-                "selected_model"
-            ),
-            "selected_feature_set": classification.get(
-                "selected_feature_set"
-            ),
+            "selected_model": classification.get("selected_model"),
+            "selected_feature_set": classification.get("selected_feature_set"),
             "decision": (
                 "Retain the probable-harvest classifier as a "
                 "benchmark experiment. No research-safe temporal "
@@ -124,12 +93,8 @@ def main() -> None:
         "robust_forecasting_branch": {
             "gate_status": robust_gate["status"],
             "ready_for_readiness_prototype": forecasting_ready,
-            "improved_horizon_count": int(
-                robust_gate["improved_horizon_count"]
-            ),
-            "required_improved_horizons": int(
-                robust_gate["required_improved_horizons"]
-            ),
+            "improved_horizon_count": int(robust_gate["improved_horizon_count"]),
+            "required_improved_horizons": int(robust_gate["required_improved_horizons"]),
             "horizons": robust_gate["horizons"],
             "decision": (
                 "Do not construct a harvest-readiness score. "
@@ -137,30 +102,16 @@ def main() -> None:
             ),
         },
         "exploratory_24h_forecast": {
-            "allowed_for_research_display": bool(
-                horizon_24["horizon_passed"]
-            ),
+            "allowed_for_research_display": bool(horizon_24["horizon_passed"]),
             "model": horizon_24["selected_model"],
-            "feature_set": horizon_24[
-                "selected_feature_set"
-            ],
-            "persistence_validation_mae": horizon_24[
-                "persistence_validation_mae"
-            ],
-            "validation_mae": horizon_24[
-                "selected_validation_mae"
-            ],
-            "test_mae": horizon_24[
-                "selected_test_mae"
-            ],
+            "feature_set": horizon_24["selected_feature_set"],
+            "persistence_validation_mae": horizon_24["persistence_validation_mae"],
+            "validation_mae": horizon_24["selected_validation_mae"],
+            "test_mae": horizon_24["selected_test_mae"],
             "validation_mae_improvement_fraction": (
-                horizon_24[
-                    "validation_mae_improvement_fraction"
-                ]
+                horizon_24["validation_mae_improvement_fraction"]
             ),
-            "test_to_validation_mae_ratio": horizon_24[
-                "test_to_validation_mae_ratio"
-            ],
+            "test_to_validation_mae_ratio": horizon_24["test_to_validation_mae_ratio"],
             "restriction": (
                 "Display only as an exploratory hive-weight "
                 "forecast. It must not be translated into harvest "
@@ -168,18 +119,10 @@ def main() -> None:
             ),
         },
         "longer_horizon_findings": {
-            "48h_selected_model": horizon_48[
-                "selected_model"
-            ],
-            "72h_selected_model": horizon_72[
-                "selected_model"
-            ],
-            "48h_improvement_passed": bool(
-                horizon_48["improvement_passed"]
-            ),
-            "72h_improvement_passed": bool(
-                horizon_72["improvement_passed"]
-            ),
+            "48h_selected_model": horizon_48["selected_model"],
+            "72h_selected_model": horizon_72["selected_model"],
+            "48h_improvement_passed": bool(horizon_48["improvement_passed"]),
+            "72h_improvement_passed": bool(horizon_72["improvement_passed"]),
         },
         "approved_dashboard_sections": [
             "Reviewed exploratory analysis",
@@ -211,26 +154,16 @@ def main() -> None:
         ),
         "source_artifacts": {
             "alert_gate": str(alert_gate_path),
-            "robust_forecasting_gate": str(
-                robust_gate_path
-            ),
-            "robust_forecasting_summary": str(
-                robust_summary_path
-            ),
+            "robust_forecasting_gate": str(robust_gate_path),
+            "robust_forecasting_summary": str(robust_summary_path),
         },
-        "robust_target_definition": robust_summary[
-            "target_definition"
-        ],
+        "robust_target_definition": robust_summary["target_definition"],
     }
 
-    decision_path = (
-        report_root / "final_research_decision.json"
-    )
+    decision_path = report_root / "final_research_decision.json"
     _write_json(decision_path, decision)
 
-    config = yaml.safe_load(
-        config_path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     config["harvesting_research_status"] = {
         "status": "benchmark_only",
         "readiness_enabled": False,
@@ -239,13 +172,8 @@ def main() -> None:
         "hrsi_enabled": False,
         "hrroc_enabled": False,
         "live_recommendation_enabled": False,
-        "exploratory_24h_forecast_enabled": bool(
-            horizon_24["horizon_passed"]
-        ),
-        "decision_path": (
-            "artifacts/reports/harvesting/reviewed/"
-            "final_research_decision.json"
-        ),
+        "exploratory_24h_forecast_enabled": bool(horizon_24["horizon_passed"]),
+        "decision_path": ("artifacts/reports/harvesting/reviewed/final_research_decision.json"),
     }
     config_path.write_text(
         yaml.safe_dump(
@@ -262,9 +190,7 @@ def main() -> None:
                 "status": "finalized",
                 "research_status": "benchmark_only",
                 "operational_readiness_enabled": False,
-                "exploratory_24h_forecast_enabled": bool(
-                    horizon_24["horizon_passed"]
-                ),
+                "exploratory_24h_forecast_enabled": bool(horizon_24["horizon_passed"]),
                 "decision_path": str(decision_path),
             },
             indent=2,
