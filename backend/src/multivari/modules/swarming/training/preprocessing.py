@@ -4,7 +4,7 @@ Honey Bee Swarming Prediction
 Preprocessing Module
 =========================================================
 
-Author : Your Name
+ 
 Project : Honey Bee Swarming Prediction Dashboard
 
 Purpose:

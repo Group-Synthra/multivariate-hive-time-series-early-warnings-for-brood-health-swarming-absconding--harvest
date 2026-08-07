@@ -212,7 +212,7 @@ print(f"  Class 1 (Swarming): {class_1:,} ({class_1 / len(y_sequences) * 100:.2f
 
 if class_1 == 0:
     print("\n  ❌ CRITICAL: No swarming events in sequences!")
-    print("     Check your data or window size.")
+    print("     Check  data or window size.")
     sys.exit()
 
 # =====================================================

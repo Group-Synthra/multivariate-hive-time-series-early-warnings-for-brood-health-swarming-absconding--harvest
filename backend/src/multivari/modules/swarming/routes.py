@@ -32,6 +32,7 @@ import pandas as pd
 from flask import Blueprint, jsonify, request, send_from_directory
 from sqlalchemy import text
 
+from .history_backfill import backfill_missing_risks
 from .iot.database import get_engine
 from .risk_history_json import get_risk_history, save_risk_prediction
 
@@ -258,8 +259,9 @@ def predict_from_iot():
         limit = int(request.args.get("limit", 432))
     except ValueError:
         return jsonify({"error": "limit must be an integer"}), 400
-    # 144 ten-minute samples cover the 24 hours required by the LSTM.
-    limit = min(max(limit, 144), 5000)
+    # Backfilling a complete 24-hour chart needs 24 hours of model context
+    # before the first chart point, so fetch at least 288 ten-minute rows.
+    limit = min(max(limit, 288), 5000)
 
     # ── Load DB settings from env ─────────────────────────────
     SCHEMA = os.getenv("IOT_SCHEMA", "public")
@@ -428,6 +430,32 @@ def predict_from_iot():
         except (OSError, TypeError, ValueError):
             logger.exception(
                 "Could not save swarming risk history for device %s",
+                device_id,
+            )
+
+        # Recover prediction points missed while the local backend was closed.
+        # The helper skips timestamps that are already stored.
+        backfill_summary = {
+            "candidates": 0,
+            "created": 0,
+            "skipped": 0,
+            "failed": 0,
+        }
+        try:
+            backfill_summary = backfill_missing_risks(
+                device_id=device_id,
+                frame=df,
+                predictor=predictor,
+                risk_classifier=risk_classifier,
+            )
+            logger.info(
+                "Risk backfill for %s: %s",
+                device_id,
+                backfill_summary,
+            )
+        except Exception:
+            logger.exception(
+                "Could not backfill swarming risk history for device %s",
                 device_id,
             )
 
@@ -660,6 +688,7 @@ def predict_from_iot():
             "recommendations": prediction.get("recommendations", []),
             "softmax_probabilities": prediction.get("softmax_probabilities", {}),
             "formula_used": prediction.get("formula_used", ""),
+            "backfill": backfill_summary,
         }
 
         return jsonify(response), 200

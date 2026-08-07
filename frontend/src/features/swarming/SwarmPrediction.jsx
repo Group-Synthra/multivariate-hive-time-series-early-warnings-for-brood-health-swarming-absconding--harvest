@@ -59,8 +59,8 @@ const TREND_SENSORS = [
   { key: "battery_voltage", label: "Battery Voltage", unit: "V", color: "#16a34a", icon: "🔋" },
 ];
 
-const RISK_THRESHOLD = 70;
-const MEDIUM_THRESHOLD = 35;
+const RISK_THRESHOLD = 60;
+const MEDIUM_THRESHOLD = 30;
 
 // ─────────────────────────────────────────────────────────────────────
 // Sub-components
@@ -1940,7 +1940,7 @@ const SwarmPrediction = () => {
         boxShadow: "0 6px 18px rgba(37,99,235,0.08)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-          <span style={{ fontSize: "1.6rem" }}>🐝</span>
+          <span style={{ fontSize: "1.6rem" }}></span>
           <h2 style={{ margin: 0, fontSize: "1.4rem", fontFamily: "'Outfit',sans-serif",
             color: "#1d4ed8" }}>
             Live Swarming Prediction
@@ -2000,7 +2000,7 @@ const SwarmPrediction = () => {
             boxShadow: "0 5px 16px rgba(37,99,235,0.06)",
           }}>
             <h3 style={{ margin: "0 0 12px", fontSize: "0.95rem", color: "#2563eb" }}>
-              🏠 Hive Selection & Control
+              Hive Selection & Control
             </h3>
             <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
               <select
@@ -2200,7 +2200,7 @@ const SwarmPrediction = () => {
 
           {/* Result card */}
           <div style={{
-            background: showPrediction ? riskCfg.bg : "#1e293b",
+            background: showPrediction ? riskCfg.bg : "#ffffff",
             border: `2px solid ${showPrediction ? riskCfg.border : "#dbe4f0"}`,
             borderRadius: "16px", padding: "22px 18px",
             display: "flex", flexDirection: "column", alignItems: "center", gap: "16px",
@@ -2221,7 +2221,7 @@ const SwarmPrediction = () => {
 
             {!loading && !result && !error && (
               <div style={{ padding: "30px 0", textAlign: "center" }}>
-                <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}>🐝</div>
+                <div style={{ fontSize: "2.5rem", marginBottom: "8px" }}></div>
                 <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
                   Select a hive to load live prediction…
                 </div>

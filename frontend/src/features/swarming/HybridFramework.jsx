@@ -2,6 +2,7 @@ import React from "react";
 
 const STEPS = [
   { label: "Raw Sensor Data", icon: "📡" },
+  { label: "Preprocessing", icon: "⚙️" },
   { label: "PELT Change Detection", icon: "📍" },
   { label: "Feature Engineering", icon: "⚙️" },
   { label: "RF · XGB · LSTM", icon: "🧠" },

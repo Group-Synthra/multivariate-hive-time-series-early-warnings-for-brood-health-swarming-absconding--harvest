@@ -179,7 +179,7 @@ function PeltCard({ data }) {
 }
 
 // ============================================================
-// Metric Card Component (With RMSE, MAE, R²)
+// Metric Card Component
 // ============================================================
 function MetricCard({ title, metrics, isBest }) {
     if (!metrics) return null;
@@ -194,7 +194,6 @@ function MetricCard({ title, metrics, isBest }) {
         if (type === "f1") return value >= 0.70 ? "#22c55e" : value >= 0.40 ? "#eab308" : "#ef4444";
         if (type === "rmse") return value <= 0.30 ? "#22c55e" : value <= 0.50 ? "#eab308" : "#ef4444";
         if (type === "mae") return value <= 0.15 ? "#22c55e" : value <= 0.30 ? "#eab308" : "#ef4444";
-        if (type === "r2") return value >= 0.80 ? "#22c55e" : value >= 0.60 ? "#eab308" : "#ef4444";
         return "#22c55e";
     };
 
@@ -204,7 +203,6 @@ function MetricCard({ title, metrics, isBest }) {
     const f1 = metrics["F1-Score"] || 0;
     const rmse = metrics.RMSE || metrics.rmse || null;
     const mae = metrics.MAE || metrics.mae || null;
-    const r2 = metrics.R2 || metrics.r2 || metrics["R²"] || null;
 
     return (
         <div
@@ -323,24 +321,6 @@ function MetricCard({ title, metrics, isBest }) {
                     <span>MAE ↓</span>
                     <strong style={{ color: getColor(mae, "mae"), fontSize: "15px" }}>
                         {mae.toFixed(4)}
-                    </strong>
-                </div>
-            )}
-
-            {/* R² ↑ - Regression Metric */}
-            {r2 !== null && r2 !== undefined && (
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        padding: "6px 0",
-                        borderBottom: "none",
-                        fontSize: "14px",
-                    }}
-                >
-                    <span>R² ↑</span>
-                    <strong style={{ color: getColor(r2, "r2"), fontSize: "15px" }}>
-                        {r2.toFixed(4)}
                     </strong>
                 </div>
             )}
@@ -501,11 +481,6 @@ function SwarmTraining() {
                     {data.best_model.RMSE && (
                         <span style={{ color: "#64748b", fontSize: "12px", marginLeft: "12px" }}>
                             RMSE: {data.best_model.RMSE.toFixed(4)}
-                        </span>
-                    )}
-                    {data.best_model.R2 && (
-                        <span style={{ color: "#64748b", fontSize: "12px", marginLeft: "12px" }}>
-                            R²: {data.best_model.R2.toFixed(4)}
                         </span>
                     )}
                 </p> */}
@@ -669,20 +644,11 @@ function SwarmTraining() {
                             </strong>
                         </div>
                     )}
-                    {data.best_model.R2 && (
-                        <div>
-                            <span style={{ color: "#64748b", fontSize: "12px" }}>R² ↑</span>
-                            <br />
-                            <strong style={{ color: "#22c55e", fontSize: "17px" }}>
-                                {data.best_model.R2.toFixed(4)}
-                            </strong>
-                        </div>
-                    )}
                 </div>
             </div>
 
             {/* ============================================================
-                MODEL COMPARISON TABLE (With RMSE, MAE, R²)
+                MODEL COMPARISON TABLE
             ============================================================ */}
             <div style={{ marginTop: "28px" }}>
                 <h2 style={{ marginBottom: "14px", fontSize: "17px" }}>
@@ -701,9 +667,6 @@ function SwarmTraining() {
                             )}
                             {data.comparison[0]?.MAE && (
                                 <th style={thStyle}>MAE ↓</th>
-                            )}
-                            {data.comparison[0]?.R2 && (
-                                <th style={thStyle}>R² ↑</th>
                             )}
                             {data.comparison[0]?.ROC_AUC && (
                                 <th style={thStyle}>ROC-AUC</th>
@@ -744,9 +707,6 @@ function SwarmTraining() {
                                     )}
                                     {row.MAE && (
                                         <td style={tdStyle}>{row.MAE.toFixed(4)}</td>
-                                    )}
-                                    {row.R2 && (
-                                        <td style={tdStyle}>{row.R2.toFixed(4)}</td>
                                     )}
                                     {row.ROC_AUC && (
                                         <td style={tdStyle}>
