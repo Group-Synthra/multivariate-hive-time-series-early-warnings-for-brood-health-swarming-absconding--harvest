@@ -6,11 +6,11 @@ from pathlib import Path
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-from multivari.modules.brood_health.routes import create_brood_health_blueprint
-from multivari.modules.brood_health.service import BroodHealthService
 from multivari.modules.absconding.iot_monitor import AbscondingIotMonitor
 from multivari.modules.absconding.routes import create_absconding_blueprint
 from multivari.modules.absconding.service import AbscondingService
+from multivari.modules.brood_health.routes import create_brood_health_blueprint
+from multivari.modules.brood_health.service import BroodHealthService
 
 from .eda_service import EDAService
 from .routes import create_api_blueprint
