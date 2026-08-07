@@ -1,0 +1,602 @@
+[
+  {
+    "harvest_event_id": "hive19-I_harvest_001",
+    "hive_id": "hive19-I",
+    "split": "test",
+    "event_start": "2023-01-31 08:00:00",
+    "lead_hours": 72,
+    "sample_time": "2023-01-28 08:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive19-I_harvest_001",
+    "hive_id": "hive19-I",
+    "split": "test",
+    "event_start": "2023-01-31 08:00:00",
+    "lead_hours": 48,
+    "sample_time": "2023-01-29 08:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive19-I_harvest_001",
+    "hive_id": "hive19-I",
+    "split": "test",
+    "event_start": "2023-01-31 08:00:00",
+    "lead_hours": 24,
+    "sample_time": "2023-01-30 08:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive19-I_harvest_001",
+    "hive_id": "hive19-I",
+    "split": "test",
+    "event_start": "2023-01-31 08:00:00",
+    "lead_hours": 6,
+    "sample_time": "2023-01-31 02:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive19-I_harvest_001",
+    "hive_id": "hive19-I",
+    "split": "test",
+    "event_start": "2023-01-31 08:00:00",
+    "lead_hours": 1,
+    "sample_time": "2023-01-31 07:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive23-R_harvest_001",
+    "hive_id": "hive23-R",
+    "split": "validation",
+    "event_start": "2022-12-09 12:00:00",
+    "lead_hours": 72,
+    "sample_time": "2022-12-06 12:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive23-R_harvest_001",
+    "hive_id": "hive23-R",
+    "split": "validation",
+    "event_start": "2022-12-09 12:00:00",
+    "lead_hours": 48,
+    "sample_time": "2022-12-07 12:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive23-R_harvest_001",
+    "hive_id": "hive23-R",
+    "split": "validation",
+    "event_start": "2022-12-09 12:00:00",
+    "lead_hours": 24,
+    "sample_time": "2022-12-08 12:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive23-R_harvest_001",
+    "hive_id": "hive23-R",
+    "split": "validation",
+    "event_start": "2022-12-09 12:00:00",
+    "lead_hours": 6,
+    "sample_time": "2022-12-09 06:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive23-R_harvest_001",
+    "hive_id": "hive23-R",
+    "split": "validation",
+    "event_start": "2022-12-09 12:00:00",
+    "lead_hours": 1,
+    "sample_time": "2022-12-09 11:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive23-R_harvest_002",
+    "hive_id": "hive23-R",
+    "split": "validation",
+    "event_start": "2022-12-21 13:00:00",
+    "lead_hours": 72,
+    "sample_time": "2022-12-18 13:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive23-R_harvest_002",
+    "hive_id": "hive23-R",
+    "split": "validation",
+    "event_start": "2022-12-21 13:00:00",
+    "lead_hours": 48,
+    "sample_time": "2022-12-19 13:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive23-R_harvest_002",
+    "hive_id": "hive23-R",
+    "split": "validation",
+    "event_start": "2022-12-21 13:00:00",
+    "lead_hours": 24,
+    "sample_time": "2022-12-20 13:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive23-R_harvest_002",
+    "hive_id": "hive23-R",
+    "split": "validation",
+    "event_start": "2022-12-21 13:00:00",
+    "lead_hours": 6,
+    "sample_time": "2022-12-21 07:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive23-R_harvest_002",
+    "hive_id": "hive23-R",
+    "split": "validation",
+    "event_start": "2022-12-21 13:00:00",
+    "lead_hours": 1,
+    "sample_time": "2022-12-21 12:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive46_harvest_001",
+    "hive_id": "hive46",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 72,
+    "sample_time": "2021-08-09 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive46_harvest_001",
+    "hive_id": "hive46",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 48,
+    "sample_time": "2021-08-10 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive46_harvest_001",
+    "hive_id": "hive46",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 24,
+    "sample_time": "2021-08-11 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive46_harvest_001",
+    "hive_id": "hive46",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 6,
+    "sample_time": "2021-08-12 08:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive46_harvest_001",
+    "hive_id": "hive46",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 1,
+    "sample_time": "2021-08-12 13:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive49_harvest_001",
+    "hive_id": "hive49",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 72,
+    "sample_time": "2021-08-09 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive49_harvest_001",
+    "hive_id": "hive49",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 48,
+    "sample_time": "2021-08-10 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive49_harvest_001",
+    "hive_id": "hive49",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 24,
+    "sample_time": "2021-08-11 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive49_harvest_001",
+    "hive_id": "hive49",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 6,
+    "sample_time": "2021-08-12 08:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive49_harvest_001",
+    "hive_id": "hive49",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 1,
+    "sample_time": "2021-08-12 13:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive50_harvest_001",
+    "hive_id": "hive50",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 72,
+    "sample_time": "2021-08-09 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive50_harvest_001",
+    "hive_id": "hive50",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 48,
+    "sample_time": "2021-08-10 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive50_harvest_001",
+    "hive_id": "hive50",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 24,
+    "sample_time": "2021-08-11 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive50_harvest_001",
+    "hive_id": "hive50",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 6,
+    "sample_time": "2021-08-12 08:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive50_harvest_001",
+    "hive_id": "hive50",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 1,
+    "sample_time": "2021-08-12 13:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive52_harvest_001",
+    "hive_id": "hive52",
+    "split": "train",
+    "event_start": "2021-07-20 10:00:00",
+    "lead_hours": 72,
+    "sample_time": "2021-07-17 10:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive52_harvest_001",
+    "hive_id": "hive52",
+    "split": "train",
+    "event_start": "2021-07-20 10:00:00",
+    "lead_hours": 48,
+    "sample_time": "2021-07-18 10:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive52_harvest_001",
+    "hive_id": "hive52",
+    "split": "train",
+    "event_start": "2021-07-20 10:00:00",
+    "lead_hours": 24,
+    "sample_time": "2021-07-19 10:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive52_harvest_001",
+    "hive_id": "hive52",
+    "split": "train",
+    "event_start": "2021-07-20 10:00:00",
+    "lead_hours": 6,
+    "sample_time": "2021-07-20 04:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive52_harvest_001",
+    "hive_id": "hive52",
+    "split": "train",
+    "event_start": "2021-07-20 10:00:00",
+    "lead_hours": 1,
+    "sample_time": "2021-07-20 09:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive52_harvest_002",
+    "hive_id": "hive52",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 72,
+    "sample_time": "2021-08-09 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive52_harvest_002",
+    "hive_id": "hive52",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 48,
+    "sample_time": "2021-08-10 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive52_harvest_002",
+    "hive_id": "hive52",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 24,
+    "sample_time": "2021-08-11 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive52_harvest_002",
+    "hive_id": "hive52",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 6,
+    "sample_time": "2021-08-12 08:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive52_harvest_002",
+    "hive_id": "hive52",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 1,
+    "sample_time": "2021-08-12 13:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive53_harvest_001",
+    "hive_id": "hive53",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 72,
+    "sample_time": "2021-08-09 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive53_harvest_001",
+    "hive_id": "hive53",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 48,
+    "sample_time": "2021-08-10 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive53_harvest_001",
+    "hive_id": "hive53",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 24,
+    "sample_time": "2021-08-11 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive53_harvest_001",
+    "hive_id": "hive53",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 6,
+    "sample_time": "2021-08-12 08:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive53_harvest_001",
+    "hive_id": "hive53",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 1,
+    "sample_time": "2021-08-12 13:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive54_harvest_001",
+    "hive_id": "hive54",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 72,
+    "sample_time": "2021-08-09 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive54_harvest_001",
+    "hive_id": "hive54",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 48,
+    "sample_time": "2021-08-10 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive54_harvest_001",
+    "hive_id": "hive54",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 24,
+    "sample_time": "2021-08-11 14:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive54_harvest_001",
+    "hive_id": "hive54",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 6,
+    "sample_time": "2021-08-12 08:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive54_harvest_001",
+    "hive_id": "hive54",
+    "split": "train",
+    "event_start": "2021-08-12 14:00:00",
+    "lead_hours": 1,
+    "sample_time": "2021-08-12 13:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive57_harvest_001",
+    "hive_id": "hive57",
+    "split": "train",
+    "event_start": "2021-08-12 12:00:00",
+    "lead_hours": 72,
+    "sample_time": "2021-08-09 12:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive57_harvest_001",
+    "hive_id": "hive57",
+    "split": "train",
+    "event_start": "2021-08-12 12:00:00",
+    "lead_hours": 48,
+    "sample_time": "2021-08-10 12:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive57_harvest_001",
+    "hive_id": "hive57",
+    "split": "train",
+    "event_start": "2021-08-12 12:00:00",
+    "lead_hours": 24,
+    "sample_time": "2021-08-11 12:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive57_harvest_001",
+    "hive_id": "hive57",
+    "split": "train",
+    "event_start": "2021-08-12 12:00:00",
+    "lead_hours": 6,
+    "sample_time": "2021-08-12 06:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive57_harvest_001",
+    "hive_id": "hive57",
+    "split": "train",
+    "event_start": "2021-08-12 12:00:00",
+    "lead_hours": 1,
+    "sample_time": "2021-08-12 11:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive58_harvest_001",
+    "hive_id": "hive58",
+    "split": "train",
+    "event_start": "2021-08-12 12:00:00",
+    "lead_hours": 72,
+    "sample_time": "2021-08-09 12:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive58_harvest_001",
+    "hive_id": "hive58",
+    "split": "train",
+    "event_start": "2021-08-12 12:00:00",
+    "lead_hours": 48,
+    "sample_time": "2021-08-10 12:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive58_harvest_001",
+    "hive_id": "hive58",
+    "split": "train",
+    "event_start": "2021-08-12 12:00:00",
+    "lead_hours": 24,
+    "sample_time": "2021-08-11 12:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive58_harvest_001",
+    "hive_id": "hive58",
+    "split": "train",
+    "event_start": "2021-08-12 12:00:00",
+    "lead_hours": 6,
+    "sample_time": "2021-08-12 06:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  },
+  {
+    "harvest_event_id": "hive58_harvest_001",
+    "hive_id": "hive58",
+    "split": "train",
+    "event_start": "2021-08-12 12:00:00",
+    "lead_hours": 1,
+    "sample_time": "2021-08-12 11:00:00",
+    "event_sample_available": true,
+    "control_sample_available": true
+  }
+]

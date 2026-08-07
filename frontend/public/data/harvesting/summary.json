@@ -1,0 +1,124 @@
+{
+  "generated_at": "2026-08-04T20:19:47.039349+00:00",
+  "target": {
+    "horizon_hours": 72,
+    "reviewed_event_count": 12,
+    "reviewed_positive_hives": 10,
+    "final_modelling_rows": 293464,
+    "target_positive_rows": 864,
+    "target_negative_rows": 292600,
+    "target_positive_rate": 0.0029441430635444212,
+    "events_by_split": {
+      "test": 1,
+      "train": 9,
+      "validation": 2
+    },
+    "split_balance": [
+      {
+        "split": "test",
+        "negative_rows": 39683,
+        "positive_rows": 72,
+        "total_rows": 39755,
+        "positive_rate": 0.0018110929442837378
+      },
+      {
+        "split": "train",
+        "negative_rows": 213376,
+        "positive_rows": 648,
+        "total_rows": 214024,
+        "positive_rate": 0.0030276978282809406
+      },
+      {
+        "split": "validation",
+        "negative_rows": 39541,
+        "positive_rows": 144,
+        "total_rows": 39685,
+        "positive_rate": 0.0036285750283482424
+      }
+    ]
+  },
+  "features": {
+    "history_rows": 311044,
+    "source_rows": 293464,
+    "output_rows": 285448,
+    "feature_count": 63,
+    "minimum_history_hours": 168,
+    "contiguous_segment_count": 48,
+    "detected_non_hourly_gaps": 0,
+    "source_positive_rows": 864,
+    "output_positive_rows": 864,
+    "positive_rows_removed": 0,
+    "output_positive_rate": 0.003026820997169362,
+    "leakage_columns_present": [],
+    "history_policy": "Features are calculated from the complete cleaned sensor timeline and then joined to approved modelling rows. Purged rows are excluded as samples but remain available as past sensor history, matching live inference."
+  },
+  "eda": {
+    "reviewed_event_count": 12,
+    "expected_event_lead_samples": 60,
+    "available_event_lead_samples": 60,
+    "available_matched_controls": 60,
+    "missing_event_lead_samples": 0,
+    "missing_controls": 0,
+    "lead_hours": [
+      72,
+      48,
+      24,
+      6,
+      1
+    ],
+    "control_exclusion_hours": 168,
+    "figure_count": 5,
+    "figures": [
+      {
+        "lead_hours": 1,
+        "filename": "top_features_lead_1h.png",
+        "url": "/data/harvesting/figures/top_features_lead_1h.png"
+      },
+      {
+        "lead_hours": 24,
+        "filename": "top_features_lead_24h.png",
+        "url": "/data/harvesting/figures/top_features_lead_24h.png"
+      },
+      {
+        "lead_hours": 48,
+        "filename": "top_features_lead_48h.png",
+        "url": "/data/harvesting/figures/top_features_lead_48h.png"
+      },
+      {
+        "lead_hours": 6,
+        "filename": "top_features_lead_6h.png",
+        "url": "/data/harvesting/figures/top_features_lead_6h.png"
+      },
+      {
+        "lead_hours": 72,
+        "filename": "top_features_lead_72h.png",
+        "url": "/data/harvesting/figures/top_features_lead_72h.png"
+      }
+    ]
+  },
+  "grouped_validation": {
+    "status": "created",
+    "fold_count": 8,
+    "positive_training_hive_count": 8,
+    "positive_training_hives": [
+      "hive46",
+      "hive49",
+      "hive50",
+      "hive52",
+      "hive53",
+      "hive54",
+      "hive57",
+      "hive58"
+    ],
+    "training_event_count": 9,
+    "minimum_training_positive_hives": 4,
+    "primary_evaluation": "Official chronological validation with 2 events and a one-event final test case study.",
+    "secondary_evaluation": "Leave-one-positive-hive-out sensitivity analysis inside the official training split.",
+    "warning": "These grouped folds are secondary only. They do not replace chronological validation because many training events share the same date."
+  },
+  "limitations": [
+    "The analysis uses 12 manually reviewed probable harvest events, not beekeeper-confirmed ground truth.",
+    "Feature differences are exploratory and must not be interpreted as confirmatory statistical evidence.",
+    "The official test split contains one event and should be reported as a case study."
+  ]
+}

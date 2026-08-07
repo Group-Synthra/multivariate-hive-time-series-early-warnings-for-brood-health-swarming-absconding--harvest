@@ -1,0 +1,76 @@
+.exploratory-forecast-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.forecast-research-warning {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #fde68a;
+  border-left: 4px solid #d97706;
+  border-radius: 12px;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.forecast-research-warning p {
+  margin: 0.25rem 0 0;
+  line-height: 1.5;
+}
+
+.forecast-tab-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.forecast-tab-header h2 {
+  margin: 0.25rem 0 0;
+  color: var(--navy);
+}
+
+.forecast-tab-header label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.forecast-tab-header select {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  color: var(--navy);
+}
+
+.forecast-chart {
+  width: 100%;
+  height: 440px;
+}
+
+.forecast-prospective-note {
+  margin: 0;
+  color: #475569;
+  line-height: 1.65;
+}
+
+.forecast-tab-error {
+  color: #b91c1c;
+}
+
+@media (max-width: 700px) {
+  .forecast-tab-header {
+    flex-direction: column;
+  }
+
+  .forecast-chart {
+    height: 500px;
+  }
+}

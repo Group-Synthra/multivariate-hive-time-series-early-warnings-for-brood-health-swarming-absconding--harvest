@@ -1,0 +1,365 @@
+/* =========================================================
+   Next 24-Hour Absconding Forecast card
+   Append this block to frontend/src/styles/absconding.css
+   ========================================================= */
+
+.iot-forecast-card {
+  --forecast-color: var(--accent-emerald);
+  padding: 0;
+  border-left: 5px solid var(--forecast-color);
+  background:
+    radial-gradient(circle at 12% 15%, rgba(56, 189, 248, 0.12), transparent 33%),
+    linear-gradient(135deg, rgba(11, 24, 41, 0.99), rgba(18, 34, 56, 0.96));
+  overflow: hidden;
+}
+
+.iot-forecast-card.forecast-medium {
+  background:
+    radial-gradient(circle at 12% 15%, rgba(245, 158, 11, 0.15), transparent 33%),
+    linear-gradient(135deg, rgba(37, 27, 9, 0.98), rgba(39, 31, 18, 0.96));
+}
+
+.iot-forecast-card.forecast-high {
+  background:
+    radial-gradient(circle at 12% 15%, rgba(239, 68, 68, 0.16), transparent 33%),
+    linear-gradient(135deg, rgba(45, 15, 22, 0.98), rgba(47, 19, 26, 0.96));
+}
+
+.iot-forecast-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.2rem;
+  padding: 1.15rem 1.3rem 0.95rem;
+  border-bottom: 1px solid var(--iot-border);
+}
+
+.iot-forecast-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.iot-forecast-title-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: 14px;
+  color: var(--forecast-color);
+  background: rgba(34, 197, 94, 0.10);
+}
+
+.iot-forecast-eyebrow {
+  margin: 0 0 0.18rem;
+  color: var(--forecast-color) !important;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.iot-forecast-title-wrap h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.15rem, 2vw, 1.65rem);
+  line-height: 1.2;
+}
+
+.iot-forecast-title-wrap p:last-child {
+  max-width: 760px;
+  margin: 0.36rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.iot-forecast-risk-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 108px;
+  padding: 0.48rem 0.78rem;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-radius: 999px;
+  color: var(--accent-emerald);
+  background: rgba(34, 197, 94, 0.10);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.iot-forecast-risk-badge.medium {
+  color: var(--accent-gold);
+  border-color: rgba(245, 158, 11, 0.38);
+  background: rgba(245, 158, 11, 0.10);
+}
+
+.iot-forecast-risk-badge.high {
+  color: var(--accent-crimson);
+  border-color: rgba(239, 68, 68, 0.38);
+  background: rgba(239, 68, 68, 0.10);
+}
+
+.iot-forecast-body {
+  display: grid;
+  grid-template-columns: minmax(230px, 1.25fr) repeat(3, minmax(150px, 0.78fr)) minmax(250px, 1.2fr);
+  gap: 0.72rem;
+  padding: 1rem 1.3rem;
+}
+
+.iot-forecast-probability-panel,
+.iot-forecast-stat-panel,
+.iot-forecast-alert-panel {
+  min-width: 0;
+  min-height: 126px;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid var(--iot-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.iot-forecast-probability-panel,
+.iot-forecast-stat-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.iot-forecast-probability-panel > span,
+.iot-forecast-stat-panel > span,
+.iot-forecast-alert-panel span {
+  color: var(--text-secondary);
+  font-size: 0.73rem;
+  font-weight: 760;
+  letter-spacing: 0.02em;
+}
+
+.iot-forecast-probability-panel > strong {
+  margin: 0.22rem 0 0.12rem;
+  font-size: clamp(2.35rem, 5vw, 4rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.iot-forecast-probability-panel small,
+.iot-forecast-stat-panel small {
+  margin-top: 0.26rem;
+  color: var(--text-muted);
+  font-size: 0.69rem;
+  line-height: 1.35;
+}
+
+.iot-forecast-stat-panel > strong {
+  margin-top: 0.35rem;
+  color: var(--text-primary);
+  font-size: clamp(1.05rem, 1.8vw, 1.42rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.iot-forecast-stat-panel.change-increasing > strong {
+  color: var(--accent-gold);
+}
+
+.iot-forecast-stat-panel.change-decreasing > strong {
+  color: var(--accent-emerald);
+}
+
+.iot-forecast-alert-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border-color: rgba(34, 197, 94, 0.34);
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--accent-emerald);
+}
+
+.iot-forecast-alert-panel.watch,
+.iot-forecast-alert-panel.warning {
+  border-color: rgba(245, 158, 11, 0.40);
+  background: rgba(245, 158, 11, 0.10);
+  color: var(--accent-gold);
+}
+
+.iot-forecast-alert-panel.critical {
+  border-color: rgba(239, 68, 68, 0.42);
+  background: rgba(239, 68, 68, 0.10);
+  color: var(--accent-crimson);
+}
+
+.iot-forecast-alert-panel svg {
+  flex: 0 0 auto;
+}
+
+.iot-forecast-alert-panel strong {
+  display: block;
+  margin: 0.18rem 0 0.22rem;
+  color: currentColor !important;
+  font-size: 1.28rem;
+  letter-spacing: 0.04em;
+}
+
+.iot-forecast-alert-panel p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.42;
+}
+
+.iot-forecast-window {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding: 0.78rem 1.3rem;
+  border-top: 1px solid var(--iot-border);
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.025);
+  font-size: 0.78rem;
+}
+
+.iot-forecast-window strong {
+  color: var(--text-primary);
+}
+
+.iot-forecast-window-arrow {
+  color: var(--forecast-color);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+/* Light appearance used by the Absconding page */
+.absconding-page .iot-forecast-card {
+  background:
+    radial-gradient(circle at 12% 15%, rgba(37, 99, 235, 0.08), transparent 34%),
+    linear-gradient(135deg, #ffffff, #f8fbff);
+  box-shadow: var(--abs-shadow);
+}
+
+.absconding-page .iot-forecast-card.forecast-medium {
+  background:
+    radial-gradient(circle at 12% 15%, rgba(245, 158, 11, 0.10), transparent 34%),
+    linear-gradient(135deg, #ffffff, #fffaf0);
+}
+
+.absconding-page .iot-forecast-card.forecast-high {
+  background:
+    radial-gradient(circle at 12% 15%, rgba(239, 68, 68, 0.10), transparent 34%),
+    linear-gradient(135deg, #ffffff, #fff7f7);
+}
+
+.absconding-page .iot-forecast-title-icon {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+}
+
+.absconding-page .iot-forecast-probability-panel,
+.absconding-page .iot-forecast-stat-panel {
+  border-color: #e2e8f0;
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.absconding-page .iot-forecast-alert-panel.normal {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+}
+
+.absconding-page .iot-forecast-alert-panel.watch,
+.absconding-page .iot-forecast-alert-panel.warning {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.absconding-page .iot-forecast-alert-panel.critical {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.absconding-page .iot-forecast-risk-badge.low {
+  color: #047857;
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+}
+
+.absconding-page .iot-forecast-risk-badge.medium {
+  color: #b45309;
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.absconding-page .iot-forecast-risk-badge.high {
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.absconding-page .iot-forecast-window {
+  border-top-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+@media (max-width: 1280px) {
+  .iot-forecast-body {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .iot-forecast-probability-panel {
+    grid-column: span 2;
+  }
+
+  .iot-forecast-alert-panel {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 900px) {
+  .iot-forecast-header {
+    flex-direction: column;
+  }
+
+  .iot-forecast-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .iot-forecast-probability-panel,
+  .iot-forecast-alert-panel {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 620px) {
+  .iot-forecast-header,
+  .iot-forecast-body,
+  .iot-forecast-window {
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+  }
+
+  .iot-forecast-title-wrap {
+    align-items: flex-start;
+  }
+
+  .iot-forecast-body {
+    grid-template-columns: 1fr;
+  }
+
+  .iot-forecast-probability-panel,
+  .iot-forecast-alert-panel {
+    grid-column: auto;
+  }
+
+  .iot-forecast-window {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.32rem;
+  }
+
+  .iot-forecast-window-arrow {
+    display: none;
+  }
+}
