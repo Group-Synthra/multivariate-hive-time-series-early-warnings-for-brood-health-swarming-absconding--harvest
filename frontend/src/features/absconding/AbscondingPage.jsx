@@ -133,6 +133,25 @@ export function AbscondingPage() {
         </div>
       </section>
 
+      <section
+        className="absconding-video-panel"
+        aria-label="Absconding behavior monitoring video"
+      >
+        <video
+          className="absconding-autoplay-video"
+          src="/videos/absconding.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          disablePictureInPicture
+          controlsList="nodownload noplaybackrate"
+        >
+          Your browser does not support the video element.
+        </video>
+      </section>
+
       <div className="stats-grid stats-grid-six">
         <StatCard label="Raw event markers" value={summary.source_event_markers} icon={Database} note="Original absconding_happened_1 rows" />
         <StatCard label="Event episodes" value={summary.distinct_event_episodes} icon={AlertTriangle} note="Nearby markers merged within 24 hours" />
