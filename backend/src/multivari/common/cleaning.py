@@ -43,6 +43,8 @@ def _interpolate_sensors(df: pd.DataFrame, *, limit: int) -> pd.DataFrame:
             limit_area="inside",
         )
         pieces.append(group.reset_index())
-    return pd.concat(pieces, ignore_index=True).sort_values(
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    ).reset_index(drop=True)
+    return (
+        pd.concat(pieces, ignore_index=True)
+        .sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN])
+        .reset_index(drop=True)
+    )
