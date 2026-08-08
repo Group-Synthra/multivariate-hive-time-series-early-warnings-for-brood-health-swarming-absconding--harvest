@@ -58,14 +58,9 @@ def main() -> None:
     repository = PostgresSensorRepository(settings)
     live = repository.fetch_recent()
 
-    training_path = (
-        BACKEND_ROOT
-        / "data/processed/harvest_reviewed_feature_dataset.parquet"
-    )
+    training_path = BACKEND_ROOT / "data/processed/harvest_reviewed_feature_dataset.parquet"
     if not training_path.exists():
-        raise FileNotFoundError(
-            f"Training feature dataset is missing: {training_path}"
-        )
+        raise FileNotFoundError(f"Training feature dataset is missing: {training_path}")
     training = pd.read_parquet(training_path)
     if "split" in training.columns:
         training = training.loc[training["split"].eq("train")]
@@ -119,9 +114,7 @@ def main() -> None:
         train_q01 = float(train_values.quantile(0.01))
         train_q99 = float(train_values.quantile(0.99))
         live_median = float(live_values.median())
-        outside_fraction = float(
-            ((live_values < train_q01) | (live_values > train_q99)).mean()
-        )
+        outside_fraction = float(((live_values < train_q01) | (live_values > train_q99)).mean())
         median_inside = train_q01 <= live_median <= train_q99
         status = "compatible_range" if median_inside else "domain_shift_warning"
         if not median_inside:
@@ -159,14 +152,10 @@ def main() -> None:
         "warnings": warnings,
     }
 
-    output_path = (
-        BACKEND_ROOT
-        / "artifacts/reports/harvesting/live_iot_sensor_compatibility.json"
-    )
+    output_path = BACKEND_ROOT / "artifacts/reports/harvesting/live_iot_sensor_compatibility.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     print(json.dumps({**payload, "output_path": str(output_path)}, indent=2))
-
 
 
 if __name__ == "__main__":

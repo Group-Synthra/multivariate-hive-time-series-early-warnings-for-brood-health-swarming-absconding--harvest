@@ -20,10 +20,7 @@ def _resolve_path(root: Path, configured_path: str) -> Path:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Build purged chronological folds from "
-            "reviewed probable harvest events."
-        )
+        description=("Build purged chronological folds from reviewed probable harvest events.")
     )
     parser.add_argument(
         "--config",
@@ -39,9 +36,7 @@ def main() -> None:
     if not config_path.is_absolute():
         config_path = backend_root / config_path
 
-    config = yaml.safe_load(
-        config_path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
 
     event_path = _resolve_path(
         backend_root,
@@ -61,15 +56,11 @@ def main() -> None:
 
     if "is_boundary_gap" in usable_events.columns:
         usable_events = usable_events.loc[
-            ~usable_events["is_boundary_gap"]
-            .fillna(False)
-            .astype(bool)
+            ~usable_events["is_boundary_gap"].fillna(False).astype(bool)
         ].copy()
 
     counts_by_split = (
-        usable_events["split"]
-        .value_counts(dropna=False)
-        .to_dict()
+        usable_events["split"].value_counts(dropna=False).to_dict()
         if "split" in usable_events.columns
         else {}
     )
@@ -88,26 +79,14 @@ def main() -> None:
     try:
         folds = create_event_aware_folds(
             usable_events,
-            minimum_training_events=int(
-                settings["minimum_training_events"]
-            ),
-            validation_events_per_fold=int(
-                settings[
-                    "validation_events_per_fold"
-                ]
-            ),
-            prediction_horizon_hours=int(
-                config["target"]["horizon_hours"]
-            ),
-            purge_hours=int(
-                settings["purge_hours"]
-            ),
+            minimum_training_events=int(settings["minimum_training_events"]),
+            validation_events_per_fold=int(settings["validation_events_per_fold"]),
+            prediction_horizon_hours=int(config["target"]["horizon_hours"]),
+            purge_hours=int(settings["purge_hours"]),
         )
         fold_frame = folds_to_frame(folds)
         status = "created"
-        message = (
-            "Reviewed event-aware folds were created."
-        )
+        message = "Reviewed event-aware folds were created."
     except ValueError as error:
         fold_frame = pd.DataFrame(
             columns=[
@@ -133,23 +112,12 @@ def main() -> None:
         "message": message,
         "reviewed_event_count": len(events),
         "usable_event_count": len(usable_events),
-        "events_by_split": {
-            str(key): int(value)
-            for key, value in counts_by_split.items()
-        },
+        "events_by_split": {str(key): int(value) for key, value in counts_by_split.items()},
         "fold_count": len(fold_frame),
-        "minimum_training_events": int(
-            settings["minimum_training_events"]
-        ),
-        "validation_events_per_fold": int(
-            settings["validation_events_per_fold"]
-        ),
-        "prediction_horizon_hours": int(
-            config["target"]["horizon_hours"]
-        ),
-        "purge_hours": int(
-            settings["purge_hours"]
-        ),
+        "minimum_training_events": int(settings["minimum_training_events"]),
+        "validation_events_per_fold": int(settings["validation_events_per_fold"]),
+        "prediction_horizon_hours": int(config["target"]["horizon_hours"]),
+        "purge_hours": int(settings["purge_hours"]),
         "folds_path": str(folds_path),
     }
 

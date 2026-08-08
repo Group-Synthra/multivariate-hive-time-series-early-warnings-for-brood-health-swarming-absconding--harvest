@@ -44,9 +44,7 @@ def test_rolling_hourly_anchor_moves_with_latest_reading() -> None:
     assert first_anchor == pd.Timestamp("2026-08-06 10:30", tz="UTC")
     assert second_anchor == pd.Timestamp("2026-08-06 10:40", tz="UTC")
     assert second_anchor - first_anchor == pd.Timedelta(minutes=10)
-    assert first["timestamp"].sort_values().diff().dropna().eq(
-        pd.Timedelta(hours=1)
-    ).all()
+    assert first["timestamp"].sort_values().diff().dropna().eq(pd.Timedelta(hours=1)).all()
 
 
 def test_forecast_bhsi_and_rod_answer_different_questions() -> None:

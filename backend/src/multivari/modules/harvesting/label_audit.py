@@ -27,9 +27,7 @@ def _require_columns(
 ) -> None:
     missing = sorted(required.difference(frame.columns))
     if missing:
-        raise ValueError(
-            f"{frame_name} is missing required columns: {missing}"
-        )
+        raise ValueError(f"{frame_name} is missing required columns: {missing}")
 
 
 def _robust_mad(series: pd.Series) -> float:
@@ -93,29 +91,17 @@ def _find_candidate_drop_onset(
     ]
 
     for candidate in candidate_rows.itertuples(index=False):
-        candidate_time = pd.Timestamp(
-            getattr(candidate, TIMESTAMP_COLUMN)
-        )
-        candidate_weight = float(
-            getattr(candidate, WEIGHT_COLUMN)
-        )
-        change_1h = float(
-            candidate.weight_change_1h
-        )
+        candidate_time = pd.Timestamp(getattr(candidate, TIMESTAMP_COLUMN))
+        candidate_weight = float(getattr(candidate, WEIGHT_COLUMN))
+        change_1h = float(candidate.weight_change_1h)
 
-        previous_rows = window.loc[
-            window[TIMESTAMP_COLUMN] < candidate_time
-        ]
+        previous_rows = window.loc[window[TIMESTAMP_COLUMN] < candidate_time]
         if previous_rows.empty:
             continue
 
-        pre_weight = float(
-            previous_rows.iloc[-1][WEIGHT_COLUMN]
-        )
+        pre_weight = float(previous_rows.iloc[-1][WEIGHT_COLUMN])
 
-        persistence_end = candidate_time + pd.Timedelta(
-            hours=persistence_hours
-        )
+        persistence_end = candidate_time + pd.Timedelta(hours=persistence_hours)
         future_rows = window.loc[
             window[TIMESTAMP_COLUMN].between(
                 candidate_time,
@@ -196,9 +182,7 @@ def audit_harvest_event_alignment(
         common_frame[TIMESTAMP_COLUMN],
         errors="raise",
     )
-    common_frame = common_frame.sort_values(
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    )
+    common_frame = common_frame.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN])
 
     event_frame = events.copy()
     event_frame[event_start_column] = pd.to_datetime(
@@ -212,13 +196,9 @@ def audit_harvest_event_alignment(
         values = event._asdict()
         hive_id = values[HIVE_COLUMN]
         event_id = values[event_id_column]
-        marker_time = pd.Timestamp(
-            values[event_start_column]
-        )
+        marker_time = pd.Timestamp(values[event_start_column])
 
-        hive_frame = common_frame.loc[
-            common_frame[HIVE_COLUMN].eq(hive_id)
-        ]
+        hive_frame = common_frame.loc[common_frame[HIVE_COLUMN].eq(hive_id)]
 
         detection = _find_candidate_drop_onset(
             hive_frame,
@@ -236,9 +216,7 @@ def audit_harvest_event_alignment(
             marker_delay_hours = np.nan
             alignment_status = "no_clear_sustained_drop"
         else:
-            marker_delay_hours = (
-                marker_time - pd.Timestamp(onset)
-            ).total_seconds() / 3600
+            marker_delay_hours = (marker_time - pd.Timestamp(onset)).total_seconds() / 3600
 
             if abs(marker_delay_hours) <= aligned_tolerance_hours:
                 alignment_status = "aligned"
@@ -255,24 +233,14 @@ def audit_harvest_event_alignment(
             )
         ]
 
-        co2_std_pre72h = float(
-            pre_window[CO2_COLUMN].std()
-        )
-        co2_unique_pre72h = int(
-            pre_window[CO2_COLUMN].nunique(dropna=True)
-        )
+        co2_std_pre72h = float(pre_window[CO2_COLUMN].std())
+        co2_unique_pre72h = int(pre_window[CO2_COLUMN].nunique(dropna=True))
         co2_flatline_pre72h = bool(
             co2_unique_pre72h <= 1
-            or (
-                not np.isnan(co2_std_pre72h)
-                and co2_std_pre72h
-                <= co2_flatline_std_threshold
-            )
+            or (not np.isnan(co2_std_pre72h) and co2_std_pre72h <= co2_flatline_std_threshold)
         )
 
-        weight_std_pre24h = float(
-            pre_window.tail(24)[WEIGHT_COLUMN].std()
-        )
+        weight_std_pre24h = float(pre_window.tail(24)[WEIGHT_COLUMN].std())
 
         row: dict[str, Any] = {
             HIVE_COLUMN: hive_id,
@@ -307,11 +275,7 @@ def audit_harvest_event_alignment(
 def summarize_alignment_audit(
     audit: pd.DataFrame,
 ) -> dict[str, Any]:
-    status_counts = (
-        audit["alignment_status"]
-        .value_counts(dropna=False)
-        .to_dict()
-    )
+    status_counts = audit["alignment_status"].value_counts(dropna=False).to_dict()
 
     delayed = audit.loc[
         audit["alignment_status"].eq("marker_delayed"),
@@ -320,18 +284,11 @@ def summarize_alignment_audit(
 
     return {
         "audited_events": len(audit),
-        "alignment_status_counts": {
-            str(key): int(value)
-            for key, value in status_counts.items()
-        },
+        "alignment_status_counts": {str(key): int(value) for key, value in status_counts.items()},
         "median_marker_delay_hours_for_delayed_events": (
-            float(delayed.median())
-            if not delayed.empty
-            else None
+            float(delayed.median()) if not delayed.empty else None
         ),
-        "co2_flatline_events_pre72h": int(
-            audit["co2_flatline_pre72h"].sum()
-        ),
+        "co2_flatline_events_pre72h": int(audit["co2_flatline_pre72h"].sum()),
         "manual_review_required": True,
         "decision_rule": (
             "Do not overwrite event times automatically. Review each "
@@ -351,9 +308,7 @@ def run_label_alignment_audit(
     if not configuration_path.is_absolute():
         configuration_path = root / configuration_path
 
-    config = yaml.safe_load(
-        configuration_path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(configuration_path.read_text(encoding="utf-8"))
 
     common_path = _resolve_path(
         root,
@@ -380,24 +335,12 @@ def run_label_alignment_audit(
         event_id_column=config["event"]["event_id_column"],
         event_start_column="event_start",
         lookback_hours=int(audit_config["lookback_hours"]),
-        persistence_hours=int(
-            audit_config["persistence_hours"]
-        ),
-        minimum_drop_kg=float(
-            audit_config["minimum_drop_kg"]
-        ),
-        mad_multiplier=float(
-            audit_config["mad_multiplier"]
-        ),
-        minimum_persistent_drop_kg=float(
-            audit_config["minimum_persistent_drop_kg"]
-        ),
-        aligned_tolerance_hours=int(
-            audit_config["aligned_tolerance_hours"]
-        ),
-        co2_flatline_std_threshold=float(
-            audit_config["co2_flatline_std_threshold"]
-        ),
+        persistence_hours=int(audit_config["persistence_hours"]),
+        minimum_drop_kg=float(audit_config["minimum_drop_kg"]),
+        mad_multiplier=float(audit_config["mad_multiplier"]),
+        minimum_persistent_drop_kg=float(audit_config["minimum_persistent_drop_kg"]),
+        aligned_tolerance_hours=int(audit_config["aligned_tolerance_hours"]),
+        co2_flatline_std_threshold=float(audit_config["co2_flatline_std_threshold"]),
     )
 
     summary = summarize_alignment_audit(audit)
@@ -406,9 +349,7 @@ def run_label_alignment_audit(
         output_directory / "event_label_alignment_audit.csv",
         index=False,
     )
-    (
-        output_directory / "event_label_alignment_summary.json"
-    ).write_text(
+    (output_directory / "event_label_alignment_summary.json").write_text(
         json.dumps(summary, indent=2),
         encoding="utf-8",
     )

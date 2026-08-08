@@ -6,8 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 MODULE_PATH = (
-    Path(__file__).resolve().parents[3]
-    / "scripts/export_classifier_derived_hui_viva_dashboard.py"
+    Path(__file__).resolve().parents[3] / "scripts/export_classifier_derived_hui_viva_dashboard.py"
 )
 SPEC = importlib.util.spec_from_file_location("hui_viva_export", MODULE_PATH)
 assert SPEC is not None and SPEC.loader is not None

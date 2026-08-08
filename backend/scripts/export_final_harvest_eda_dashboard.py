@@ -88,9 +88,7 @@ def _top_sensor_rows(
                 "event_mean": float(row["event_mean"]),
                 "control_mean": float(row["control_mean"]),
                 "smd": float(row["standardized_mean_difference"]),
-                "absolute_smd": float(
-                    row["absolute_standardized_mean_difference"]
-                ),
+                "absolute_smd": float(row["absolute_standardized_mean_difference"]),
                 "event_n": int(row["event_n"]),
                 "control_n": int(row["control_n"]),
             }
@@ -122,9 +120,7 @@ def _sensor_summary(
                 }
             )
             continue
-        best = subset.nlargest(
-            1, "absolute_standardized_mean_difference"
-        ).iloc[0]
+        best = subset.nlargest(1, "absolute_standardized_mean_difference").iloc[0]
         value = float(best["absolute_standardized_mean_difference"])
         output.append(
             {
@@ -134,11 +130,7 @@ def _sensor_summary(
                 "feature": str(best["feature"]),
                 "feature_display_name": _friendly(str(best["feature"])),
                 "strength": (
-                    "Strong"
-                    if value >= 0.8
-                    else "Moderate"
-                    if value >= 0.5
-                    else "Present"
+                    "Strong" if value >= 0.8 else "Moderate" if value >= 0.5 else "Present"
                 ),
             }
         )
@@ -160,9 +152,7 @@ def _signal_evolution(
                 )
             ].dropna(subset=["absolute_standardized_mean_difference"])
             row[family] = (
-                float(
-                    subset["absolute_standardized_mean_difference"].max()
-                )
+                float(subset["absolute_standardized_mean_difference"].max())
                 if not subset.empty
                 else None
             )
@@ -173,9 +163,7 @@ def _signal_evolution(
 def main() -> None:
     backend_root = Path(__file__).resolve().parents[1]
     project_root = backend_root.parent
-    config = yaml.safe_load(
-        (backend_root / "config/harvesting.yaml").read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load((backend_root / "config/harvesting.yaml").read_text(encoding="utf-8"))
     settings = config["reviewed_feature_eda"]
     feature_settings = config["reviewed_features"]
     target_column = config["reviewed_target"]["output_column"]
@@ -194,15 +182,9 @@ def main() -> None:
         comparison_path,
         coverage_path,
     ]
-    missing = [
-        str(path.relative_to(backend_root))
-        for path in required
-        if not path.exists()
-    ]
+    missing = [str(path.relative_to(backend_root)) for path in required if not path.exists()]
     if missing:
-        raise FileNotFoundError(
-            "Reviewed EDA artifacts are missing: " + ", ".join(missing)
-        )
+        raise FileNotFoundError("Reviewed EDA artifacts are missing: " + ", ".join(missing))
 
     events = pd.read_parquet(event_path)
     features = pd.read_parquet(feature_path)
@@ -211,15 +193,10 @@ def main() -> None:
     coverage = pd.read_csv(coverage_path)
 
     lead_hours = [int(value) for value in settings["lead_hours"]]
-    feature_names = [
-        str(value) for value in manifest["feature_name"].dropna().tolist()
-    ]
+    feature_names = [str(value) for value in manifest["feature_name"].dropna().tolist()]
     modelling_rows = len(features)
     positive_rows = int(
-        pd.to_numeric(features[target_column], errors="coerce")
-        .fillna(0)
-        .eq(1)
-        .sum()
+        pd.to_numeric(features[target_column], errors="coerce").fillna(0).eq(1).sum()
     )
     prevalence = positive_rows / modelling_rows if modelling_rows else 0.0
 
@@ -230,20 +207,15 @@ def main() -> None:
     )
 
     events_by_split = {
-        str(key): int(value)
-        for key, value in events["split"].value_counts().to_dict().items()
+        str(key): int(value) for key, value in events["split"].value_counts().to_dict().items()
     }
     expected_samples = int(len(events) * len(lead_hours))
     available_event_samples = int(
         coverage["event_sample_available"].fillna(False).astype(bool).sum()
     )
-    available_controls = int(
-        coverage["control_sample_available"].fillna(False).astype(bool).sum()
-    )
+    available_controls = int(coverage["control_sample_available"].fillna(False).astype(bool).sum())
     coverage_percent = (
-        min(available_event_samples, available_controls)
-        / expected_samples
-        * 100.0
+        min(available_event_samples, available_controls) / expected_samples * 100.0
         if expected_samples
         else 0.0
     )
@@ -252,14 +224,11 @@ def main() -> None:
     strong_count = sum(
         1
         for item in sensor_summary
-        if item["maximum_absolute_smd"] is not None
-        and item["maximum_absolute_smd"] >= 0.8
+        if item["maximum_absolute_smd"] is not None and item["maximum_absolute_smd"] >= 0.8
     )
 
     details = comparison.loc[
-        comparison["feature"].map(
-            lambda value: _feature_family(str(value)) is not None
-        )
+        comparison["feature"].map(lambda value: _feature_family(str(value)) is not None)
     ].sort_values(
         ["lead_hours", "absolute_standardized_mean_difference"],
         ascending=[False, False],
@@ -273,9 +242,7 @@ def main() -> None:
             "reviewed_events": len(events),
             "positive_hives": int(events["hive_id"].nunique()),
             "engineered_features": len(feature_names),
-            "minimum_history_hours": int(
-                feature_settings.get("minimum_history_hours", 168)
-            ),
+            "minimum_history_hours": int(feature_settings.get("minimum_history_hours", 168)),
             "positive_rows": positive_rows,
             "target_prevalence": prevalence,
             "events_by_split": events_by_split,
@@ -293,8 +260,7 @@ def main() -> None:
         "sensor_summary_72h": sensor_summary,
         "strong_sensor_family_count": strong_count,
         "top_sensor_features_by_lead": {
-            str(lead): _top_sensor_rows(comparison, lead)
-            for lead in lead_hours
+            str(lead): _top_sensor_rows(comparison, lead) for lead in lead_hours
         },
         "signal_evolution": _signal_evolution(comparison, lead_hours),
         "lead_hours": lead_hours,
@@ -333,8 +299,7 @@ def main() -> None:
     }
 
     output_path = (
-        project_root
-        / "frontend/public/data/harvesting-research/final-reviewed-eda-dashboard.json"
+        project_root / "frontend/public/data/harvesting-research/final-reviewed-eda-dashboard.json"
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")

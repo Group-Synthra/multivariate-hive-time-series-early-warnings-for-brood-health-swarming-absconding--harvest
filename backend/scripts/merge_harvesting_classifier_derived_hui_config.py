@@ -8,33 +8,20 @@ import yaml
 def main() -> None:
     backend_root = Path(__file__).resolve().parents[1]
     main_path = backend_root / "config/harvesting.yaml"
-    section_path = (
-        backend_root
-        / "config/harvesting_classifier_derived_hui_section.yaml"
-    )
+    section_path = backend_root / "config/harvesting_classifier_derived_hui_section.yaml"
 
     if not main_path.exists():
         raise FileNotFoundError(f"Missing main config: {main_path}")
     if not section_path.exists():
-        raise FileNotFoundError(
-            f"Missing classifier-derived HUI section: {section_path}"
-        )
+        raise FileNotFoundError(f"Missing classifier-derived HUI section: {section_path}")
 
-    main_config = yaml.safe_load(
-        main_path.read_text(encoding="utf-8")
-    ) or {}
-    section_config = yaml.safe_load(
-        section_path.read_text(encoding="utf-8")
-    ) or {}
+    main_config = yaml.safe_load(main_path.read_text(encoding="utf-8")) or {}
+    section_config = yaml.safe_load(section_path.read_text(encoding="utf-8")) or {}
 
     if "classifier_derived_hui" not in section_config:
-        raise ValueError(
-            "Section file must define classifier_derived_hui."
-        )
+        raise ValueError("Section file must define classifier_derived_hui.")
 
-    main_config["classifier_derived_hui"] = section_config[
-        "classifier_derived_hui"
-    ]
+    main_config["classifier_derived_hui"] = section_config["classifier_derived_hui"]
     main_path.write_text(
         yaml.safe_dump(
             main_config,

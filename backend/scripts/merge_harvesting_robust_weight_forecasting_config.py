@@ -9,16 +9,13 @@ import yaml
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Merge robust future-weight forecasting configuration "
-            "into config/harvesting.yaml."
+            "Merge robust future-weight forecasting configuration into config/harvesting.yaml."
         )
     )
     parser.add_argument("--config", default="config/harvesting.yaml")
     parser.add_argument(
         "--snippet",
-        default=(
-            "config/harvesting_robust_weight_forecasting_section.yaml"
-        ),
+        default=("config/harvesting_robust_weight_forecasting_section.yaml"),
     )
     return parser.parse_args()
 

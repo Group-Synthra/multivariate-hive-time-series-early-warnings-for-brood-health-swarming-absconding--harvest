@@ -101,15 +101,6 @@ def test_future_target_never_crosses_hive_boundaries() -> None:
         horizon_hours=1,
     )
 
-    h1_rows = result.loc[
-        result["hive_id"].eq("h1")
-    ]
+    h1_rows = result.loc[result["hive_id"].eq("h1")]
 
-    assert (
-        h1_rows[
-            "harvest_within_next_72h"
-        ]
-        .fillna(0)
-        .sum()
-        == 0
-    )
+    assert h1_rows["harvest_within_next_72h"].fillna(0).sum() == 0

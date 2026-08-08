@@ -85,9 +85,7 @@ def test_old_model_ready_row_is_not_returned_as_live_prediction() -> None:
         }
     ]
 
-    aligned, updated = LiveHuiInferenceEngine._latest_aligned_ready_rows(
-        predicted, diagnostics
-    )
+    aligned, updated = LiveHuiInferenceEngine._latest_aligned_ready_rows(predicted, diagnostics)
 
     assert aligned.empty
     assert updated[0]["live_prediction_ready"] is False
@@ -114,9 +112,7 @@ def test_exact_latest_model_row_is_accepted_when_history_is_ready() -> None:
         }
     ]
 
-    aligned, updated = LiveHuiInferenceEngine._latest_aligned_ready_rows(
-        predicted, diagnostics
-    )
+    aligned, updated = LiveHuiInferenceEngine._latest_aligned_ready_rows(predicted, diagnostics)
 
     assert len(aligned) == 1
     assert updated[0]["live_prediction_ready"] is True

@@ -47,20 +47,14 @@ class PersistenceHuiRegressor:
     ) -> PersistenceHuiRegressor:
         del target
         if CURRENT_HUI_COLUMN not in features.columns:
-            raise ValueError(
-                f"{CURRENT_HUI_COLUMN} is required for persistence."
-            )
+            raise ValueError(f"{CURRENT_HUI_COLUMN} is required for persistence.")
         return self
 
     def predict(
         self,
         features: pd.DataFrame,
     ) -> np.ndarray:
-        return (
-            features[CURRENT_HUI_COLUMN]
-            .to_numpy(dtype=float)
-            .clip(0.0, 100.0)
-        )
+        return features[CURRENT_HUI_COLUMN].to_numpy(dtype=float).clip(0.0, 100.0)
 
 
 def _resolve_path(root: Path, configured_path: str) -> Path:
@@ -111,9 +105,7 @@ def _require_columns(
 ) -> None:
     missing = sorted(required.difference(frame.columns))
     if missing:
-        raise ValueError(
-            f"{frame_name} is missing required columns: {missing}"
-        )
+        raise ValueError(f"{frame_name} is missing required columns: {missing}")
 
 
 def assign_provisional_hui_class(
@@ -123,16 +115,8 @@ def assign_provisional_hui_class(
     approaching_upper: float,
     ready_upper: float,
 ) -> pd.Series:
-    if not (
-        0.0
-        < not_ready_upper
-        < approaching_upper
-        < ready_upper
-        < 100.0
-    ):
-        raise ValueError(
-            "HUI class boundaries must be increasing inside 0–100."
-        )
+    if not (0.0 < not_ready_upper < approaching_upper < ready_upper < 100.0):
+        raise ValueError("HUI class boundaries must be increasing inside 0–100.")
 
     labels = np.select(
         [
@@ -156,15 +140,9 @@ def _robust_bounds(
     lower_quantile: float,
     upper_quantile: float,
 ) -> tuple[float, float]:
-    finite = (
-        pd.to_numeric(values, errors="coerce")
-        .replace([np.inf, -np.inf], np.nan)
-        .dropna()
-    )
+    finite = pd.to_numeric(values, errors="coerce").replace([np.inf, -np.inf], np.nan).dropna()
     if finite.empty:
-        raise ValueError(
-            "Cannot estimate normalization bounds from empty values."
-        )
+        raise ValueError("Cannot estimate normalization bounds from empty values.")
 
     lower = float(finite.quantile(lower_quantile))
     upper = float(finite.quantile(upper_quantile))
@@ -211,10 +189,7 @@ def build_current_provisional_hui(
         HIVE_COLUMN,
         SPLIT_COLUMN,
     }
-    required.update(
-        str(settings["column"])
-        for settings in component_config.values()
-    )
+    required.update(str(settings["column"]) for settings in component_config.values())
     _require_columns(
         frame,
         required,
@@ -229,20 +204,11 @@ def build_current_provisional_hui(
 
     train_mask = result[SPLIT_COLUMN].eq("train")
     if not train_mask.any():
-        raise ValueError(
-            "Training rows are required for HUI normalization."
-        )
+        raise ValueError("Training rows are required for HUI normalization.")
 
-    total_weight = float(
-        sum(
-            float(settings["weight"])
-            for settings in component_config.values()
-        )
-    )
+    total_weight = float(sum(float(settings["weight"]) for settings in component_config.values()))
     if not np.isclose(total_weight, 1.0):
-        raise ValueError(
-            "Provisional HUI component weights must sum to one."
-        )
+        raise ValueError("Provisional HUI component weights must sum to one.")
 
     weighted_score = pd.Series(
         0.0,
@@ -267,9 +233,7 @@ def build_current_provisional_hui(
             errors="coerce",
         )
         if "clip_lower" in settings:
-            raw = raw.clip(
-                lower=float(settings["clip_lower"])
-            )
+            raw = raw.clip(lower=float(settings["clip_lower"]))
         if direction == "lower_absolute":
             raw = raw.abs()
             effective_direction = "lower"
@@ -295,13 +259,9 @@ def build_current_provisional_hui(
                 upper=upper,
             )
         else:
-            raise ValueError(
-                f"Unsupported HUI component direction: {direction}"
-            )
+            raise ValueError(f"Unsupported HUI component direction: {direction}")
 
-        result[f"hui_component_{name}"] = (
-            component_score * 100.0
-        )
+        result[f"hui_component_{name}"] = component_score * 100.0
         weighted_score += component_score * weight
 
         parameters["components"][name] = {
@@ -312,16 +272,8 @@ def build_current_provisional_hui(
             "upper": upper,
         }
 
-    available_quality_columns = [
-        column
-        for column in quality_columns
-        if column in result.columns
-    ]
-    missing_quality_columns = sorted(
-        set(quality_columns).difference(
-            available_quality_columns
-        )
-    )
+    available_quality_columns = [column for column in quality_columns if column in result.columns]
+    missing_quality_columns = sorted(set(quality_columns).difference(available_quality_columns))
 
     if available_quality_columns:
         quality_flags = (
@@ -338,21 +290,16 @@ def build_current_provisional_hui(
             dtype="float64",
         )
 
-    quality_factor = (
-        1.0
-        - quality_penalty_per_flag * quality_flags
-    ).clip(lower=minimum_quality_factor, upper=1.0)
+    quality_factor = (1.0 - quality_penalty_per_flag * quality_flags).clip(
+        lower=minimum_quality_factor, upper=1.0
+    )
 
     result["hui_data_quality_factor"] = quality_factor
-    result[CURRENT_HUI_COLUMN] = (
-        weighted_score * quality_factor * 100.0
-    ).clip(0.0, 100.0)
+    result[CURRENT_HUI_COLUMN] = (weighted_score * quality_factor * 100.0).clip(0.0, 100.0)
     result[CURRENT_CLASS_COLUMN] = assign_provisional_hui_class(
         result[CURRENT_HUI_COLUMN],
         not_ready_upper=float(class_config["not_ready_upper"]),
-        approaching_upper=float(
-            class_config["approaching_upper"]
-        ),
+        approaching_upper=float(class_config["approaching_upper"]),
         ready_upper=float(class_config["ready_upper"]),
     )
 
@@ -394,31 +341,18 @@ def add_future_hui_target(
         current[TIMESTAMP_COLUMN],
         errors="raise",
     )
-    current = current.sort_values(
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    ).reset_index(drop=True)
+    current = current.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN]).reset_index(drop=True)
 
     elapsed_hours = (
-        current.groupby(HIVE_COLUMN)[TIMESTAMP_COLUMN]
-        .diff()
-        .dt.total_seconds()
-        .div(3600)
+        current.groupby(HIVE_COLUMN)[TIMESTAMP_COLUMN].diff().dt.total_seconds().div(3600)
     )
-    previous_split = (
-        current.groupby(HIVE_COLUMN)[SPLIT_COLUMN]
-        .shift()
-    )
+    previous_split = current.groupby(HIVE_COLUMN)[SPLIT_COLUMN].shift()
     starts_segment = (
-        elapsed_hours.isna()
-        | elapsed_hours.ne(1.0)
-        | current[SPLIT_COLUMN].ne(previous_split)
+        elapsed_hours.isna() | elapsed_hours.ne(1.0) | current[SPLIT_COLUMN].ne(previous_split)
     )
-    current["_hui_segment_id"] = (
-        starts_segment.cumsum().astype("int64")
-    )
-    current["_future_timestamp"] = (
-        current[TIMESTAMP_COLUMN]
-        + pd.to_timedelta(horizon_hours, unit="h")
+    current["_hui_segment_id"] = starts_segment.cumsum().astype("int64")
+    current["_future_timestamp"] = current[TIMESTAMP_COLUMN] + pd.to_timedelta(
+        horizon_hours, unit="h"
     )
 
     future = current[
@@ -432,9 +366,7 @@ def add_future_hui_target(
     ].rename(
         columns={
             TIMESTAMP_COLUMN: "_future_timestamp",
-            CURRENT_HUI_COLUMN: (
-                f"future_provisional_hui_{horizon_hours}h"
-            ),
+            CURRENT_HUI_COLUMN: (f"future_provisional_hui_{horizon_hours}h"),
         }
     )
 
@@ -466,17 +398,8 @@ def _load_feature_manifest(path: Path) -> list[str]:
         "name",
     ):
         if candidate in manifest.columns:
-            return (
-                manifest[candidate]
-                .dropna()
-                .astype(str)
-                .drop_duplicates()
-                .tolist()
-            )
-    raise ValueError(
-        "Feature manifest must contain feature_name, feature, "
-        "column or name."
-    )
+            return manifest[candidate].dropna().astype(str).drop_duplicates().tolist()
+    raise ValueError("Feature manifest must contain feature_name, feature, column or name.")
 
 
 def _feature_sets(
@@ -500,10 +423,7 @@ def _feature_sets(
             selected = [
                 feature
                 for feature in available_features
-                if any(
-                    feature.startswith(prefix)
-                    for prefix in prefixes
-                )
+                if any(feature.startswith(prefix) for prefix in prefixes)
             ]
 
         excluded = [
@@ -517,10 +437,7 @@ def _feature_sets(
             selected = [
                 feature
                 for feature in selected
-                if not any(
-                    feature.startswith(prefix)
-                    for prefix in excluded
-                )
+                if not any(feature.startswith(prefix) for prefix in excluded)
             ]
 
         selected = [
@@ -531,9 +448,7 @@ def _feature_sets(
             and not feature.startswith("hui_component_")
         ]
         if not selected:
-            raise ValueError(
-                f"Feature set {name!r} is empty."
-            )
+            raise ValueError(f"Feature set {name!r} is empty.")
         output[name] = selected
 
     return output
@@ -559,11 +474,7 @@ def _build_models(
                 ("scaler", StandardScaler()),
                 (
                     "model",
-                    Ridge(
-                        alpha=float(
-                            model_config["ridge"]["alpha"]
-                        )
-                    ),
+                    Ridge(alpha=float(model_config["ridge"]["alpha"])),
                 ),
             ]
         )
@@ -579,17 +490,11 @@ def _build_models(
                 (
                     "model",
                     RandomForestRegressor(
-                        n_estimators=int(
-                            settings["n_estimators"]
-                        ),
+                        n_estimators=int(settings["n_estimators"]),
                         max_depth=int(settings["max_depth"]),
-                        min_samples_leaf=int(
-                            settings["min_samples_leaf"]
-                        ),
+                        min_samples_leaf=int(settings["min_samples_leaf"]),
                         max_features=settings["max_features"],
-                        max_samples=float(
-                            settings["max_samples"]
-                        ),
+                        max_samples=float(settings["max_samples"]),
                         random_state=random_state,
                         n_jobs=-1,
                     ),
@@ -605,13 +510,9 @@ def _build_models(
             n_estimators=int(settings["n_estimators"]),
             learning_rate=float(settings["learning_rate"]),
             max_depth=int(settings["max_depth"]),
-            min_child_weight=float(
-                settings["min_child_weight"]
-            ),
+            min_child_weight=float(settings["min_child_weight"]),
             subsample=float(settings["subsample"]),
-            colsample_bytree=float(
-                settings["colsample_bytree"]
-            ),
+            colsample_bytree=float(settings["colsample_bytree"]),
             reg_alpha=float(settings["reg_alpha"]),
             reg_lambda=float(settings["reg_lambda"]),
             objective="reg:squarederror",
@@ -628,13 +529,9 @@ def _build_models(
             learning_rate=float(settings["learning_rate"]),
             num_leaves=int(settings["num_leaves"]),
             max_depth=int(settings["max_depth"]),
-            min_child_samples=int(
-                settings["min_child_samples"]
-            ),
+            min_child_samples=int(settings["min_child_samples"]),
             subsample=float(settings["subsample"]),
-            colsample_bytree=float(
-                settings["colsample_bytree"]
-            ),
+            colsample_bytree=float(settings["colsample_bytree"]),
             reg_alpha=float(settings["reg_alpha"]),
             reg_lambda=float(settings["reg_lambda"]),
             random_state=random_state,
@@ -674,15 +571,9 @@ def _regression_metrics(
             )
         ),
         "bias": float(np.mean(errors)),
-        "r2": float(
-            r2_score(actual_array, predicted_array)
-        ),
-        "within_5_points_fraction": float(
-            np.mean(np.abs(errors) <= 5.0)
-        ),
-        "within_10_points_fraction": float(
-            np.mean(np.abs(errors) <= 10.0)
-        ),
+        "r2": float(r2_score(actual_array, predicted_array)),
+        "within_5_points_fraction": float(np.mean(np.abs(errors) <= 5.0)),
+        "within_10_points_fraction": float(np.mean(np.abs(errors) <= 10.0)),
     }
 
 
@@ -761,60 +652,36 @@ def evaluate_hui_research_gate(
 
     for horizon in horizons_hours:
         rows = comparison.loc[
-            comparison["horizon_hours"].eq(horizon)
-            & comparison["status"].eq("ok")
+            comparison["horizon_hours"].eq(horizon) & comparison["status"].eq("ok")
         ]
-        baseline_rows = rows.loc[
-            rows["model"].eq("persistence")
-        ]
+        baseline_rows = rows.loc[rows["model"].eq("persistence")]
         if baseline_rows.empty:
-            raise ValueError(
-                f"No persistence baseline exists for {horizon}h."
-            )
+            raise ValueError(f"No persistence baseline exists for {horizon}h.")
 
-        baseline_mae = float(
-            baseline_rows["validation_mae"].min()
-        )
+        baseline_mae = float(baseline_rows["validation_mae"].min())
         selected = summary["horizons"][str(horizon)]
-        selected_mae = float(
-            selected["validation"]["mae"]
-        )
+        selected_mae = float(selected["validation"]["mae"])
         test_mae = float(selected["test"]["mae"])
 
-        improvement = (
-            (baseline_mae - selected_mae) / baseline_mae
-            if baseline_mae > 0
-            else 0.0
-        )
-        ratio = (
-            test_mae / selected_mae
-            if selected_mae > 0
-            else np.inf
-        )
+        improvement = (baseline_mae - selected_mae) / baseline_mae if baseline_mae > 0 else 0.0
+        ratio = test_mae / selected_mae if selected_mae > 0 else np.inf
         passed = bool(
-            improvement >= minimum_improvement
-            and ratio <= maximum_test_to_validation_ratio
+            improvement >= minimum_improvement and ratio <= maximum_test_to_validation_ratio
         )
         improved_count += int(passed)
 
         horizon_results[str(horizon)] = {
             "selected_model": selected["selected_model"],
-            "selected_feature_set": (
-                selected["selected_feature_set"]
-            ),
+            "selected_feature_set": (selected["selected_feature_set"]),
             "persistence_validation_mae": baseline_mae,
             "selected_validation_mae": selected_mae,
             "selected_test_mae": test_mae,
-            "validation_mae_improvement_fraction": (
-                improvement
-            ),
+            "validation_mae_improvement_fraction": (improvement),
             "test_to_validation_mae_ratio": ratio,
             "horizon_passed": passed,
         }
 
-    gate_passed = bool(
-        improved_count >= required_improved_horizons
-    )
+    gate_passed = bool(improved_count >= required_improved_horizons)
     return {
         "status": (
             "provisional_hui_regression_gate_passed"
@@ -825,15 +692,9 @@ def evaluate_hui_research_gate(
         "ready_for_operational_hui": False,
         "gate_passed": gate_passed,
         "improved_horizon_count": improved_count,
-        "required_improved_horizons": (
-            required_improved_horizons
-        ),
-        "minimum_validation_mae_improvement_fraction": (
-            minimum_improvement
-        ),
-        "maximum_test_to_validation_mae_ratio": (
-            maximum_test_to_validation_ratio
-        ),
+        "required_improved_horizons": (required_improved_horizons),
+        "minimum_validation_mae_improvement_fraction": (minimum_improvement),
+        "maximum_test_to_validation_mae_ratio": (maximum_test_to_validation_ratio),
         "horizons": horizon_results,
         "warning": (
             "Even when this regression gate passes, the target is "
@@ -853,9 +714,7 @@ def build_provisional_hui_dataset_from_config(
     if not path.is_absolute():
         path = root / path
 
-    config = yaml.safe_load(
-        path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
     settings = config["provisional_hui_regression"]
 
     feature_path = _resolve_path(
@@ -876,26 +735,12 @@ def build_provisional_hui_dataset_from_config(
     hui, parameters = build_current_provisional_hui(
         features,
         component_config=settings["hui_components"],
-        lower_quantile=float(
-            normalization["lower_quantile"]
-        ),
-        upper_quantile=float(
-            normalization["upper_quantile"]
-        ),
-        quality_columns=[
-            str(value)
-            for value in settings["quality_columns"]
-        ],
-        quality_penalty_per_flag=float(
-            settings["quality_penalty_per_flag"]
-        ),
-        minimum_quality_factor=float(
-            settings["minimum_quality_factor"]
-        ),
-        class_config={
-            str(key): float(value)
-            for key, value in settings["classes"].items()
-        },
+        lower_quantile=float(normalization["lower_quantile"]),
+        upper_quantile=float(normalization["upper_quantile"]),
+        quality_columns=[str(value) for value in settings["quality_columns"]],
+        quality_penalty_per_flag=float(settings["quality_penalty_per_flag"]),
+        minimum_quality_factor=float(settings["minimum_quality_factor"]),
+        class_config={str(key): float(value) for key, value in settings["classes"].items()},
     )
 
     for horizon in settings["horizons_hours"]:
@@ -915,8 +760,7 @@ def build_provisional_hui_dataset_from_config(
     hui.to_parquet(output_path, index=False)
 
     _write_json(
-        output_directory
-        / "provisional_hui_definition.json",
+        output_directory / "provisional_hui_definition.json",
         parameters,
     )
 
@@ -933,8 +777,7 @@ def build_provisional_hui_dataset_from_config(
         .reset_index()
     )
     distribution.to_csv(
-        output_directory
-        / "provisional_hui_distribution.csv",
+        output_directory / "provisional_hui_distribution.csv",
         index=False,
     )
 
@@ -943,10 +786,7 @@ def build_provisional_hui_dataset_from_config(
         "rows": len(hui),
         "hives": int(hui[HIVE_COLUMN].nunique()),
         "dataset_path": str(output_path),
-        "definition_path": str(
-            output_directory
-            / "provisional_hui_definition.json"
-        ),
+        "definition_path": str(output_directory / "provisional_hui_definition.json"),
     }
 
 
@@ -960,9 +800,7 @@ def run_provisional_hui_regression_from_config(
     if not path.is_absolute():
         path = root / path
 
-    config = yaml.safe_load(
-        path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
     settings = config["provisional_hui_regression"]
 
     dataset_path = _resolve_path(
@@ -989,22 +827,12 @@ def run_provisional_hui_regression_from_config(
         dataset[TIMESTAMP_COLUMN],
         errors="raise",
     )
-    dataset = dataset.sort_values(
-        [TIMESTAMP_COLUMN, HIVE_COLUMN]
-    ).reset_index(drop=True)
+    dataset = dataset.sort_values([TIMESTAMP_COLUMN, HIVE_COLUMN]).reset_index(drop=True)
 
-    manifest_features = _load_feature_manifest(
-        manifest_path
-    )
-    available_features = [
-        feature
-        for feature in manifest_features
-        if feature in dataset.columns
-    ]
+    manifest_features = _load_feature_manifest(manifest_path)
+    available_features = [feature for feature in manifest_features if feature in dataset.columns]
     if not available_features:
-        raise ValueError(
-            "No feature-manifest columns exist in the HUI dataset."
-        )
+        raise ValueError("No feature-manifest columns exist in the HUI dataset.")
 
     feature_sets = _feature_sets(
         available_features,
@@ -1018,8 +846,7 @@ def run_provisional_hui_regression_from_config(
     comparison_rows: list[dict[str, Any]] = []
     summary: dict[str, Any] = {
         "research_stage": (
-            "Direct multi-horizon regression of an engineered "
-            "Provisional HUI target."
+            "Direct multi-horizon regression of an engineered Provisional HUI target."
         ),
         "target_status": "provisional_research_index",
         "selection_rule": (
@@ -1043,9 +870,7 @@ def run_provisional_hui_regression_from_config(
 
     for horizon_value in settings["horizons_hours"]:
         horizon = int(horizon_value)
-        target_column = (
-            f"future_provisional_hui_{horizon}h"
-        )
+        target_column = f"future_provisional_hui_{horizon}h"
         required = {
             TIMESTAMP_COLUMN,
             HIVE_COLUMN,
@@ -1060,29 +885,18 @@ def run_provisional_hui_regression_from_config(
         )
 
         modelling = dataset.loc[
-            dataset[target_column].notna()
-            & dataset[CURRENT_HUI_COLUMN].notna()
+            dataset[target_column].notna() & dataset[CURRENT_HUI_COLUMN].notna()
         ].copy()
-        train = modelling.loc[
-            modelling[SPLIT_COLUMN].eq("train")
-        ]
-        validation = modelling.loc[
-            modelling[SPLIT_COLUMN].eq("validation")
-        ]
-        test = modelling.loc[
-            modelling[SPLIT_COLUMN].eq("test")
-        ]
+        train = modelling.loc[modelling[SPLIT_COLUMN].eq("train")]
+        validation = modelling.loc[modelling[SPLIT_COLUMN].eq("validation")]
+        test = modelling.loc[modelling[SPLIT_COLUMN].eq("test")]
 
         if train.empty or validation.empty or test.empty:
-            raise ValueError(
-                f"Missing train/validation/test rows for {horizon}h."
-            )
+            raise ValueError(f"Missing train/validation/test rows for {horizon}h.")
 
         train_fit = _downsample_training(
             train,
-            maximum_rows=int(
-                settings["maximum_training_rows"]
-            ),
+            maximum_rows=int(settings["maximum_training_rows"]),
         )
 
         candidates: list[dict[str, Any]] = []
@@ -1094,12 +908,8 @@ def run_provisional_hui_regression_from_config(
                 else feature_sets
             )
 
-            for feature_set_name, feature_columns in (
-                candidate_feature_sets.items()
-            ):
-                estimator = copy.deepcopy(
-                    estimator_template
-                )
+            for feature_set_name, feature_columns in candidate_feature_sets.items():
+                estimator = copy.deepcopy(estimator_template)
                 try:
                     (
                         fitted,
@@ -1123,56 +933,32 @@ def run_provisional_hui_regression_from_config(
                         "training_rows": len(train_fit),
                         "validation_rows": len(validation),
                         "test_rows": len(test),
-                        "validation_mae": metrics[
-                            "validation"
-                        ]["mae"],
-                        "validation_rmse": metrics[
-                            "validation"
-                        ]["rmse"],
+                        "validation_mae": metrics["validation"]["mae"],
+                        "validation_rmse": metrics["validation"]["rmse"],
                         "validation_median_absolute_error": (
-                            metrics["validation"][
-                                "median_absolute_error"
-                            ]
+                            metrics["validation"]["median_absolute_error"]
                         ),
-                        "validation_bias": metrics[
-                            "validation"
-                        ]["bias"],
-                        "validation_r2": metrics[
-                            "validation"
-                        ]["r2"],
+                        "validation_bias": metrics["validation"]["bias"],
+                        "validation_r2": metrics["validation"]["r2"],
                         "validation_within_5_points_fraction": (
-                            metrics["validation"][
-                                "within_5_points_fraction"
-                            ]
+                            metrics["validation"]["within_5_points_fraction"]
                         ),
                         "validation_within_10_points_fraction": (
-                            metrics["validation"][
-                                "within_10_points_fraction"
-                            ]
+                            metrics["validation"]["within_10_points_fraction"]
                         ),
                         "test_mae": metrics["test"]["mae"],
                         "test_rmse": metrics["test"]["rmse"],
-                        "test_median_absolute_error": (
-                            metrics["test"][
-                                "median_absolute_error"
-                            ]
-                        ),
+                        "test_median_absolute_error": (metrics["test"]["median_absolute_error"]),
                         "test_bias": metrics["test"]["bias"],
                         "test_r2": metrics["test"]["r2"],
                         "test_within_5_points_fraction": (
-                            metrics["test"][
-                                "within_5_points_fraction"
-                            ]
+                            metrics["test"]["within_5_points_fraction"]
                         ),
                         "test_within_10_points_fraction": (
-                            metrics["test"][
-                                "within_10_points_fraction"
-                            ]
+                            metrics["test"]["within_10_points_fraction"]
                         ),
                         "_fitted": fitted,
-                        "_validation_prediction": (
-                            validation_prediction
-                        ),
+                        "_validation_prediction": (validation_prediction),
                         "_test_prediction": test_prediction,
                         "_feature_columns": feature_columns,
                         "_metrics": metrics,
@@ -1192,56 +978,36 @@ def run_provisional_hui_regression_from_config(
                     }
 
                 comparison_rows.append(
-                    {
-                        key: value
-                        for key, value in row.items()
-                        if not key.startswith("_")
-                    }
+                    {key: value for key, value in row.items() if not key.startswith("_")}
                 )
                 if row["status"] == "ok":
                     candidates.append(row)
 
         if not candidates:
-            raise RuntimeError(
-                f"All Provisional HUI models failed for {horizon}h."
-            )
+            raise RuntimeError(f"All Provisional HUI models failed for {horizon}h.")
 
         selected = min(
             candidates,
             key=lambda row: (
                 row["validation_mae"],
-                row[
-                    "validation_median_absolute_error"
-                ],
+                row["validation_median_absolute_error"],
                 abs(row["validation_bias"]),
                 complexity_order[row["model"]],
             ),
         )
 
-        model_path = (
-            model_directory
-            / f"selected_provisional_hui_regressor_{horizon}h.joblib"
-        )
-        metadata_path = (
-            model_directory
-            / f"selected_provisional_hui_regressor_{horizon}h.json"
-        )
+        model_path = model_directory / f"selected_provisional_hui_regressor_{horizon}h.joblib"
+        metadata_path = model_directory / f"selected_provisional_hui_regressor_{horizon}h.json"
         joblib.dump(selected["_fitted"], model_path)
         _write_json(
             metadata_path,
             {
                 "horizon_hours": horizon,
                 "selected_model": selected["model"],
-                "selected_feature_set": (
-                    selected["feature_set"]
-                ),
-                "feature_columns": (
-                    selected["_feature_columns"]
-                ),
+                "selected_feature_set": (selected["feature_set"]),
+                "feature_columns": (selected["_feature_columns"]),
                 "target_column": target_column,
-                "score_status": (
-                    "provisional_research_index"
-                ),
+                "score_status": ("provisional_research_index"),
                 "operational_use_allowed": False,
             },
         )
@@ -1262,14 +1028,9 @@ def run_provisional_hui_regression_from_config(
                     target_column_name,
                 ]
             ].copy()
-            output["predicted_future_provisional_hui"] = (
-                prediction
-            )
+            output["predicted_future_provisional_hui"] = prediction
             output["prediction_error_points"] = (
-                output[
-                    "predicted_future_provisional_hui"
-                ]
-                - output[target_column_name]
+                output["predicted_future_provisional_hui"] - output[target_column_name]
             )
             return output
 
@@ -1284,45 +1045,28 @@ def run_provisional_hui_regression_from_config(
             target_column_name=target_column,
         )
         validation_predictions.to_parquet(
-            output_directory
-            / (
-                "selected_validation_predictions_"
-                f"{horizon}h.parquet"
-            ),
+            output_directory / (f"selected_validation_predictions_{horizon}h.parquet"),
             index=False,
         )
         test_predictions.to_parquet(
-            output_directory
-            / f"selected_test_predictions_{horizon}h.parquet",
+            output_directory / f"selected_test_predictions_{horizon}h.parquet",
             index=False,
         )
 
         summary["horizons"][str(horizon)] = {
             "selected_model": selected["model"],
-            "selected_feature_set": (
-                selected["feature_set"]
-            ),
-            "selected_feature_count": len(
-                selected["_feature_columns"]
-            ),
+            "selected_feature_set": (selected["feature_set"]),
+            "selected_feature_count": len(selected["_feature_columns"]),
             "training_rows": len(train_fit),
             "validation_rows": len(validation),
             "test_rows": len(test),
-            "validation": selected["_metrics"][
-                "validation"
-            ],
+            "validation": selected["_metrics"]["validation"],
             "test": selected["_metrics"]["test"],
         }
 
     comparison = pd.DataFrame(comparison_rows)
-    comparison_path = (
-        output_directory
-        / "provisional_hui_regression_comparison.csv"
-    )
-    summary_path = (
-        output_directory
-        / "provisional_hui_regression_summary.json"
-    )
+    comparison_path = output_directory / "provisional_hui_regression_comparison.csv"
+    summary_path = output_directory / "provisional_hui_regression_summary.json"
     comparison.to_csv(comparison_path, index=False)
     _write_json(summary_path, summary)
 
@@ -1330,28 +1074,12 @@ def run_provisional_hui_regression_from_config(
     gate = evaluate_hui_research_gate(
         comparison,
         summary,
-        horizons_hours=[
-            int(value)
-            for value in settings["horizons_hours"]
-        ],
-        minimum_improvement=float(
-            gate_config[
-                "minimum_validation_mae_improvement_fraction"
-            ]
-        ),
-        required_improved_horizons=int(
-            gate_config["required_improved_horizons"]
-        ),
-        maximum_test_to_validation_ratio=float(
-            gate_config[
-                "maximum_test_to_validation_mae_ratio"
-            ]
-        ),
+        horizons_hours=[int(value) for value in settings["horizons_hours"]],
+        minimum_improvement=float(gate_config["minimum_validation_mae_improvement_fraction"]),
+        required_improved_horizons=int(gate_config["required_improved_horizons"]),
+        maximum_test_to_validation_ratio=float(gate_config["maximum_test_to_validation_mae_ratio"]),
     )
-    gate_path = (
-        output_directory
-        / "provisional_hui_regression_gate.json"
-    )
+    gate_path = output_directory / "provisional_hui_regression_gate.json"
     _write_json(gate_path, gate)
 
     return {
@@ -1373,9 +1101,7 @@ def export_provisional_hui_dashboard_from_config(
     if not path.is_absolute():
         path = root / path
 
-    config = yaml.safe_load(
-        path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
     settings = config["provisional_hui_regression"]
     output_directory = _resolve_path(
         root,
@@ -1390,30 +1116,15 @@ def export_provisional_hui_dashboard_from_config(
         settings["hui_dataset_path"],
     )
 
-    summary = _read_json(
-        output_directory
-        / "provisional_hui_regression_summary.json"
-    )
-    gate = _read_json(
-        output_directory
-        / "provisional_hui_regression_gate.json"
-    )
-    definition = _read_json(
-        output_directory
-        / "provisional_hui_definition.json"
-    )
+    summary = _read_json(output_directory / "provisional_hui_regression_summary.json")
+    gate = _read_json(output_directory / "provisional_hui_regression_gate.json")
+    definition = _read_json(output_directory / "provisional_hui_definition.json")
 
-    horizons = [
-        int(value)
-        for value in settings["horizons_hours"]
-    ]
+    horizons = [int(value) for value in settings["horizons_hours"]]
     merged: pd.DataFrame | None = None
 
     for horizon in horizons:
-        prediction_path = (
-            output_directory
-            / f"selected_test_predictions_{horizon}h.parquet"
-        )
+        prediction_path = output_directory / f"selected_test_predictions_{horizon}h.parquet"
         predictions = pd.read_parquet(prediction_path)
         keep = predictions[
             [
@@ -1423,13 +1134,7 @@ def export_provisional_hui_dashboard_from_config(
                 CURRENT_CLASS_COLUMN,
                 "predicted_future_provisional_hui",
             ]
-        ].rename(
-            columns={
-                "predicted_future_provisional_hui": (
-                    f"predicted_hui_{horizon}h"
-                )
-            }
-        )
+        ].rename(columns={"predicted_future_provisional_hui": (f"predicted_hui_{horizon}h")})
 
         if merged is None:
             merged = keep
@@ -1448,55 +1153,31 @@ def export_provisional_hui_dashboard_from_config(
             )
 
     if merged is None or merged.empty:
-        raise ValueError(
-            "No test predictions were available for dashboard export."
-        )
+        raise ValueError("No test predictions were available for dashboard export.")
 
-    class_config = {
-        str(key): float(value)
-        for key, value in settings["classes"].items()
-    }
+    class_config = {str(key): float(value) for key, value in settings["classes"].items()}
     for horizon in horizons:
-        merged[f"predicted_class_{horizon}h"] = (
-            assign_provisional_hui_class(
-                merged[f"predicted_hui_{horizon}h"],
-                not_ready_upper=class_config[
-                    "not_ready_upper"
-                ],
-                approaching_upper=class_config[
-                    "approaching_upper"
-                ],
-                ready_upper=class_config["ready_upper"],
-            )
+        merged[f"predicted_class_{horizon}h"] = assign_provisional_hui_class(
+            merged[f"predicted_hui_{horizon}h"],
+            not_ready_upper=class_config["not_ready_upper"],
+            approaching_upper=class_config["approaching_upper"],
+            ready_upper=class_config["ready_upper"],
         )
 
     merged[TIMESTAMP_COLUMN] = pd.to_datetime(
         merged[TIMESTAMP_COLUMN],
         errors="raise",
     )
-    merged = merged.sort_values(
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    )
-    rows_per_hive = int(
-        settings["dashboard_rows_per_hive"]
-    )
+    merged = merged.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN])
+    rows_per_hive = int(settings["dashboard_rows_per_hive"])
     recent = (
-        merged.groupby(HIVE_COLUMN, group_keys=False)
-        .tail(rows_per_hive)
-        .reset_index(drop=True)
+        merged.groupby(HIVE_COLUMN, group_keys=False).tail(rows_per_hive).reset_index(drop=True)
     )
-    latest = (
-        recent.groupby(HIVE_COLUMN, as_index=False)
-        .tail(1)
-        .sort_values(HIVE_COLUMN)
-    )
+    latest = recent.groupby(HIVE_COLUMN, as_index=False).tail(1).sort_values(HIVE_COLUMN)
 
     def records(frame: pd.DataFrame) -> list[dict[str, Any]]:
         return [
-            {
-                key: _json_safe(value)
-                for key, value in row.items()
-            }
+            {key: _json_safe(value) for key, value in row.items()}
             for row in frame.to_dict(orient="records")
         ]
 
@@ -1510,12 +1191,7 @@ def export_provisional_hui_dashboard_from_config(
         "models": summary["horizons"],
         "research_gate": gate,
         "definition": definition,
-        "available_hives": sorted(
-            recent[HIVE_COLUMN]
-            .astype(str)
-            .unique()
-            .tolist()
-        ),
+        "available_hives": sorted(recent[HIVE_COLUMN].astype(str).unique().tolist()),
         "latest_by_hive": records(latest),
         "historical_test_series": records(recent),
         "warnings": [
@@ -1527,10 +1203,7 @@ def export_provisional_hui_dashboard_from_config(
                 "This is not a calibrated harvest probability and "
                 "does not directly measure honey maturity."
             ),
-            (
-                "A beekeeper inspection is required before any "
-                "harvesting decision."
-            ),
+            ("A beekeeper inspection is required before any harvesting decision."),
         ],
         "source_dataset": str(dataset_path),
     }

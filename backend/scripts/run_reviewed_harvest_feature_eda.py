@@ -11,10 +11,7 @@ from multivari.modules.harvesting.reviewed_feature_eda import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Run reviewed-event EDA using the live-compatible "
-            "feature dataset."
-        )
+        description=("Run reviewed-event EDA using the live-compatible feature dataset.")
     )
     parser.add_argument(
         "--config",

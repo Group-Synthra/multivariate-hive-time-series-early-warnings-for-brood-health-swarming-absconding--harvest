@@ -18,6 +18,9 @@ from multivari.modules.harvesting.live_hui_monitor import (
     create_live_hui_monitor,
     should_start_monitor_in_this_process,
 )
+from multivari.modules.swarming.iot.routes import iot_bp
+from multivari.modules.swarming.routes import swarming_live_bp
+from multivari.modules.swarming.training_routes import model_training_bp
 
 from .eda_service import EDAService
 from .harvesting_live_routes import create_harvesting_live_blueprint
@@ -77,11 +80,12 @@ def create_app() -> Flask:
 
     live_hui_monitor = create_live_hui_monitor(backend_root=backend_root)
     app.extensions["live_hui_monitor"] = live_hui_monitor
-    app.register_blueprint(
-        create_harvesting_live_blueprint(live_hui_monitor)
-    )
+    app.register_blueprint(create_harvesting_live_blueprint(live_hui_monitor))
     if should_start_monitor_in_this_process():
         live_hui_monitor.start()
+    app.register_blueprint(swarming_live_bp)
+    app.register_blueprint(model_training_bp)
+    app.register_blueprint(iot_bp)
 
     @app.get("/")
     def index():

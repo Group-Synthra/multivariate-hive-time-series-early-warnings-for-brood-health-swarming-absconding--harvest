@@ -107,9 +107,7 @@ def add_research_eda_features(frame: pd.DataFrame) -> pd.DataFrame:
     result["recent_max_weight_168h"] = grouped["weight_kg"].transform(
         lambda series: series.rolling(168, min_periods=24).max()
     )
-    result["distance_from_max_168h"] = (
-        result["recent_max_weight_168h"] - result["weight_kg"]
-    )
+    result["distance_from_max_168h"] = result["recent_max_weight_168h"] - result["weight_kg"]
     result["relative_to_max_168h"] = np.where(
         result["recent_max_weight_168h"].gt(0),
         result["weight_kg"] / result["recent_max_weight_168h"],
@@ -124,9 +122,7 @@ def add_research_eda_features(frame: pd.DataFrame) -> pd.DataFrame:
         ],
         axis=1,
     )
-    result["environmental_stability_24h"] = 1.0 / (
-        1.0 + stability_components.mean(axis=1)
-    )
+    result["environmental_stability_24h"] = 1.0 / (1.0 + stability_components.mean(axis=1))
     return result
 
 
@@ -245,9 +241,8 @@ def build_matched_control_samples(
         if event_times:
             keep = np.ones(len(candidates), dtype=bool)
             for event_time in event_times:
-                keep &= (
-                    (candidates[TIMESTAMP_COLUMN] - event_time).abs()
-                    > pd.Timedelta(hours=exclusion_hours)
+                keep &= (candidates[TIMESTAMP_COLUMN] - event_time).abs() > pd.Timedelta(
+                    hours=exclusion_hours
                 )
             candidates = candidates.loc[keep]
 
@@ -351,15 +346,15 @@ def _build_event_windows(
         if window.empty:
             continue
         window["relative_hour"] = (
-            (window[TIMESTAMP_COLUMN] - event_start).dt.total_seconds() / 3600
-        ).round().astype("int32")
+            ((window[TIMESTAMP_COLUMN] - event_start).dt.total_seconds() / 3600)
+            .round()
+            .astype("int32")
+        )
         window[event_id_column] = values[event_id_column]
         window["event_start"] = event_start
         baseline = window.loc[window["relative_hour"].eq(-1), "weight_kg"]
         baseline_weight = float(baseline.iloc[0]) if not baseline.empty else np.nan
-        window["weight_relative_to_pre_event_kg"] = (
-            window["weight_kg"] - baseline_weight
-        )
+        window["weight_relative_to_pre_event_kg"] = window["weight_kg"] - baseline_weight
         windows.append(window)
     return pd.concat(windows, ignore_index=True) if windows else pd.DataFrame()
 
@@ -491,9 +486,9 @@ def _plot_individual_events(
     output_directory.mkdir(parents=True, exist_ok=True)
     created = 0
     for event_id in event_ids:
-        event_window = windows.loc[
-            windows[event_id_column].eq(event_id)
-        ].sort_values("relative_hour")
+        event_window = windows.loc[windows[event_id_column].eq(event_id)].sort_values(
+            "relative_hour"
+        )
         figure, axes = plt.subplots(4, 1, figsize=(12, 10), sharex=True)
         definitions = [
             ("weight_kg", "Weight (kg)"),
@@ -634,8 +629,18 @@ def run_harvest_research_eda(
         output_path=figure_directory / "event_aligned_weight_profile.png",
     )
     for column, ylabel, title, filename in [
-        ("temperature_c", "Internal temperature (°C)", "Temperature around harvest markers", "event_aligned_temperature_profile.png"),
-        ("humidity_pct", "Humidity (%)", "Humidity around harvest markers", "event_aligned_humidity_profile.png"),
+        (
+            "temperature_c",
+            "Internal temperature (°C)",
+            "Temperature around harvest markers",
+            "event_aligned_temperature_profile.png",
+        ),
+        (
+            "humidity_pct",
+            "Humidity (%)",
+            "Humidity around harvest markers",
+            "event_aligned_humidity_profile.png",
+        ),
         ("co2_ppm", "CO₂ (ppm)", "CO₂ around harvest markers", "event_aligned_co2_profile.png"),
     ]:
         _plot_event_aligned_profile(
@@ -660,9 +665,9 @@ def run_harvest_research_eda(
 
     top_relationships: dict[str, list[dict[str, Any]]] = {}
     for lead_hour in lead_hours:
-        selected = relationships.loc[
-            relationships["lead_hours"].eq(lead_hour)
-        ].nlargest(5, "absolute_effect_size")
+        selected = relationships.loc[relationships["lead_hours"].eq(lead_hour)].nlargest(
+            5, "absolute_effect_size"
+        )
         top_relationships[str(lead_hour)] = selected[
             [
                 "feature",

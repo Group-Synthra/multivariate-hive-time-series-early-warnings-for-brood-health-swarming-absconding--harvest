@@ -57,17 +57,11 @@ def _split_balance_records(
     required = {"split", target_column, "rows"}
     missing = required.difference(target_balance.columns)
     if missing:
-        raise ValueError(
-            "Target balance CSV is missing columns: "
-            f"{sorted(missing)}"
-        )
+        raise ValueError(f"Target balance CSV is missing columns: {sorted(missing)}")
 
     records: list[dict[str, Any]] = []
     for split, group in target_balance.groupby("split", sort=False):
-        by_target = {
-            int(row[target_column]): int(row["rows"])
-            for _, row in group.iterrows()
-        }
+        by_target = {int(row[target_column]): int(row["rows"]) for _, row in group.iterrows()}
         negative = by_target.get(0, 0)
         positive = by_target.get(1, 0)
         total = negative + positive
@@ -88,41 +82,19 @@ def export_dashboard_data(
     backend_root: Path,
     frontend_root: Path,
 ) -> dict[str, Any]:
-    reports = (
-        backend_root
-        / "artifacts"
-        / "reports"
-        / "harvesting"
-        / "reviewed"
-    )
+    reports = backend_root / "artifacts" / "reports" / "harvesting" / "reviewed"
 
     target_audit = _read_json(reports / "target_audit.json")
-    target_balance = _read_csv(
-        reports / "target_balance_by_split.csv"
-    )
-    feature_audit = _read_json(
-        reports / "features" / "feature_audit.json"
-    )
-    eda_audit = _read_json(
-        reports
-        / "feature_eda"
-        / "reviewed_feature_eda_audit.json"
-    )
+    target_balance = _read_csv(reports / "target_balance_by_split.csv")
+    feature_audit = _read_json(reports / "features" / "feature_audit.json")
+    eda_audit = _read_json(reports / "feature_eda" / "reviewed_feature_eda_audit.json")
     grouped_summary = _read_json(
         reports / "grouped_hive_summary.json",
         required=False,
     )
-    top_features = _read_csv(
-        reports / "feature_eda" / "top_features_by_lead.csv"
-    )
-    comparison = _read_csv(
-        reports
-        / "feature_eda"
-        / "lead_feature_comparison.csv"
-    )
-    coverage = _read_csv(
-        reports / "feature_eda" / "sample_coverage.csv"
-    )
+    top_features = _read_csv(reports / "feature_eda" / "top_features_by_lead.csv")
+    comparison = _read_csv(reports / "feature_eda" / "lead_feature_comparison.csv")
+    coverage = _read_csv(reports / "feature_eda" / "sample_coverage.csv")
 
     target_column = "harvest_within_next_72h_reviewed"
     split_balance = _split_balance_records(
@@ -130,9 +102,7 @@ def export_dashboard_data(
         target_column=target_column,
     )
 
-    output_root = (
-        frontend_root / "public" / "data" / "harvesting"
-    )
+    output_root = frontend_root / "public" / "data" / "harvesting"
     figures_output = output_root / "figures"
     figures_output.mkdir(parents=True, exist_ok=True)
 
@@ -142,11 +112,7 @@ def export_dashboard_data(
         for figure in sorted(source_figures.glob("*.png")):
             destination = figures_output / figure.name
             shutil.copy2(figure, destination)
-            lead_text = (
-                figure.stem
-                .replace("top_features_lead_", "")
-                .replace("h", "")
-            )
+            lead_text = figure.stem.replace("top_features_lead_", "").replace("h", "")
             try:
                 lead_hours = int(lead_text)
             except ValueError:
@@ -156,10 +122,7 @@ def export_dashboard_data(
                 {
                     "lead_hours": lead_hours,
                     "filename": figure.name,
-                    "url": (
-                        "/data/harvesting/figures/"
-                        f"{figure.name}"
-                    ),
+                    "url": (f"/data/harvesting/figures/{figure.name}"),
                 }
             )
 
@@ -173,9 +136,7 @@ def export_dashboard_data(
                 "absolute_standardized_mean_difference",
                 ascending=False,
             )
-            top_features_payload[str(int(lead))] = _records(
-                ordered
-            )
+            top_features_payload[str(int(lead))] = _records(ordered)
 
     comparison_payload: dict[str, list[dict[str, Any]]] = {}
     if not comparison.empty:
@@ -187,37 +148,19 @@ def export_dashboard_data(
                 "absolute_standardized_mean_difference",
                 ascending=False,
             )
-            comparison_payload[str(int(lead))] = _records(
-                ordered
-            )
+            comparison_payload[str(int(lead))] = _records(ordered)
 
     summary = {
         "generated_at": datetime.now(UTC).isoformat(),
         "target": {
-            "horizon_hours": int(
-                target_audit["prediction_horizon_hours"]
-            ),
-            "reviewed_event_count": int(
-                target_audit["reviewed_event_count"]
-            ),
-            "reviewed_positive_hives": int(
-                target_audit["reviewed_positive_hives"]
-            ),
-            "final_modelling_rows": int(
-                target_audit["final_modelling_rows"]
-            ),
-            "target_positive_rows": int(
-                target_audit["target_positive_rows"]
-            ),
-            "target_negative_rows": int(
-                target_audit["target_negative_rows"]
-            ),
-            "target_positive_rate": float(
-                target_audit["target_positive_rate"]
-            ),
-            "events_by_split": target_audit[
-                "reviewed_events_by_split"
-            ],
+            "horizon_hours": int(target_audit["prediction_horizon_hours"]),
+            "reviewed_event_count": int(target_audit["reviewed_event_count"]),
+            "reviewed_positive_hives": int(target_audit["reviewed_positive_hives"]),
+            "final_modelling_rows": int(target_audit["final_modelling_rows"]),
+            "target_positive_rows": int(target_audit["target_positive_rows"]),
+            "target_negative_rows": int(target_audit["target_negative_rows"]),
+            "target_positive_rate": float(target_audit["target_positive_rate"]),
+            "events_by_split": target_audit["reviewed_events_by_split"],
             "split_balance": split_balance,
         },
         "features": {
@@ -225,59 +168,25 @@ def export_dashboard_data(
             "source_rows": int(feature_audit["source_rows"]),
             "output_rows": int(feature_audit["output_rows"]),
             "feature_count": int(feature_audit["feature_count"]),
-            "minimum_history_hours": int(
-                feature_audit["minimum_history_hours"]
-            ),
-            "contiguous_segment_count": int(
-                feature_audit["contiguous_segment_count"]
-            ),
-            "detected_non_hourly_gaps": int(
-                feature_audit["detected_non_hourly_gaps"]
-            ),
-            "source_positive_rows": int(
-                feature_audit["source_positive_rows"]
-            ),
-            "output_positive_rows": int(
-                feature_audit["output_positive_rows"]
-            ),
-            "positive_rows_removed": int(
-                feature_audit["positive_rows_removed"]
-            ),
-            "output_positive_rate": float(
-                feature_audit["output_positive_rate"]
-            ),
-            "leakage_columns_present": feature_audit[
-                "leakage_columns_present"
-            ],
-            "history_policy": feature_audit.get(
-                "history_policy"
-            ),
+            "minimum_history_hours": int(feature_audit["minimum_history_hours"]),
+            "contiguous_segment_count": int(feature_audit["contiguous_segment_count"]),
+            "detected_non_hourly_gaps": int(feature_audit["detected_non_hourly_gaps"]),
+            "source_positive_rows": int(feature_audit["source_positive_rows"]),
+            "output_positive_rows": int(feature_audit["output_positive_rows"]),
+            "positive_rows_removed": int(feature_audit["positive_rows_removed"]),
+            "output_positive_rate": float(feature_audit["output_positive_rate"]),
+            "leakage_columns_present": feature_audit["leakage_columns_present"],
+            "history_policy": feature_audit.get("history_policy"),
         },
         "eda": {
-            "reviewed_event_count": int(
-                eda_audit["reviewed_event_count"]
-            ),
-            "expected_event_lead_samples": int(
-                eda_audit["expected_event_lead_samples"]
-            ),
-            "available_event_lead_samples": int(
-                eda_audit["available_event_lead_samples"]
-            ),
-            "available_matched_controls": int(
-                eda_audit["available_matched_controls"]
-            ),
-            "missing_event_lead_samples": int(
-                eda_audit["missing_event_lead_samples"]
-            ),
-            "missing_controls": int(
-                eda_audit["missing_controls"]
-            ),
-            "lead_hours": [
-                int(value) for value in eda_audit["lead_hours"]
-            ],
-            "control_exclusion_hours": int(
-                eda_audit["control_exclusion_hours"]
-            ),
+            "reviewed_event_count": int(eda_audit["reviewed_event_count"]),
+            "expected_event_lead_samples": int(eda_audit["expected_event_lead_samples"]),
+            "available_event_lead_samples": int(eda_audit["available_event_lead_samples"]),
+            "available_matched_controls": int(eda_audit["available_matched_controls"]),
+            "missing_event_lead_samples": int(eda_audit["missing_event_lead_samples"]),
+            "missing_controls": int(eda_audit["missing_controls"]),
+            "lead_hours": [int(value) for value in eda_audit["lead_hours"]],
+            "control_exclusion_hours": int(eda_audit["control_exclusion_hours"]),
             "figure_count": int(eda_audit["figure_count"]),
             "figures": figure_records,
         },
@@ -291,10 +200,7 @@ def export_dashboard_data(
                 "Feature differences are exploratory and must not be "
                 "interpreted as confirmatory statistical evidence."
             ),
-            (
-                "The official test split contains one event and should "
-                "be reported as a case study."
-            ),
+            ("The official test split contains one event and should be reported as a case study."),
         ],
     }
 
@@ -327,9 +233,7 @@ def export_dashboard_data(
 
     return {
         "output_directory": str(output_root),
-        "reviewed_event_count": summary["target"][
-            "reviewed_event_count"
-        ],
+        "reviewed_event_count": summary["target"]["reviewed_event_count"],
         "feature_count": summary["features"]["feature_count"],
         "lead_hours": summary["eda"]["lead_hours"],
         "figure_count": len(figure_records),
@@ -338,18 +242,12 @@ def export_dashboard_data(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Export reviewed harvesting EDA outputs as static JSON "
-            "for the Vite frontend."
-        )
+        description=("Export reviewed harvesting EDA outputs as static JSON for the Vite frontend.")
     )
     parser.add_argument(
         "--frontend-root",
         default=None,
-        help=(
-            "Frontend directory. Defaults to the project-level "
-            "'frontend' directory."
-        ),
+        help=("Frontend directory. Defaults to the project-level 'frontend' directory."),
     )
     return parser.parse_args()
 
@@ -365,9 +263,7 @@ def main() -> None:
     )
 
     if not frontend_root.exists():
-        raise FileNotFoundError(
-            f"Frontend directory not found: {frontend_root}"
-        )
+        raise FileNotFoundError(f"Frontend directory not found: {frontend_root}")
 
     result = export_dashboard_data(
         backend_root=backend_root,

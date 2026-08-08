@@ -12,8 +12,7 @@ from multivari.modules.harvesting.review import (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Validate the completed manual review and create "
-            "the reviewed harvest-event table."
+            "Validate the completed manual review and create the reviewed harvest-event table."
         )
     )
     parser.add_argument(

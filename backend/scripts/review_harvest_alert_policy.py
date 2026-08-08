@@ -11,9 +11,7 @@ from multivari.modules.harvesting.alert_policy_research_gate import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Apply the research gate to the harvest alert-policy sweep."
-        )
+        description=("Apply the research gate to the harvest alert-policy sweep.")
     )
     parser.add_argument(
         "--config",

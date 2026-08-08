@@ -30,9 +30,7 @@ def _require_columns(
 ) -> None:
     missing = sorted(required.difference(frame.columns))
     if missing:
-        raise ValueError(
-            f"{frame_name} is missing required columns: {missing}"
-        )
+        raise ValueError(f"{frame_name} is missing required columns: {missing}")
 
 
 def create_manual_review_template(
@@ -119,16 +117,8 @@ def create_manual_review_template(
         "manual_review_complete",
     ]
 
-    existing = [
-        column
-        for column in preferred_columns
-        if column in review.columns
-    ]
-    remaining = [
-        column
-        for column in review.columns
-        if column not in existing
-    ]
+    existing = [column for column in preferred_columns if column in review.columns]
+    remaining = [column for column in review.columns if column not in existing]
 
     return review[existing + remaining]
 
@@ -154,24 +144,16 @@ def validate_manual_review(
         pd.to_numeric(
             review["manual_review_complete"],
             errors="coerce",
-        ).fillna(0).ne(1)
+        )
+        .fillna(0)
+        .ne(1)
     ]
     if not incomplete.empty:
         ids = incomplete["harvest_event_id"].astype(str).tolist()
-        raise ValueError(
-            "Manual review is incomplete for events: "
-            f"{ids}"
-        )
+        raise ValueError(f"Manual review is incomplete for events: {ids}")
 
-    event_types = (
-        review["manual_event_type"]
-        .astype("string")
-        .str.strip()
-    )
-    invalid_types = sorted(
-        set(event_types.dropna())
-        .difference(ALLOWED_EVENT_TYPES)
-    )
+    event_types = review["manual_event_type"].astype("string").str.strip()
+    invalid_types = sorted(set(event_types.dropna()).difference(ALLOWED_EVENT_TYPES))
     if invalid_types:
         raise ValueError(
             "Invalid manual_event_type values: "
@@ -185,28 +167,30 @@ def validate_manual_review(
     )
     invalid_include = ~include_values.isin([0, 1])
     if invalid_include.any():
-        ids = review.loc[
-            invalid_include,
-            "harvest_event_id",
-        ].astype(str).tolist()
-        raise ValueError(
-            "manual_include_for_training must be 0 or 1 for: "
-            f"{ids}"
+        ids = (
+            review.loc[
+                invalid_include,
+                "harvest_event_id",
+            ]
+            .astype(str)
+            .tolist()
         )
+        raise ValueError(f"manual_include_for_training must be 0 or 1 for: {ids}")
 
     included = include_values.eq(1)
     included_types = event_types.loc[included]
-    invalid_included_types = included_types.ne(
-        "probable_harvest"
-    )
+    invalid_included_types = included_types.ne("probable_harvest")
     if invalid_included_types.any():
-        ids = review.loc[
-            included_types.index[invalid_included_types],
-            "harvest_event_id",
-        ].astype(str).tolist()
+        ids = (
+            review.loc[
+                included_types.index[invalid_included_types],
+                "harvest_event_id",
+            ]
+            .astype(str)
+            .tolist()
+        )
         raise ValueError(
-            "Only probable_harvest events may be included "
-            f"for training. Invalid events: {ids}"
+            f"Only probable_harvest events may be included for training. Invalid events: {ids}"
         )
 
     reviewed_times = pd.to_datetime(
@@ -215,14 +199,15 @@ def validate_manual_review(
     )
     missing_times = included & reviewed_times.isna()
     if missing_times.any():
-        ids = review.loc[
-            missing_times,
-            "harvest_event_id",
-        ].astype(str).tolist()
-        raise ValueError(
-            "Included events require a valid "
-            f"manual_reviewed_event_start: {ids}"
+        ids = (
+            review.loc[
+                missing_times,
+                "harvest_event_id",
+            ]
+            .astype(str)
+            .tolist()
         )
+        raise ValueError(f"Included events require a valid manual_reviewed_event_start: {ids}")
 
 
 def build_reviewed_event_table(
@@ -259,9 +244,7 @@ def build_reviewed_event_table(
         errors="raise",
     )
 
-    common_keys = common[
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    ].copy()
+    common_keys = common[[HIVE_COLUMN, TIMESTAMP_COLUMN]].copy()
     common_keys[TIMESTAMP_COLUMN] = pd.to_datetime(
         common_keys[TIMESTAMP_COLUMN],
         errors="raise",
@@ -275,13 +258,9 @@ def build_reviewed_event_table(
         how="left",
         indicator=True,
     )
-    unmatched = unmatched.loc[
-        unmatched["_merge"].ne("both")
-    ]
+    unmatched = unmatched.loc[unmatched["_merge"].ne("both")]
     if not unmatched.empty:
-        ids = unmatched[
-            "harvest_event_id"
-        ].astype(str).tolist()
+        ids = unmatched["harvest_event_id"].astype(str).tolist()
         raise ValueError(
             "Reviewed event timestamps must exactly match "
             f"common hourly records. Unmatched events: {ids}"
@@ -301,11 +280,7 @@ def build_reviewed_event_table(
         if optional in manifest.columns:
             manifest_columns.append(optional)
 
-    manifest = manifest[
-        manifest_columns
-    ].drop_duplicates(
-        subset=[HIVE_COLUMN, TIMESTAMP_COLUMN]
-    )
+    manifest = manifest[manifest_columns].drop_duplicates(subset=[HIVE_COLUMN, TIMESTAMP_COLUMN])
 
     reviewed = included.merge(
         manifest,
@@ -318,41 +293,25 @@ def build_reviewed_event_table(
 
     if "split_reviewed" in reviewed.columns:
         reviewed["split"] = reviewed["split_reviewed"]
-        reviewed = reviewed.drop(
-            columns=["split_reviewed"]
-        )
+        reviewed = reviewed.drop(columns=["split_reviewed"])
 
     if "is_boundary_gap_reviewed" in reviewed.columns:
-        reviewed["is_boundary_gap"] = reviewed[
-            "is_boundary_gap_reviewed"
-        ]
-        reviewed = reviewed.drop(
-            columns=["is_boundary_gap_reviewed"]
-        )
+        reviewed["is_boundary_gap"] = reviewed["is_boundary_gap_reviewed"]
+        reviewed = reviewed.drop(columns=["is_boundary_gap_reviewed"])
 
     reviewed = reviewed.drop(
         columns=[TIMESTAMP_COLUMN],
         errors="ignore",
     )
 
-    reviewed = reviewed.sort_values(
-        [HIVE_COLUMN, "event_start"]
-    ).reset_index(drop=True)
+    reviewed = reviewed.sort_values([HIVE_COLUMN, "event_start"]).reset_index(drop=True)
 
-    reviewed["source_harvest_event_id"] = reviewed[
-        "harvest_event_id"
-    ]
-    reviewed["event_number"] = (
-        reviewed.groupby(HIVE_COLUMN)
-        .cumcount()
-        .add(1)
-    )
+    reviewed["source_harvest_event_id"] = reviewed["harvest_event_id"]
+    reviewed["event_number"] = reviewed.groupby(HIVE_COLUMN).cumcount().add(1)
     reviewed["harvest_event_id"] = (
         reviewed[HIVE_COLUMN].astype(str)
         + "_harvest_"
-        + reviewed["event_number"]
-        .astype(str)
-        .str.zfill(3)
+        + reviewed["event_number"].astype(str).str.zfill(3)
     )
 
     duplicates = reviewed.duplicated(
@@ -368,10 +327,7 @@ def build_reviewed_event_table(
                 "source_harvest_event_id",
             ],
         ].to_dict(orient="records")
-        raise ValueError(
-            "Duplicate reviewed event timestamps were found: "
-            f"{rows}"
-        )
+        raise ValueError(f"Duplicate reviewed event timestamps were found: {rows}")
 
     output_columns = [
         HIVE_COLUMN,
@@ -391,47 +347,26 @@ def build_reviewed_event_table(
         "manual_reviewer_notes",
     ]
 
-    return reviewed[
-        [
-            column
-            for column in output_columns
-            if column in reviewed.columns
-        ]
-    ]
+    return reviewed[[column for column in output_columns if column in reviewed.columns]]
 
 
 def summarize_review(
     review: pd.DataFrame,
     reviewed_events: pd.DataFrame,
 ) -> dict[str, Any]:
-    event_types = (
-        review["manual_event_type"]
-        .astype("string")
-        .value_counts(dropna=False)
-        .to_dict()
-    )
+    event_types = review["manual_event_type"].astype("string").value_counts(dropna=False).to_dict()
     split_counts = (
-        reviewed_events["split"]
-        .value_counts(dropna=False)
-        .to_dict()
+        reviewed_events["split"].value_counts(dropna=False).to_dict()
         if "split" in reviewed_events.columns
         else {}
     )
 
     return {
         "audited_events": len(review),
-        "included_probable_harvest_events": len(
-            reviewed_events
-        ),
+        "included_probable_harvest_events": len(reviewed_events),
         "excluded_events": len(review) - len(reviewed_events),
-        "manual_event_type_counts": {
-            str(key): int(value)
-            for key, value in event_types.items()
-        },
-        "included_events_by_split": {
-            str(key): int(value)
-            for key, value in split_counts.items()
-        },
+        "manual_event_type_counts": {str(key): int(value) for key, value in event_types.items()},
+        "included_events_by_split": {str(key): int(value) for key, value in split_counts.items()},
         "next_action": (
             "Rebuild the 72-hour future target from the reviewed "
             "event timestamps, then regenerate cross-validation folds."
@@ -449,9 +384,7 @@ def prepare_review_from_config(
     if not path.is_absolute():
         path = root / path
 
-    config = yaml.safe_load(
-        path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
     review_config = config["review"]
 
     audit_path = _resolve_path(
@@ -485,9 +418,7 @@ def finalize_review_from_config(
     if not path.is_absolute():
         path = root / path
 
-    config = yaml.safe_load(
-        path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
     review_config = config["review"]
 
     review_path = _resolve_path(

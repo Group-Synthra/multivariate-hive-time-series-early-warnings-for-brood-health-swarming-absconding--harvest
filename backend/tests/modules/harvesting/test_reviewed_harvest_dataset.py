@@ -47,10 +47,7 @@ def test_future_reviewed_target_never_crosses_hives() -> None:
     )
     rows = pd.DataFrame(
         {
-            "hive_id": (
-                ["h1"] * 100
-                + ["h2"] * 100
-            ),
+            "hive_id": (["h1"] * 100 + ["h2"] * 100),
             "timestamp": list(timestamps) * 2,
         }
     )

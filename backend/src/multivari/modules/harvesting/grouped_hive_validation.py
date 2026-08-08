@@ -28,51 +28,26 @@ def create_grouped_positive_hive_folds(
         SPLIT_COLUMN,
         target_column,
     }
-    missing_features = sorted(
-        required_feature_columns.difference(
-            feature_dataset.columns
-        )
-    )
+    missing_features = sorted(required_feature_columns.difference(feature_dataset.columns))
     if missing_features:
-        raise ValueError(
-            "Feature dataset is missing required columns: "
-            f"{missing_features}"
-        )
+        raise ValueError(f"Feature dataset is missing required columns: {missing_features}")
 
     required_event_columns = {
         HIVE_COLUMN,
         SPLIT_COLUMN,
         "harvest_event_id",
     }
-    missing_events = sorted(
-        required_event_columns.difference(
-            reviewed_events.columns
-        )
-    )
+    missing_events = sorted(required_event_columns.difference(reviewed_events.columns))
     if missing_events:
-        raise ValueError(
-            "Reviewed events are missing required columns: "
-            f"{missing_events}"
-        )
+        raise ValueError(f"Reviewed events are missing required columns: {missing_events}")
 
-    training_events = reviewed_events.loc[
-        reviewed_events[SPLIT_COLUMN].eq("train")
-    ].copy()
-    positive_hives = sorted(
-        training_events[HIVE_COLUMN].unique().tolist()
-    )
+    training_events = reviewed_events.loc[reviewed_events[SPLIT_COLUMN].eq("train")].copy()
+    positive_hives = sorted(training_events[HIVE_COLUMN].unique().tolist())
 
-    if len(positive_hives) < (
-        minimum_training_positive_hives + 1
-    ):
-        raise ValueError(
-            "Not enough positive training hives for grouped "
-            "validation."
-        )
+    if len(positive_hives) < (minimum_training_positive_hives + 1):
+        raise ValueError("Not enough positive training hives for grouped validation.")
 
-    training_rows = feature_dataset.loc[
-        feature_dataset[SPLIT_COLUMN].eq("train")
-    ].copy()
+    training_rows = feature_dataset.loc[feature_dataset[SPLIT_COLUMN].eq("train")].copy()
 
     records: list[dict[str, Any]] = []
     for fold_number, validation_hive in enumerate(
@@ -80,59 +55,29 @@ def create_grouped_positive_hive_folds(
         start=1,
     ):
         training_positive_hives = [
-            hive_id
-            for hive_id in positive_hives
-            if hive_id != validation_hive
+            hive_id for hive_id in positive_hives if hive_id != validation_hive
         ]
 
-        validation_rows = training_rows.loc[
-            training_rows[HIVE_COLUMN].eq(validation_hive)
-        ]
-        fitting_rows = training_rows.loc[
-            training_rows[HIVE_COLUMN].ne(validation_hive)
-        ]
+        validation_rows = training_rows.loc[training_rows[HIVE_COLUMN].eq(validation_hive)]
+        fitting_rows = training_rows.loc[training_rows[HIVE_COLUMN].ne(validation_hive)]
 
-        validation_event_count = int(
-            training_events[HIVE_COLUMN]
-            .eq(validation_hive)
-            .sum()
-        )
-        training_event_count = int(
-            training_events[HIVE_COLUMN]
-            .ne(validation_hive)
-            .sum()
-        )
+        validation_event_count = int(training_events[HIVE_COLUMN].eq(validation_hive).sum())
+        training_event_count = int(training_events[HIVE_COLUMN].ne(validation_hive).sum())
 
         records.append(
             {
                 "fold": fold_number,
                 "validation_hive_id": validation_hive,
-                "training_positive_hive_count": len(
-                    training_positive_hives
-                ),
-                "training_positive_hives": "|".join(
-                    training_positive_hives
-                ),
+                "training_positive_hive_count": len(training_positive_hives),
+                "training_positive_hives": "|".join(training_positive_hives),
                 "training_event_count": training_event_count,
-                "validation_event_count": (
-                    validation_event_count
-                ),
+                "validation_event_count": (validation_event_count),
                 "training_rows": len(fitting_rows),
                 "validation_rows": len(validation_rows),
-                "training_positive_rows": int(
-                    fitting_rows[target_column].sum()
-                ),
-                "validation_positive_rows": int(
-                    validation_rows[target_column].sum()
-                ),
-                "training_rule": (
-                    "split == 'train' and hive_id != "
-                    "validation_hive_id"
-                ),
-                "validation_rule": (
-                    "split == 'train' and hive_id == "
-                    "validation_hive_id"
-                ),
+                "training_positive_rows": int(fitting_rows[target_column].sum()),
+                "validation_positive_rows": int(validation_rows[target_column].sum()),
+                "training_rule": ("split == 'train' and hive_id != validation_hive_id"),
+                "validation_rule": ("split == 'train' and hive_id == validation_hive_id"),
             }
         )
 
@@ -143,16 +88,12 @@ def create_grouped_positive_hive_folds(
         "positive_training_hive_count": len(positive_hives),
         "positive_training_hives": positive_hives,
         "training_event_count": len(training_events),
-        "minimum_training_positive_hives": (
-            minimum_training_positive_hives
-        ),
+        "minimum_training_positive_hives": (minimum_training_positive_hives),
         "primary_evaluation": (
-            "Official chronological validation with 2 events "
-            "and a one-event final test case study."
+            "Official chronological validation with 2 events and a one-event final test case study."
         ),
         "secondary_evaluation": (
-            "Leave-one-positive-hive-out sensitivity analysis "
-            "inside the official training split."
+            "Leave-one-positive-hive-out sensitivity analysis inside the official training split."
         ),
         "warning": (
             "These grouped folds are secondary only. They do not "
@@ -173,9 +114,7 @@ def run_grouped_hive_validation_from_config(
     if not path.is_absolute():
         path = root / path
 
-    config = yaml.safe_load(
-        path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
     settings = config["grouped_hive_validation"]
     target_column = config["reviewed_target"]["output_column"]
 
@@ -203,9 +142,7 @@ def run_grouped_hive_validation_from_config(
         features,
         events,
         target_column=target_column,
-        minimum_training_positive_hives=int(
-            settings["minimum_training_positive_hives"]
-        ),
+        minimum_training_positive_hives=int(settings["minimum_training_positive_hives"]),
     )
 
     folds_path.parent.mkdir(

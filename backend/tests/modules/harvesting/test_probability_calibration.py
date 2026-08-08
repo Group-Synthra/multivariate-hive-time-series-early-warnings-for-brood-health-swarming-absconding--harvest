@@ -16,18 +16,8 @@ from multivari.modules.harvesting.probability_calibration import (
 def test_grouped_folds_keep_hives_together_and_balance_positives() -> None:
     rows = pd.DataFrame(
         {
-            "hive_id": (
-                ["hive_a"] * 8
-                + ["hive_b"] * 8
-                + ["hive_c"] * 8
-                + ["hive_d"] * 8
-            ),
-            "target": (
-                [0, 0, 0, 0, 1, 1, 1, 1]
-                + [0, 0, 0, 0, 0, 1, 1, 1]
-                + [0] * 8
-                + [0] * 8
-            ),
+            "hive_id": (["hive_a"] * 8 + ["hive_b"] * 8 + ["hive_c"] * 8 + ["hive_d"] * 8),
+            "target": ([0, 0, 0, 0, 1, 1, 1, 1] + [0, 0, 0, 0, 0, 1, 1, 1] + [0] * 8 + [0] * 8),
         }
     )
 
@@ -39,9 +29,7 @@ def test_grouped_folds_keep_hives_together_and_balance_positives() -> None:
 
     assigned = rows.assign(fold=fold_ids)
     assert assigned.groupby("hive_id")["fold"].nunique().max() == 1
-    positive_hives = audit.loc[
-        audit["positive_rows"].gt(0)
-    ].groupby("fold").size()
+    positive_hives = audit.loc[audit["positive_rows"].gt(0)].groupby("fold").size()
     assert positive_hives.min() >= 1
 
 

@@ -15,19 +15,13 @@ from multivari.modules.harvesting.splitting import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Create event-aware chronological validation "
-            "folds for the harvesting module."
-        )
+        description=("Create event-aware chronological validation folds for the harvesting module.")
     )
 
     parser.add_argument(
         "--config",
         default="config/harvesting.yaml",
-        help=(
-            "Configuration path relative to backend, "
-            "or an absolute path."
-        ),
+        help=("Configuration path relative to backend, or an absolute path."),
     )
 
     return parser.parse_args()
@@ -48,18 +42,14 @@ def resolve_path(
 def main() -> None:
     args = parse_args()
 
-    backend_root = Path(
-        __file__
-    ).resolve().parents[1]
+    backend_root = Path(__file__).resolve().parents[1]
 
     config_path = Path(args.config)
 
     if not config_path.is_absolute():
         config_path = backend_root / config_path
 
-    config = yaml.safe_load(
-        config_path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
 
     event_table_path = resolve_path(
         backend_root,
@@ -82,22 +72,10 @@ def main() -> None:
 
     folds = create_event_aware_folds(
         events,
-        minimum_training_events=int(
-            cross_validation[
-                "minimum_training_events"
-            ]
-        ),
-        validation_events_per_fold=int(
-            cross_validation[
-                "validation_events_per_fold"
-            ]
-        ),
-        prediction_horizon_hours=int(
-            config["target"]["horizon_hours"]
-        ),
-        purge_hours=int(
-            cross_validation["purge_hours"]
-        ),
+        minimum_training_events=int(cross_validation["minimum_training_events"]),
+        validation_events_per_fold=int(cross_validation["validation_events_per_fold"]),
+        prediction_horizon_hours=int(config["target"]["horizon_hours"]),
+        purge_hours=int(cross_validation["purge_hours"]),
     )
 
     fold_frame = folds_to_frame(folds)
@@ -111,25 +89,11 @@ def main() -> None:
         "event_table_path": str(event_table_path),
         "output_path": str(output_path),
         "fold_count": len(fold_frame),
-        "minimum_training_events": int(
-            cross_validation[
-                "minimum_training_events"
-            ]
-        ),
-        "validation_events_per_fold": int(
-            cross_validation[
-                "validation_events_per_fold"
-            ]
-        ),
-        "prediction_horizon_hours": int(
-            config["target"]["horizon_hours"]
-        ),
-        "purge_hours": int(
-            cross_validation["purge_hours"]
-        ),
-        "folds": fold_frame.to_dict(
-            orient="records"
-        ),
+        "minimum_training_events": int(cross_validation["minimum_training_events"]),
+        "validation_events_per_fold": int(cross_validation["validation_events_per_fold"]),
+        "prediction_horizon_hours": int(config["target"]["horizon_hours"]),
+        "purge_hours": int(cross_validation["purge_hours"]),
+        "folds": fold_frame.to_dict(orient="records"),
     }
 
     print(

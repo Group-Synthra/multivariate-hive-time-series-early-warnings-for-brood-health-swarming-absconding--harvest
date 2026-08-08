@@ -72,20 +72,14 @@ class RecentTrendDeltaRegressor(
     ) -> RecentTrendDeltaRegressor:
         del target
         if self.trend_feature not in features.columns:
-            raise ValueError(
-                "Recent-trend feature is unavailable: "
-                f"{self.trend_feature}"
-            )
+            raise ValueError(f"Recent-trend feature is unavailable: {self.trend_feature}")
         return self
 
     def predict(
         self,
         features: pd.DataFrame,
     ) -> np.ndarray:
-        return (
-            features[self.trend_feature].to_numpy(dtype=float)
-            * self.horizon_hours
-        )
+        return features[self.trend_feature].to_numpy(dtype=float) * self.horizon_hours
 
 
 def _resolve_path(root: Path, configured_path: str) -> Path:
@@ -101,9 +95,7 @@ def _require_columns(
 ) -> None:
     missing = sorted(required.difference(frame.columns))
     if missing:
-        raise ValueError(
-            f"{frame_name} is missing required columns: {missing}"
-        )
+        raise ValueError(f"{frame_name} is missing required columns: {missing}")
 
 
 def _json_safe(value: Any) -> Any:
@@ -143,17 +135,10 @@ def build_feature_sets(
         if settings.get("include_all"):
             selected = available.copy()
         elif "include" in settings:
-            requested = [
-                str(value) for value in settings["include"]
-            ]
-            missing = sorted(
-                set(requested).difference(available_set)
-            )
+            requested = [str(value) for value in settings["include"]]
+            missing = sorted(set(requested).difference(available_set))
             if missing:
-                raise ValueError(
-                    f"Feature set '{name}' requests missing "
-                    f"features: {missing}"
-                )
+                raise ValueError(f"Feature set '{name}' requests missing features: {missing}")
             selected = requested
         else:
             prefixes = [
@@ -166,10 +151,7 @@ def build_feature_sets(
             selected = [
                 feature
                 for feature in available
-                if any(
-                    feature.startswith(prefix)
-                    for prefix in prefixes
-                )
+                if any(feature.startswith(prefix) for prefix in prefixes)
             ]
 
         excluded_prefixes = [
@@ -183,17 +165,12 @@ def build_feature_sets(
             selected = [
                 feature
                 for feature in selected
-                if not any(
-                    feature.startswith(prefix)
-                    for prefix in excluded_prefixes
-                )
+                if not any(feature.startswith(prefix) for prefix in excluded_prefixes)
             ]
 
         selected = list(dict.fromkeys(selected))
         if not selected:
-            raise ValueError(
-                f"Feature set '{name}' contains no features."
-            )
+            raise ValueError(f"Feature set '{name}' contains no features.")
         result[name] = selected
 
     return result
@@ -257,23 +234,12 @@ def build_future_weight_targets(
         (clean, "clean rows"),
         (manifest, "split manifest"),
     ):
-        duplicates = int(
-            frame.duplicated(
-                [HIVE_COLUMN, TIMESTAMP_COLUMN]
-            ).sum()
-        )
+        duplicates = int(frame.duplicated([HIVE_COLUMN, TIMESTAMP_COLUMN]).sum())
         if duplicates:
-            raise ValueError(
-                f"{name} contains duplicate hive-timestamp rows: "
-                f"{duplicates}"
-            )
+            raise ValueError(f"{name} contains duplicate hive-timestamp rows: {duplicates}")
 
-    clean_with_split = clean[
-        [HIVE_COLUMN, TIMESTAMP_COLUMN, WEIGHT_COLUMN]
-    ].merge(
-        manifest[
-            [HIVE_COLUMN, TIMESTAMP_COLUMN, SPLIT_COLUMN]
-        ],
+    clean_with_split = clean[[HIVE_COLUMN, TIMESTAMP_COLUMN, WEIGHT_COLUMN]].merge(
+        manifest[[HIVE_COLUMN, TIMESTAMP_COLUMN, SPLIT_COLUMN]],
         on=[HIVE_COLUMN, TIMESTAMP_COLUMN],
         how="inner",
         validate="one_to_one",
@@ -283,20 +249,13 @@ def build_future_weight_targets(
 
     for horizon in horizons_hours:
         if horizon <= 0:
-            raise ValueError(
-                "Forecast horizons must be greater than zero."
-            )
+            raise ValueError("Forecast horizons must be greater than zero.")
 
         future = clean_with_split.copy()
-        future[TIMESTAMP_COLUMN] = (
-            future[TIMESTAMP_COLUMN]
-            - pd.Timedelta(hours=horizon)
-        )
+        future[TIMESTAMP_COLUMN] = future[TIMESTAMP_COLUMN] - pd.Timedelta(hours=horizon)
         future = future.rename(
             columns={
-                WEIGHT_COLUMN: (
-                    f"future_weight_{horizon}h_kg"
-                ),
+                WEIGHT_COLUMN: (f"future_weight_{horizon}h_kg"),
                 SPLIT_COLUMN: f"future_split_{horizon}h",
             }
         )
@@ -309,21 +268,14 @@ def build_future_weight_targets(
         )
 
         future_split_column = f"future_split_{horizon}h"
-        future_weight_column = (
-            f"future_weight_{horizon}h_kg"
-        )
+        future_weight_column = f"future_weight_{horizon}h_kg"
         target_column = f"weight_delta_next_{horizon}h_kg"
 
-        same_split = result[future_split_column].eq(
-            result[SPLIT_COLUMN]
-        )
+        same_split = result[future_split_column].eq(result[SPLIT_COLUMN])
         result[target_column] = (
-            result[future_weight_column]
-            - result[CURRENT_WEIGHT_FEATURE]
+            result[future_weight_column] - result[CURRENT_WEIGHT_FEATURE]
         ).where(same_split)
-        result = result.drop(
-            columns=[future_split_column]
-        )
+        result = result.drop(columns=[future_split_column])
 
     return result
 
@@ -337,25 +289,13 @@ def calculate_regression_metrics(
     error = predicted - actual
 
     return {
-        "mae": float(
-            mean_absolute_error(actual, predicted)
-        ),
-        "rmse": float(
-            math.sqrt(
-                mean_squared_error(actual, predicted)
-            )
-        ),
-        "median_absolute_error": float(
-            median_absolute_error(actual, predicted)
-        ),
+        "mae": float(mean_absolute_error(actual, predicted)),
+        "rmse": float(math.sqrt(mean_squared_error(actual, predicted))),
+        "median_absolute_error": float(median_absolute_error(actual, predicted)),
         "bias": float(error.mean()),
         "r2": float(r2_score(actual, predicted)),
-        "within_0_5kg_fraction": float(
-            (np.abs(error) <= 0.5).mean()
-        ),
-        "within_1kg_fraction": float(
-            (np.abs(error) <= 1.0).mean()
-        ),
+        "within_0_5kg_fraction": float((np.abs(error) <= 0.5).mean()),
+        "within_1kg_fraction": float((np.abs(error) <= 1.0).mean()),
     }
 
 
@@ -390,9 +330,7 @@ def _make_estimator(
         return RandomForestRegressor(
             n_estimators=int(settings["n_estimators"]),
             max_depth=int(settings["max_depth"]),
-            min_samples_leaf=int(
-                settings["min_samples_leaf"]
-            ),
+            min_samples_leaf=int(settings["min_samples_leaf"]),
             max_features=settings["max_features"],
             max_samples=float(settings["max_samples"]),
             n_jobs=-1,
@@ -403,21 +341,15 @@ def _make_estimator(
         try:
             from xgboost import XGBRegressor
         except ImportError as error:
-            raise ImportError(
-                "XGBoost is not installed. Run: pip install xgboost"
-            ) from error
+            raise ImportError("XGBoost is not installed. Run: pip install xgboost") from error
 
         return XGBRegressor(
             n_estimators=int(settings["n_estimators"]),
             learning_rate=float(settings["learning_rate"]),
             max_depth=int(settings["max_depth"]),
-            min_child_weight=float(
-                settings["min_child_weight"]
-            ),
+            min_child_weight=float(settings["min_child_weight"]),
             subsample=float(settings["subsample"]),
-            colsample_bytree=float(
-                settings["colsample_bytree"]
-            ),
+            colsample_bytree=float(settings["colsample_bytree"]),
             reg_alpha=float(settings["reg_alpha"]),
             reg_lambda=float(settings["reg_lambda"]),
             objective="reg:squarederror",
@@ -430,22 +362,16 @@ def _make_estimator(
         try:
             from lightgbm import LGBMRegressor
         except ImportError as error:
-            raise ImportError(
-                "LightGBM is not installed. Run: pip install lightgbm"
-            ) from error
+            raise ImportError("LightGBM is not installed. Run: pip install lightgbm") from error
 
         return LGBMRegressor(
             n_estimators=int(settings["n_estimators"]),
             learning_rate=float(settings["learning_rate"]),
             num_leaves=int(settings["num_leaves"]),
             max_depth=int(settings["max_depth"]),
-            min_child_samples=int(
-                settings["min_child_samples"]
-            ),
+            min_child_samples=int(settings["min_child_samples"]),
             subsample=float(settings["subsample"]),
-            colsample_bytree=float(
-                settings["colsample_bytree"]
-            ),
+            colsample_bytree=float(settings["colsample_bytree"]),
             reg_alpha=float(settings["reg_alpha"]),
             reg_lambda=float(settings["reg_lambda"]),
             objective="regression",
@@ -513,9 +439,7 @@ def run_weight_forecasting_from_config(
     if not path.is_absolute():
         path = root / path
 
-    config = yaml.safe_load(
-        path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
     settings = config["weight_forecasting"]
 
     feature_path = _resolve_path(
@@ -551,23 +475,14 @@ def run_weight_forecasting_from_config(
     split_manifest = pd.read_parquet(split_path)
     feature_manifest = pd.read_csv(manifest_path)
 
-    available_features = (
-        feature_manifest["feature_name"]
-        .astype(str)
-        .tolist()
-    )
+    available_features = feature_manifest["feature_name"].astype(str).tolist()
     feature_sets = build_feature_sets(
         available_features,
         settings["feature_sets"],
     )
-    horizons = [
-        int(value)
-        for value in settings["horizons_hours"]
-    ]
+    horizons = [int(value) for value in settings["horizons_hours"]]
     random_state = int(settings["random_state"])
-    maximum_training_rows = int(
-        settings["maximum_training_rows"]
-    )
+    maximum_training_rows = int(settings["maximum_training_rows"])
 
     dataset = build_future_weight_targets(
         feature_rows,
@@ -581,22 +496,12 @@ def run_weight_forecasting_from_config(
     all_per_hive: list[pd.DataFrame] = []
 
     for horizon in horizons:
-        target_column = (
-            f"weight_delta_next_{horizon}h_kg"
-        )
-        horizon_rows = dataset.loc[
-            dataset[target_column].notna()
-        ].copy()
+        target_column = f"weight_delta_next_{horizon}h_kg"
+        horizon_rows = dataset.loc[dataset[target_column].notna()].copy()
 
-        train = horizon_rows.loc[
-            horizon_rows[SPLIT_COLUMN].eq("train")
-        ]
-        validation = horizon_rows.loc[
-            horizon_rows[SPLIT_COLUMN].eq("validation")
-        ]
-        test = horizon_rows.loc[
-            horizon_rows[SPLIT_COLUMN].eq("test")
-        ]
+        train = horizon_rows.loc[horizon_rows[SPLIT_COLUMN].eq("train")]
+        validation = horizon_rows.loc[horizon_rows[SPLIT_COLUMN].eq("validation")]
+        test = horizon_rows.loc[horizon_rows[SPLIT_COLUMN].eq("test")]
 
         if train.empty or validation.empty or test.empty:
             raise ValueError(
@@ -615,15 +520,9 @@ def run_weight_forecasting_from_config(
             ]
         ] = []
 
-        for feature_set_name, selected_features in (
-            feature_sets.items()
-        ):
-            for model_name, model_settings in (
-                settings["models"].items()
-            ):
-                if not bool(
-                    model_settings.get("enabled", True)
-                ):
+        for feature_set_name, selected_features in feature_sets.items():
+            for model_name, model_settings in settings["models"].items():
+                if not bool(model_settings.get("enabled", True)):
                     comparison_records.append(
                         {
                             "horizon_hours": horizon,
@@ -652,18 +551,12 @@ def run_weight_forecasting_from_config(
                         sampled_train[selected_features],
                         sampled_train[target_column],
                     )
-                    training_seconds = (
-                        time.perf_counter() - started
-                    )
+                    training_seconds = time.perf_counter() - started
 
-                    validation_prediction = estimator.predict(
-                        validation[selected_features]
-                    )
-                    validation_metrics = (
-                        calculate_regression_metrics(
-                            validation[target_column],
-                            validation_prediction,
-                        )
+                    validation_prediction = estimator.predict(validation[selected_features])
+                    validation_metrics = calculate_regression_metrics(
+                        validation[target_column],
+                        validation_prediction,
                     )
 
                     complexity_order = {
@@ -676,9 +569,7 @@ def run_weight_forecasting_from_config(
                     }[model_name]
                     selection_key = (
                         validation_metrics["mae"],
-                        validation_metrics[
-                            "median_absolute_error"
-                        ],
+                        validation_metrics["median_absolute_error"],
                         abs(validation_metrics["bias"]),
                         complexity_order,
                     )
@@ -699,16 +590,13 @@ def run_weight_forecasting_from_config(
                             "model": model_name,
                             "feature_set": feature_set_name,
                             "status": "ok",
-                            "feature_count": len(
-                                selected_features
-                            ),
+                            "feature_count": len(selected_features),
                             "training_rows": len(sampled_train),
                             "validation_rows": len(validation),
                             "training_seconds": training_seconds,
                             **{
                                 f"validation_{key}": value
-                                for key, value
-                                in validation_metrics.items()
+                                for key, value in validation_metrics.items()
                             },
                         }
                     )
@@ -734,9 +622,7 @@ def run_weight_forecasting_from_config(
                     )
 
         if not candidates:
-            raise RuntimeError(
-                f"No forecasting candidate completed at {horizon}h."
-            )
+            raise RuntimeError(f"No forecasting candidate completed at {horizon}h.")
 
         (
             _,
@@ -747,12 +633,8 @@ def run_weight_forecasting_from_config(
             validation_metrics,
         ) = min(candidates, key=lambda item: item[0])
 
-        validation_prediction = selected_estimator.predict(
-            validation[selected_features]
-        )
-        test_prediction = selected_estimator.predict(
-            test[selected_features]
-        )
+        validation_prediction = selected_estimator.predict(validation[selected_features])
+        test_prediction = selected_estimator.predict(test[selected_features])
         test_metrics = calculate_regression_metrics(
             test[target_column],
             test_prediction,
@@ -775,25 +657,18 @@ def run_weight_forecasting_from_config(
             ].copy()
             result = result.rename(
                 columns={
-                    CURRENT_WEIGHT_FEATURE: (
-                        "current_weight_kg"
-                    ),
+                    CURRENT_WEIGHT_FEATURE: ("current_weight_kg"),
                     target_column_name: "actual_delta_kg",
                 }
             )
             result["predicted_delta_kg"] = prediction
             result["actual_future_weight_kg"] = (
-                result["current_weight_kg"]
-                + result["actual_delta_kg"]
+                result["current_weight_kg"] + result["actual_delta_kg"]
             )
             result["predicted_future_weight_kg"] = (
-                result["current_weight_kg"]
-                + result["predicted_delta_kg"]
+                result["current_weight_kg"] + result["predicted_delta_kg"]
             )
-            result["error_kg"] = (
-                result["predicted_delta_kg"]
-                - result["actual_delta_kg"]
-            )
+            result["error_kg"] = result["predicted_delta_kg"] - result["actual_delta_kg"]
             return result
 
         validation_predictions = build_predictions(
@@ -808,13 +683,11 @@ def run_weight_forecasting_from_config(
         )
 
         validation_predictions.to_parquet(
-            output_directory
-            / f"selected_validation_predictions_{horizon}h.parquet",
+            output_directory / f"selected_validation_predictions_{horizon}h.parquet",
             index=False,
         )
         test_predictions.to_parquet(
-            output_directory
-            / f"selected_test_predictions_{horizon}h.parquet",
+            output_directory / f"selected_test_predictions_{horizon}h.parquet",
             index=False,
         )
 
@@ -839,30 +712,24 @@ def run_weight_forecasting_from_config(
 
         joblib.dump(
             selected_estimator,
-            model_directory
-            / f"selected_weight_forecaster_{horizon}h.joblib",
+            model_directory / f"selected_weight_forecaster_{horizon}h.joblib",
         )
         _write_json(
-            model_directory
-            / f"selected_weight_forecaster_{horizon}h.json",
+            model_directory / f"selected_weight_forecaster_{horizon}h.json",
             {
                 "horizon_hours": horizon,
                 "model": selected_model_name,
                 "feature_set": selected_feature_set,
                 "feature_columns": selected_features,
                 "target": target_column,
-                "probability_status": (
-                    "not_applicable_regression_forecast"
-                ),
+                "probability_status": ("not_applicable_regression_forecast"),
             },
         )
 
         summary_by_horizon[str(horizon)] = {
             "selected_model": selected_model_name,
             "selected_feature_set": selected_feature_set,
-            "selected_feature_count": len(
-                selected_features
-            ),
+            "selected_feature_count": len(selected_features),
             "training_rows": len(train),
             "validation_rows": len(validation),
             "test_rows": len(test),
@@ -880,8 +747,7 @@ def run_weight_forecasting_from_config(
             all_per_hive,
             ignore_index=True,
         ).to_csv(
-            output_directory
-            / "selected_forecaster_per_hive_metrics.csv",
+            output_directory / "selected_forecaster_per_hive_metrics.csv",
             index=False,
         )
 
@@ -891,10 +757,7 @@ def run_weight_forecasting_from_config(
         "available_rows_by_horizon_and_split": (
             dataset.melt(
                 id_vars=[SPLIT_COLUMN],
-                value_vars=[
-                    f"weight_delta_next_{horizon}h_kg"
-                    for horizon in horizons
-                ],
+                value_vars=[f"weight_delta_next_{horizon}h_kg" for horizon in horizons],
                 var_name="target",
                 value_name="value",
             )
@@ -917,9 +780,7 @@ def run_weight_forecasting_from_config(
     )
 
     summary = {
-        "research_stage": (
-            "Label-independent future hive-weight forecasting."
-        ),
+        "research_stage": ("Label-independent future hive-weight forecasting."),
         "selection_rule": (
             "For each horizon, minimize validation MAE, then median "
             "absolute error, absolute bias and model complexity."
@@ -930,10 +791,7 @@ def run_weight_forecasting_from_config(
                 "Forecast accuracy does not by itself prove honey "
                 "maturity or optimal harvesting time."
             ),
-            (
-                "Humidity is generated; the no-humidity feature set "
-                "must be reported separately."
-            ),
+            ("Humidity is generated; the no-humidity feature set must be reported separately."),
             (
                 "Readiness scoring must be transparent and validated "
                 "prospectively with beekeeper-confirmed harvest data."
@@ -948,14 +806,7 @@ def run_weight_forecasting_from_config(
     return {
         "status": "completed",
         "horizons": summary_by_horizon,
-        "comparison_path": str(
-            output_directory / "weight_forecasting_comparison.csv"
-        ),
-        "summary_path": str(
-            output_directory / "weight_forecasting_summary.json"
-        ),
-        "target_audit_path": str(
-            output_directory
-            / "weight_forecasting_target_audit.json"
-        ),
+        "comparison_path": str(output_directory / "weight_forecasting_comparison.csv"),
+        "summary_path": str(output_directory / "weight_forecasting_summary.json"),
+        "target_audit_path": str(output_directory / "weight_forecasting_target_audit.json"),
     }

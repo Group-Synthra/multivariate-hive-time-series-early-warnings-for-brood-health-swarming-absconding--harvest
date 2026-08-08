@@ -67,9 +67,7 @@ class IsotonicCalibrator:
     method_name: str = "isotonic"
 
     def predict(self, probabilities: np.ndarray) -> np.ndarray:
-        calibrated = self.estimator.predict(
-            np.asarray(probabilities, dtype=float)
-        )
+        calibrated = self.estimator.predict(np.asarray(probabilities, dtype=float))
         return np.clip(calibrated, self.epsilon, 1.0 - self.epsilon)
 
 
@@ -108,9 +106,7 @@ def _require_columns(
 ) -> None:
     missing = sorted(required.difference(frame.columns))
     if missing:
-        raise ValueError(
-            f"{frame_name} is missing required columns: {missing}"
-        )
+        raise ValueError(f"{frame_name} is missing required columns: {missing}")
 
 
 def _probability_logit(
@@ -164,9 +160,7 @@ def _make_estimator(
         try:
             from xgboost import XGBClassifier
         except ImportError as error:
-            raise ImportError(
-                "XGBoost is not installed. Run: pip install xgboost"
-            ) from error
+            raise ImportError("XGBoost is not installed. Run: pip install xgboost") from error
 
         return XGBClassifier(
             n_estimators=int(settings["n_estimators"]),
@@ -188,9 +182,7 @@ def _make_estimator(
         try:
             from lightgbm import LGBMClassifier
         except ImportError as error:
-            raise ImportError(
-                "LightGBM is not installed. Run: pip install lightgbm"
-            ) from error
+            raise ImportError("LightGBM is not installed. Run: pip install lightgbm") from error
 
         return LGBMClassifier(
             n_estimators=int(settings["n_estimators"]),
@@ -237,9 +229,7 @@ def _positive_probabilities(
 ) -> np.ndarray:
     probabilities = estimator.predict_proba(features)
     if probabilities.ndim != 2 or probabilities.shape[1] != 2:
-        raise ValueError(
-            "Classifier predict_proba must return two columns."
-        )
+        raise ValueError("Classifier predict_proba must return two columns.")
     return probabilities[:, 1].astype(float)
 
 
@@ -272,17 +262,11 @@ def assign_grouped_hive_folds(
         )
         .reset_index()
     )
-    positive_hives = statistics.loc[
-        statistics["positive_rows"].gt(0)
-    ].copy()
-    negative_hives = statistics.loc[
-        statistics["positive_rows"].eq(0)
-    ].copy()
+    positive_hives = statistics.loc[statistics["positive_rows"].gt(0)].copy()
+    negative_hives = statistics.loc[statistics["positive_rows"].eq(0)].copy()
 
     if len(positive_hives) < 2:
-        raise ValueError(
-            "Grouped calibration requires at least two positive hives."
-        )
+        raise ValueError("Grouped calibration requires at least two positive hives.")
 
     fold_count = min(requested_folds, len(positive_hives))
     loads = [
@@ -337,9 +321,7 @@ def assign_grouped_hive_folds(
         raise RuntimeError("Some hives were not assigned to an OOF fold.")
 
     audit = statistics.copy()
-    audit["fold"] = (
-        audit[HIVE_COLUMN].astype(str).map(assignments).astype(int)
-    )
+    audit["fold"] = audit[HIVE_COLUMN].astype(str).map(assignments).astype(int)
     audit = audit.sort_values(["fold", HIVE_COLUMN]).reset_index(drop=True)
 
     fold_summary = (
@@ -356,9 +338,7 @@ def assign_grouped_hive_folds(
         .reset_index()
     )
     if fold_summary["positive_hives"].lt(1).any():
-        raise RuntimeError(
-            "Every OOF fold must contain at least one positive hive."
-        )
+        raise RuntimeError("Every OOF fold must contain at least one positive hive.")
 
     return fold_series.astype(int), audit
 
@@ -398,28 +378,18 @@ def build_grouped_oof_predictions(
     fold_records: list[dict[str, Any]] = []
 
     for fold in sorted(working["calibration_fold"].unique()):
-        fold_train = working.loc[
-            working["calibration_fold"].ne(fold)
-        ].copy()
-        fold_validation = working.loc[
-            working["calibration_fold"].eq(fold)
-        ].copy()
+        fold_train = working.loc[working["calibration_fold"].ne(fold)].copy()
+        fold_validation = working.loc[working["calibration_fold"].eq(fold)].copy()
 
         if fold_train[target_column].nunique() < 2:
-            raise ValueError(
-                f"OOF fold {fold} training data has only one class."
-            )
+            raise ValueError(f"OOF fold {fold} training data has only one class.")
         if fold_validation[target_column].nunique() < 2:
-            raise ValueError(
-                f"OOF fold {fold} validation data has only one class."
-            )
+            raise ValueError(f"OOF fold {fold} validation data has only one class.")
 
         sampled = sample_training_rows(
             fold_train,
             target_column=target_column,
-            maximum_negative_to_positive_ratio=(
-                maximum_negative_to_positive_ratio
-            ),
+            maximum_negative_to_positive_ratio=(maximum_negative_to_positive_ratio),
             random_state=random_state + int(fold),
         )
         weights = calculate_session_balanced_weights(
@@ -460,38 +430,26 @@ def build_grouped_oof_predictions(
         fold_records.append(
             {
                 "fold": int(fold),
-                "training_hives": int(
-                    fold_train[HIVE_COLUMN].nunique()
-                ),
-                "validation_hives": int(
-                    fold_validation[HIVE_COLUMN].nunique()
-                ),
+                "training_hives": int(fold_train[HIVE_COLUMN].nunique()),
+                "validation_hives": int(fold_validation[HIVE_COLUMN].nunique()),
                 "training_rows_before_sampling": len(fold_train),
                 "training_rows_after_sampling": len(sampled),
-                "training_positive_rows": int(
-                    sampled[target_column].sum()
-                ),
+                "training_positive_rows": int(sampled[target_column].sum()),
                 "validation_rows": len(fold_validation),
-                "validation_positive_rows": int(
-                    fold_validation[target_column].sum()
-                ),
+                "validation_positive_rows": int(fold_validation[target_column].sum()),
                 "training_seconds": elapsed,
             }
         )
 
     result = pd.concat(predictions, ignore_index=True)
     if len(result) != len(rows):
-        raise RuntimeError(
-            "OOF predictions do not cover every training row."
-        )
+        raise RuntimeError("OOF predictions do not cover every training row.")
     duplicated = result.duplicated(
         [TIMESTAMP_COLUMN, HIVE_COLUMN],
         keep=False,
     )
     if duplicated.any():
-        raise RuntimeError(
-            "OOF predictions contain duplicate hive/timestamp rows."
-        )
+        raise RuntimeError("OOF predictions contain duplicate hive/timestamp rows.")
 
     fold_run_audit = pd.DataFrame(fold_records)
     fold_hive_audit = fold_audit.merge(
@@ -501,9 +459,7 @@ def build_grouped_oof_predictions(
         validate="many_to_one",
     )
     return (
-        result.sort_values(
-            [TIMESTAMP_COLUMN, HIVE_COLUMN]
-        ).reset_index(drop=True),
+        result.sort_values([TIMESTAMP_COLUMN, HIVE_COLUMN]).reset_index(drop=True),
         fold_hive_audit,
     )
 
@@ -589,8 +545,7 @@ def build_reliability_table(
         .reset_index()
     )
     reliability["absolute_calibration_gap"] = (
-        reliability["mean_probability"]
-        - reliability["observed_event_rate"]
+        reliability["mean_probability"] - reliability["observed_event_rate"]
     ).abs()
     return reliability
 
@@ -643,15 +598,8 @@ def calculate_calibration_metrics(
     )
     total_rows = int(reliability["rows"].sum())
     weights = reliability["rows"] / total_rows
-    ece = float(
-        (
-            weights
-            * reliability["absolute_calibration_gap"]
-        ).sum()
-    )
-    mce = float(
-        reliability["absolute_calibration_gap"].max()
-    )
+    ece = float((weights * reliability["absolute_calibration_gap"]).sum())
+    mce = float(reliability["absolute_calibration_gap"].max())
     intercept, slope = _calibration_slope_intercept(
         y_true,
         y_prob,
@@ -669,9 +617,7 @@ def calculate_calibration_metrics(
         "pr_auc": float(average_precision_score(y_true, y_prob)),
         "roc_auc": float(roc_auc_score(y_true, y_prob)),
         "brier_score": float(brier_score_loss(y_true, y_prob)),
-        "log_loss": float(
-            log_loss(y_true, y_prob, labels=[0, 1])
-        ),
+        "log_loss": float(log_loss(y_true, y_prob, labels=[0, 1])),
         "expected_calibration_error": ece,
         "maximum_calibration_error": mce,
         "calibration_intercept": intercept,
@@ -684,13 +630,10 @@ def select_calibration_method(
     comparison: pd.DataFrame,
 ) -> str:
     validation = comparison.loc[
-        comparison["split"].eq("validation")
-        & comparison["status"].eq("ok")
+        comparison["split"].eq("validation") & comparison["status"].eq("ok")
     ].copy()
     if validation.empty:
-        raise RuntimeError(
-            "No calibration method has valid validation metrics."
-        )
+        raise RuntimeError("No calibration method has valid validation metrics.")
 
     complexity = {
         "identity": 0,
@@ -723,48 +666,36 @@ def evaluate_calibration_gate(
     indexed = comparison.set_index(["method", "split"])
 
     raw_validation = indexed.loc[("identity", "validation")]
-    selected_validation = indexed.loc[
-        (selected_method, "validation")
-    ]
+    selected_validation = indexed.loc[(selected_method, "validation")]
     raw_test = indexed.loc[("identity", "test")]
     selected_test = indexed.loc[(selected_method, "test")]
 
     raw_validation_brier = float(raw_validation["brier_score"])
-    selected_validation_brier = float(
-        selected_validation["brier_score"]
-    )
+    selected_validation_brier = float(selected_validation["brier_score"])
     raw_test_brier = float(raw_test["brier_score"])
     selected_test_brier = float(selected_test["brier_score"])
 
     validation_improvement = (
         raw_validation_brier - selected_validation_brier
     ) / raw_validation_brier
-    test_degradation = (
-        selected_test_brier - raw_test_brier
-    ) / raw_test_brier
+    test_degradation = (selected_test_brier - raw_test_brier) / raw_test_brier
 
-    validation_ece_not_worse = float(
-        selected_validation["expected_calibration_error"]
-    ) <= float(raw_validation["expected_calibration_error"])
+    validation_ece_not_worse = float(selected_validation["expected_calibration_error"]) <= float(
+        raw_validation["expected_calibration_error"]
+    )
 
     conditions = {
         "non_identity_method_selected": selected_method != "identity",
         "validation_brier_improvement_sufficient": (
-            validation_improvement
-            >= minimum_validation_brier_improvement_fraction
+            validation_improvement >= minimum_validation_brier_improvement_fraction
         ),
         "validation_ece_not_worse": (
-            validation_ece_not_worse
-            if require_validation_ece_not_worse
-            else True
+            validation_ece_not_worse if require_validation_ece_not_worse else True
         ),
         "test_brier_not_materially_worse": (
-            test_degradation
-            <= maximum_test_brier_degradation_fraction
+            test_degradation <= maximum_test_brier_degradation_fraction
         ),
-        "positive_hive_count_sufficient": (
-            positive_hive_count >= minimum_positive_hives
-        ),
+        "positive_hive_count_sufficient": (positive_hive_count >= minimum_positive_hives),
     }
     gate_passed = all(conditions.values())
 
@@ -777,16 +708,12 @@ def evaluate_calibration_gate(
         "gate_passed": gate_passed,
         "selected_method": selected_method,
         "conditions": conditions,
-        "validation_brier_improvement_fraction": (
-            validation_improvement
-        ),
+        "validation_brier_improvement_fraction": (validation_improvement),
         "test_brier_degradation_fraction": test_degradation,
         "minimum_validation_brier_improvement_fraction": (
             minimum_validation_brier_improvement_fraction
         ),
-        "maximum_test_brier_degradation_fraction": (
-            maximum_test_brier_degradation_fraction
-        ),
+        "maximum_test_brier_degradation_fraction": (maximum_test_brier_degradation_fraction),
         "positive_hive_count": positive_hive_count,
         "minimum_positive_hives": minimum_positive_hives,
         "operational_calibration_allowed": False,
@@ -856,30 +783,18 @@ def run_probability_calibration_from_config(
     session_gap_hours = int(settings["session_gap_hours"])
     requested_folds = int(settings["grouped_oof_folds"])
     random_state = int(settings["random_state"])
-    negative_ratio = int(
-        settings["maximum_negative_to_positive_ratio"]
-    )
+    negative_ratio = int(settings["maximum_negative_to_positive_ratio"])
     reliability_bins = int(settings["reliability_bins"])
     epsilon = float(settings["probability_clip_epsilon"])
 
     if not selected_model_path.exists():
-        raise FileNotFoundError(
-            f"Missing selected classifier: {selected_model_path}"
-        )
+        raise FileNotFoundError(f"Missing selected classifier: {selected_model_path}")
 
-    metadata = json.loads(
-        metadata_path.read_text(encoding="utf-8")
-    )
-    feature_payload = json.loads(
-        feature_columns_path.read_text(encoding="utf-8")
-    )
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    feature_payload = json.loads(feature_columns_path.read_text(encoding="utf-8"))
     selected_model_name = str(metadata["model_name"])
-    feature_columns = [
-        str(value) for value in feature_payload["features"]
-    ]
-    selected_model_settings = model_settings_root["models"][
-        selected_model_name
-    ]
+    feature_columns = [str(value) for value in feature_payload["features"]]
+    selected_model_settings = model_settings_root["models"][selected_model_name]
 
     features = pd.read_parquet(feature_path)
     events = pd.read_parquet(event_path)
@@ -910,9 +825,7 @@ def run_probability_calibration_from_config(
         target_column=target_column,
         horizon_hours=horizon_hours,
     )
-    training_rows = rows.loc[
-        rows[SPLIT_COLUMN].eq("train")
-    ].copy()
+    training_rows = rows.loc[rows[SPLIT_COLUMN].eq("train")].copy()
 
     oof_predictions, fold_audit = build_grouped_oof_predictions(
         training_rows,
@@ -947,12 +860,8 @@ def run_probability_calibration_from_config(
         np.ndarray,
     ] = {}
 
-    training_raw = oof_predictions["raw_probability"].to_numpy(
-        dtype=float
-    )
-    training_target = oof_predictions[target_column].to_numpy(
-        dtype=int
-    )
+    training_raw = oof_predictions["raw_probability"].to_numpy(dtype=float)
+    training_target = oof_predictions[target_column].to_numpy(dtype=int)
 
     for method in methods:
         try:
@@ -965,24 +874,18 @@ def run_probability_calibration_from_config(
             calibrators[method] = calibrator
 
             for split_name, frame in split_frames.items():
-                calibrated = calibrator.predict(
-                    frame["raw_probability"].to_numpy(dtype=float)
-                )
+                calibrated = calibrator.predict(frame["raw_probability"].to_numpy(dtype=float))
                 calibrated = np.clip(
                     calibrated,
                     epsilon,
                     1.0 - epsilon,
                 )
-                calibrated_by_method[(method, split_name)] = (
-                    calibrated
-                )
-                metrics, reliability = (
-                    calculate_calibration_metrics(
-                        frame[target_column].to_numpy(dtype=int),
-                        calibrated,
-                        reliability_bins=reliability_bins,
-                        epsilon=epsilon,
-                    )
+                calibrated_by_method[(method, split_name)] = calibrated
+                metrics, reliability = calculate_calibration_metrics(
+                    frame[target_column].to_numpy(dtype=int),
+                    calibrated,
+                    reliability_bins=reliability_bins,
+                    epsilon=epsilon,
                 )
                 comparison_records.append(
                     {
@@ -1015,17 +918,13 @@ def run_probability_calibration_from_config(
     selected_calibrator = calibrators[selected_method]
 
     validation_output = validation_predictions.copy()
-    validation_output["calibrated_probability"] = (
-        calibrated_by_method[(selected_method, "validation")]
-    )
+    validation_output["calibrated_probability"] = calibrated_by_method[
+        (selected_method, "validation")
+    ]
     test_output = test_predictions.copy()
-    test_output["calibrated_probability"] = calibrated_by_method[
-        (selected_method, "test")
-    ]
+    test_output["calibrated_probability"] = calibrated_by_method[(selected_method, "test")]
     oof_output = oof_predictions.copy()
-    oof_output["calibrated_probability"] = calibrated_by_method[
-        (selected_method, "training_oof")
-    ]
+    oof_output["calibrated_probability"] = calibrated_by_method[(selected_method, "training_oof")]
 
     positive_hive_count = int(
         training_rows.loc[
@@ -1038,22 +937,14 @@ def run_probability_calibration_from_config(
         comparison,
         selected_method=selected_method,
         minimum_validation_brier_improvement_fraction=float(
-            gate_settings[
-                "minimum_validation_brier_improvement_fraction"
-            ]
+            gate_settings["minimum_validation_brier_improvement_fraction"]
         ),
-        require_validation_ece_not_worse=bool(
-            gate_settings["require_validation_ece_not_worse"]
-        ),
+        require_validation_ece_not_worse=bool(gate_settings["require_validation_ece_not_worse"]),
         maximum_test_brier_degradation_fraction=float(
-            gate_settings[
-                "maximum_test_brier_degradation_fraction"
-            ]
+            gate_settings["maximum_test_brier_degradation_fraction"]
         ),
         positive_hive_count=positive_hive_count,
-        minimum_positive_hives=int(
-            gate_settings["minimum_positive_hives"]
-        ),
+        minimum_positive_hives=int(gate_settings["minimum_positive_hives"]),
     )
 
     comparison.to_csv(
@@ -1092,9 +983,7 @@ def run_probability_calibration_from_config(
     selected_summary = {
         split: {
             key: _json_safe(value)
-            for key, value in indexed.loc[
-                (selected_method, split)
-            ].to_dict().items()
+            for key, value in indexed.loc[(selected_method, split)].to_dict().items()
             if key != "status"
         }
         for split in ("training_oof", "validation", "test")
@@ -1102,9 +991,7 @@ def run_probability_calibration_from_config(
     raw_summary = {
         split: {
             key: _json_safe(value)
-            for key, value in indexed.loc[
-                ("identity", split)
-            ].to_dict().items()
+            for key, value in indexed.loc[("identity", split)].to_dict().items()
             if key != "status"
         }
         for split in ("training_oof", "validation", "test")
@@ -1120,9 +1007,7 @@ def run_probability_calibration_from_config(
         "horizon_hours": horizon_hours,
         "selected_calibration_method": selected_method,
         "grouped_oof_folds_requested": requested_folds,
-        "grouped_oof_folds_used": int(
-            oof_output["calibration_fold"].nunique()
-        ),
+        "grouped_oof_folds_used": int(oof_output["calibration_fold"].nunique()),
         "positive_training_hives": positive_hive_count,
         "raw_score_metrics": raw_summary,
         "selected_calibration_metrics": selected_summary,
@@ -1137,10 +1022,7 @@ def run_probability_calibration_from_config(
                 "Training contains only a small number of reviewed harvest "
                 "events and temporal sessions."
             ),
-            (
-                "Validation contains two reviewed events and test contains "
-                "one reviewed event."
-            ),
+            ("Validation contains two reviewed events and test contains one reviewed event."),
             (
                 "This calibration is suitable only for a provisional "
                 "academic HUI if the research gate passes."
@@ -1181,16 +1063,8 @@ def run_probability_calibration_from_config(
         "oof_rows": len(oof_output),
         "validation_rows": len(validation_output),
         "test_rows": len(test_output),
-        "comparison_path": str(
-            output_directory / "calibration_method_comparison.csv"
-        ),
-        "summary_path": str(
-            output_directory / "probability_calibration_summary.json"
-        ),
-        "gate_path": str(
-            output_directory / "probability_calibration_gate.json"
-        ),
-        "calibrator_path": str(
-            model_directory / "selected_probability_calibrator.joblib"
-        ),
+        "comparison_path": str(output_directory / "calibration_method_comparison.csv"),
+        "summary_path": str(output_directory / "probability_calibration_summary.json"),
+        "gate_path": str(output_directory / "probability_calibration_gate.json"),
+        "calibrator_path": str(model_directory / "selected_probability_calibrator.joblib"),
     }

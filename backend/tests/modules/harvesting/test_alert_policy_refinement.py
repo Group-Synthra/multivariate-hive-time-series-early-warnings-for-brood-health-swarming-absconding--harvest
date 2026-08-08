@@ -122,11 +122,7 @@ def test_policy_selection_prefers_fewer_false_alerts() -> None:
             "hive_id": ["h1"] * 160,
             "split": ["validation"] * 160,
             "target": [
-                int(
-                    timestamp < event_time
-                    and timestamp
-                    >= event_time - pd.Timedelta(hours=72)
-                )
+                int(timestamp < event_time and timestamp >= event_time - pd.Timedelta(hours=72))
                 for timestamp in timestamps
             ],
             "raw_probability": probabilities,
@@ -160,24 +156,15 @@ def test_policy_selection_prefers_fewer_false_alerts() -> None:
     assert detection["detected"].all()
     assert selected["alert"].sum() > 0
     selected_row = sweep.loc[
-        sweep["smoothing_window_hours"].eq(
-            policy["smoothing_window_hours"]
-        )
-        & sweep["minimum_consecutive_hours"].eq(
-            policy["minimum_consecutive_hours"]
-        )
+        sweep["smoothing_window_hours"].eq(policy["smoothing_window_hours"])
+        & sweep["minimum_consecutive_hours"].eq(policy["minimum_consecutive_hours"])
         & np.isclose(
             sweep["threshold"],
             policy["threshold"],
         )
     ].iloc[0]
-    eligible = sweep.loc[
-        sweep["event_recall"].eq(1.0)
-        & sweep["median_lead_hours"].ge(1.0)
-    ]
-    assert selected_row["false_alert_episodes"] == (
-        eligible["false_alert_episodes"].min()
-    )
+    eligible = sweep.loc[sweep["event_recall"].eq(1.0) & sweep["median_lead_hours"].ge(1.0)]
+    assert selected_row["false_alert_episodes"] == (eligible["false_alert_episodes"].min())
 
 
 def test_smoothing_does_not_cross_gap() -> None:
@@ -208,11 +195,7 @@ def test_smoothing_does_not_cross_gap() -> None:
         minimum_consecutive_hours=1,
     )
 
-    second_segment = result.loc[
-        result["timestamp"].ge(
-            pd.Timestamp("2024-01-01 08:00")
-        )
-    ]
+    second_segment = result.loc[result["timestamp"].ge(pd.Timestamp("2024-01-01 08:00"))]
 
     assert pd.isna(second_segment.iloc[0]["smoothed_probability"])
     assert pd.isna(second_segment.iloc[1]["smoothed_probability"])

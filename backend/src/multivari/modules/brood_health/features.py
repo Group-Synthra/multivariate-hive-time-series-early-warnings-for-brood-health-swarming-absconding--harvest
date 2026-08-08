@@ -102,10 +102,9 @@ def map_iot_frame(
     if missing:
         raise ValueError(f"Live IoT data are missing required mapped columns: {missing}")
 
-    out["weight_kg"] = (
-        pd.to_numeric(out["weight_kg"], errors="coerce") * float(weight_scale_factor)
-        + float(weight_offset_kg)
-    )
+    out["weight_kg"] = pd.to_numeric(out["weight_kg"], errors="coerce") * float(
+        weight_scale_factor
+    ) + float(weight_offset_kg)
     return normalise_historical(out)
 
 
@@ -141,9 +140,7 @@ def aggregate_live_hourly(
     pieces: list[pd.DataFrame] = []
     for hive_id, group in frame.groupby("hive_id", sort=False):
         ordered = group.sort_values("timestamp").copy()
-        ordered["timestamp"] = pd.to_datetime(
-            ordered["timestamp"], errors="coerce", utc=True
-        )
+        ordered["timestamp"] = pd.to_datetime(ordered["timestamp"], errors="coerce", utc=True)
         ordered = ordered.dropna(subset=["timestamp"])
         if ordered.empty:
             continue
@@ -171,12 +168,10 @@ def aggregate_live_hourly(
             hourly = aggregated.merge(counts, on="timestamp", how="left")
         else:
             indexed = ordered.set_index("timestamp")
-            hourly = indexed[numeric].resample(
-                frequency, label="right", closed="right"
-            ).median()
-            hourly["raw_reading_count"] = indexed[numeric[0]].resample(
-                frequency, label="right", closed="right"
-            ).count()
+            hourly = indexed[numeric].resample(frequency, label="right", closed="right").median()
+            hourly["raw_reading_count"] = (
+                indexed[numeric[0]].resample(frequency, label="right", closed="right").count()
+            )
             hourly = hourly.reset_index()
 
         hourly["hive_id"] = hive_id
@@ -239,9 +234,9 @@ def build_feature_frame(frame: pd.DataFrame) -> pd.DataFrame:
     for sensor in ENVIRONMENT_SENSORS:
         values = pd.to_numeric(data[sensor], errors="coerce")
         columns[sensor] = values
-        columns[f"{sensor}_missing"] = data.get(
-            f"{sensor}_was_missing", values.isna()
-        ).astype(float)
+        columns[f"{sensor}_missing"] = data.get(f"{sensor}_was_missing", values.isna()).astype(
+            float
+        )
         grouped = values.groupby(group_codes, sort=False)
         shifted = grouped.shift(1)
 
@@ -269,52 +264,33 @@ def build_feature_frame(frame: pd.DataFrame) -> pd.DataFrame:
     weight = pd.to_numeric(data["weight_kg"], errors="coerce")
     weight_group = weight.groupby(group_codes, sort=False)
     weight_shifted = weight_group.shift(1)
-    columns["weight_missing"] = data.get(
-        "weight_kg_was_missing", weight.isna()
-    ).astype(float)
+    columns["weight_missing"] = data.get("weight_kg_was_missing", weight.isna()).astype(float)
     for lag in (1, 3, 6, 12, 24, 48, 72):
         previous = weight_group.shift(lag)
-        columns[f"weight_change_pct_{lag}h"] = (
-            (weight - previous) / previous.abs().clip(lower=1.0)
-        )
+        columns[f"weight_change_pct_{lag}h"] = (weight - previous) / previous.abs().clip(lower=1.0)
     for window in ROLLING_WINDOWS:
-        median = _rolling_from_shifted(
-            weight_shifted, group_codes, window, "median"
+        median = _rolling_from_shifted(weight_shifted, group_codes, window, "median")
+        std = _rolling_from_shifted(weight_shifted, group_codes, window, "std")
+        columns[f"weight_relative_to_median_{window}h"] = (weight - median) / median.abs().clip(
+            lower=1.0
         )
-        std = _rolling_from_shifted(
-            weight_shifted, group_codes, window, "std"
-        )
-        columns[f"weight_relative_to_median_{window}h"] = (
-            (weight - median) / median.abs().clip(lower=1.0)
-        )
-        columns[f"weight_cv_{window}h"] = (
-            std / median.abs().clip(lower=1.0)
-        )
+        columns[f"weight_cv_{window}h"] = std / median.abs().clip(lower=1.0)
 
     hour = data["timestamp"].dt.hour.astype(float)
     columns["hour_sin"] = np.sin(2.0 * np.pi * hour / 24.0)
     columns["hour_cos"] = np.cos(2.0 * np.pi * hour / 24.0)
     columns["is_night"] = ((hour < 6) | (hour >= 18)).astype("int8")
 
-    columns["temperature_deviation_35"] = (
-        data["temperature_c"] - 35.0
-    ).abs()
-    columns["humidity_deviation_65"] = (
-        data["humidity_pct"] - 65.0
-    ).abs()
+    columns["temperature_deviation_35"] = (data["temperature_c"] - 35.0).abs()
+    columns["humidity_deviation_65"] = (data["humidity_pct"] - 65.0).abs()
     columns["co2_log1p"] = np.log1p(data["co2_ppm"].clip(lower=0.0))
-    columns["temperature_humidity_interaction"] = (
-        data["temperature_c"] * data["humidity_pct"]
-    )
-    columns["temperature_co2_interaction"] = (
-        data["temperature_c"] * columns["co2_log1p"]
-    )
-    columns["history_hours"] = (
-        data.groupby("hive_id", sort=False).cumcount().astype(float)
-    )
+    columns["temperature_humidity_interaction"] = data["temperature_c"] * data["humidity_pct"]
+    columns["temperature_co2_interaction"] = data["temperature_c"] * columns["co2_log1p"]
+    columns["history_hours"] = data.groupby("hive_id", sort=False).cumcount().astype(float)
 
     features = pd.DataFrame(columns, index=data.index)
     return features.replace([np.inf, -np.inf], np.nan)
+
 
 def target_columns(horizon_hours: int) -> list[str]:
     return [f"score_t_plus_{hour}h" for hour in range(1, int(horizon_hours) + 1)]
@@ -343,9 +319,9 @@ def build_supervised_dataset(
 
     targets = pd.DataFrame(index=data.index)
     for hour in range(1, horizon + 1):
-        targets[f"score_t_plus_{hour}h"] = scored["brood_health_score"].groupby(
-            groups, sort=False
-        ).shift(-hour)
+        targets[f"score_t_plus_{hour}h"] = (
+            scored["brood_health_score"].groupby(groups, sort=False).shift(-hour)
+        )
 
     target_timestamp = data["timestamp"].groupby(groups, sort=False).shift(-horizon)
     current_score = scored["brood_health_score"]
@@ -367,19 +343,19 @@ def build_supervised_dataset(
     metadata["exact_score_drop"] = current_score - exact_future_score
     metadata["minimum_score_drop"] = current_score - minimum_future_score
     metadata["transition_window"] = (
-        (metadata["current_level_code"] != metadata["exact_future_level_code"])
-        | (metadata["exact_score_drop"].abs() >= 10.0)
-    )
+        metadata["current_level_code"] != metadata["exact_future_level_code"]
+    ) | (metadata["exact_score_drop"].abs() >= 10.0)
     metadata["deterioration_event"] = (
-        (metadata["exact_future_level_code"] < metadata["current_level_code"])
-        | (metadata["exact_score_drop"] >= 10.0)
-    )
+        metadata["exact_future_level_code"] < metadata["current_level_code"]
+    ) | (metadata["exact_score_drop"] >= 10.0)
     metadata["history_hours"] = data.groupby("hive_id", sort=False).cumcount()
 
     if TARGET_COLUMN in data.columns:
-        metadata["observed_health_at_horizon"] = pd.to_numeric(
-            data[TARGET_COLUMN], errors="coerce"
-        ).groupby(groups, sort=False).shift(-horizon)
+        metadata["observed_health_at_horizon"] = (
+            pd.to_numeric(data[TARGET_COLUMN], errors="coerce")
+            .groupby(groups, sort=False)
+            .shift(-horizon)
+        )
     else:
         metadata["observed_health_at_horizon"] = np.nan
 

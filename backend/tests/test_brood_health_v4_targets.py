@@ -38,9 +38,7 @@ def test_exact_six_hour_target_matches_group_shift() -> None:
 
     expected = scored["brood_health_score"].shift(-6)
     source_timestamps = pd.to_datetime(frame["timestamp"], utc=True)
-    source_rows = metadata["timestamp"].map(
-        dict(zip(source_timestamps, expected, strict=True))
-    )
+    source_rows = metadata["timestamp"].map(dict(zip(source_timestamps, expected, strict=True)))
     np.testing.assert_allclose(
         y["score_t_plus_6h"].to_numpy(),
         source_rows.to_numpy(),

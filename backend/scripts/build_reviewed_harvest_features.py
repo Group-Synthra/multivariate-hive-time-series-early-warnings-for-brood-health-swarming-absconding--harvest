@@ -11,10 +11,7 @@ from multivari.modules.harvesting.reviewed_features import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Build live-compatible, past-only features for "
-            "reviewed harvest forecasting."
-        )
+        description=("Build live-compatible, past-only features for reviewed harvest forecasting.")
     )
     parser.add_argument(
         "--config",

@@ -21,25 +21,11 @@ def _source_frame(
             "timestamp": timestamps,
             "hive_id": ["h1"] * periods,
             "split": ["train"] * periods,
-            "harvest_within_next_72h_reviewed": (
-                [0] * (periods - 72) + [1] * 72
-            ),
-            "weight_kg": [
-                50.0 + index * 0.01
-                for index in range(periods)
-            ],
-            "temperature_c": [
-                30.0 + (index % 24) * 0.01
-                for index in range(periods)
-            ],
-            "humidity_pct": [
-                60.0 + (index % 12) * 0.02
-                for index in range(periods)
-            ],
-            "co2_ppm": [
-                500.0 + (index % 20)
-                for index in range(periods)
-            ],
+            "harvest_within_next_72h_reviewed": ([0] * (periods - 72) + [1] * 72),
+            "weight_kg": [50.0 + index * 0.01 for index in range(periods)],
+            "temperature_c": [30.0 + (index % 24) * 0.01 for index in range(periods)],
+            "humidity_pct": [60.0 + (index % 12) * 0.02 for index in range(periods)],
+            "co2_ppm": [500.0 + (index % 20) for index in range(periods)],
             "honey_harvested_1": [0] * periods,
             "harvest_reviewed_event_start_1": [0] * periods,
         }
@@ -69,9 +55,7 @@ def _build(
 def test_feature_output_excludes_leakage_columns() -> None:
     output = _build(_source_frame())
 
-    assert not set(output.columns).intersection(
-        BANNED_MODEL_COLUMNS
-    )
+    assert not set(output.columns).intersection(BANNED_MODEL_COLUMNS)
 
 
 def test_future_changes_do_not_change_past_features() -> None:
@@ -141,9 +125,7 @@ def test_features_do_not_cross_non_hourly_gap() -> None:
         "timestamp",
     ].min()
 
-    assert first_kept_second_segment == (
-        second_start + pd.Timedelta(hours=167)
-    )
+    assert first_kept_second_segment == (second_start + pd.Timedelta(hours=167))
 
 
 def test_all_features_are_finite_after_filtering() -> None:
@@ -163,9 +145,7 @@ def test_all_features_are_finite_after_filtering() -> None:
 
 def test_removed_modelling_rows_do_not_reset_sensor_history() -> None:
     history = _source_frame(periods=500)
-    modelling = history.drop(
-        index=range(220, 245)
-    ).reset_index(drop=True)
+    modelling = history.drop(index=range(220, 245)).reset_index(drop=True)
 
     output = _build(history, modelling)
 
@@ -173,7 +153,4 @@ def test_removed_modelling_rows_do_not_reset_sensor_history() -> None:
         245,
         "timestamp",
     ]
-    assert first_row_after_removed_period in set(
-        output["timestamp"]
-    )
-
+    assert first_row_after_removed_period in set(output["timestamp"])

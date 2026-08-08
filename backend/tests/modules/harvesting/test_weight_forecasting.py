@@ -46,12 +46,7 @@ def test_future_target_uses_exact_same_hive_timestamp() -> None:
         horizons_hours=[24],
     )
 
-    assert (
-        result["weight_delta_next_24h_kg"]
-        .dropna()
-        .eq(24.0)
-        .all()
-    )
+    assert result["weight_delta_next_24h_kg"].dropna().eq(24.0).all()
 
 
 def test_future_target_does_not_cross_split() -> None:
@@ -90,9 +85,7 @@ def test_future_target_does_not_cross_split() -> None:
         horizons_hours=[24],
     )
 
-    assert pd.isna(
-        result.loc[0, "weight_delta_next_24h_kg"]
-    )
+    assert pd.isna(result.loc[0, "weight_delta_next_24h_kg"])
 
 
 def test_feature_ablation_excludes_humidity() -> None:
@@ -118,9 +111,7 @@ def test_feature_ablation_excludes_humidity() -> None:
 
 
 def test_persistence_predicts_zero_delta() -> None:
-    features = pd.DataFrame(
-        {"weight_kg_current": [10.0, 11.0]}
-    )
+    features = pd.DataFrame({"weight_kg_current": [10.0, 11.0]})
     estimator = PersistenceDeltaRegressor().fit(
         features,
         pd.Series([1.0, 2.0]),
@@ -142,9 +133,7 @@ def test_recent_trend_extends_past_only_slope() -> None:
         }
     )
     estimator = RecentTrendDeltaRegressor(
-        trend_feature=(
-            "weight_trend_24h_kg_per_hour"
-        ),
+        trend_feature=("weight_trend_24h_kg_per_hour"),
         horizon_hours=24,
     ).fit(features, pd.Series([0.0, 0.0]))
 

@@ -36,11 +36,7 @@ def _as_float(value: Any) -> float | None:
 def _as_utc(value: Any) -> datetime | None:
     if value is None:
         return None
-    timestamp = (
-        value
-        if isinstance(value, datetime)
-        else datetime.fromisoformat(str(value))
-    )
+    timestamp = value if isinstance(value, datetime) else datetime.fromisoformat(str(value))
     if timestamp.tzinfo is None:
         timestamp = timestamp.replace(tzinfo=UTC)
     return timestamp.astimezone(UTC)
@@ -48,10 +44,7 @@ def _as_utc(value: Any) -> datetime | None:
 
 def _domain_warnings() -> list[str]:
     backend_root = Path(__file__).resolve().parents[3]
-    path = (
-        backend_root
-        / "artifacts/reports/harvesting/live_iot_sensor_compatibility.json"
-    )
+    path = backend_root / "artifacts/reports/harvesting/live_iot_sensor_compatibility.json"
     if not path.exists():
         return []
     try:
@@ -70,23 +63,13 @@ def _latest_rows(hive_id: str | None) -> list[dict[str, Any]]:
     columns = {
         "hive_id": _env("IOT_HIVE_COLUMN", "device_id"),
         "timestamp": _env("IOT_TIMESTAMP_COLUMN", "recorded_at"),
-        "internal_temperature_c": _env(
-            "IOT_TEMPERATURE_COLUMN", "internal_temp"
-        ),
-        "internal_humidity_pct": _env(
-            "IOT_HUMIDITY_COLUMN", "internal_humidity"
-        ),
+        "internal_temperature_c": _env("IOT_TEMPERATURE_COLUMN", "internal_temp"),
+        "internal_humidity_pct": _env("IOT_HUMIDITY_COLUMN", "internal_humidity"),
         "co2_ppm": _env("IOT_CO2_COLUMN", "internal_co2"),
         "weight_kg": _env("IOT_WEIGHT_COLUMN", "total_weight"),
-        "external_temperature_c": _env(
-            "IOT_EXTERNAL_TEMPERATURE_COLUMN", "external_temp"
-        ),
-        "external_humidity_pct": _env(
-            "IOT_EXTERNAL_HUMIDITY_COLUMN", "external_humidity"
-        ),
-        "battery_voltage": _env(
-            "IOT_BATTERY_VOLTAGE_COLUMN", "battery_voltage"
-        ),
+        "external_temperature_c": _env("IOT_EXTERNAL_TEMPERATURE_COLUMN", "external_temp"),
+        "external_humidity_pct": _env("IOT_EXTERNAL_HUMIDITY_COLUMN", "external_humidity"),
+        "battery_voltage": _env("IOT_BATTERY_VOLTAGE_COLUMN", "battery_voltage"),
     }
 
     select_items = [
@@ -100,9 +83,7 @@ def _latest_rows(hive_id: str | None) -> list[dict[str, Any]]:
     where_clause = sql.SQL("")
     params: list[Any] = []
     if hive_id:
-        where_clause = sql.SQL("WHERE {} = %s").format(
-            sql.Identifier(columns["hive_id"])
-        )
+        where_clause = sql.SQL("WHERE {} = %s").format(sql.Identifier(columns["hive_id"]))
         params.append(hive_id)
 
     query = sql.SQL(
@@ -129,16 +110,17 @@ def _latest_rows(hive_id: str | None) -> list[dict[str, Any]]:
         schema=sql.Identifier(schema),
         table=sql.Identifier(table),
         where_clause=where_clause,
-        output_columns=sql.SQL(", ").join(
-            sql.Identifier(name) for name in columns
-        ),
+        output_columns=sql.SQL(", ").join(sql.Identifier(name) for name in columns),
     )
 
-    with psycopg.connect(
-        database_url,
-        sslmode=sslmode,
-        row_factory=dict_row,
-    ) as connection, connection.cursor() as cursor:
+    with (
+        psycopg.connect(
+            database_url,
+            sslmode=sslmode,
+            row_factory=dict_row,
+        ) as connection,
+        connection.cursor() as cursor,
+    ):
         cursor.execute(query, params)
         return list(cursor.fetchall())
 
@@ -161,31 +143,20 @@ def _serialize(
         "hive_id": str(row.get("hive_id", "")),
         "timestamp": timestamp.isoformat() if timestamp else None,
         "next_expected_at": (
-            (timestamp + timedelta(minutes=interval_minutes)).isoformat()
-            if timestamp
-            else None
+            (timestamp + timedelta(minutes=interval_minutes)).isoformat() if timestamp else None
         ),
         "freshness_minutes": freshness_minutes,
         "freshness_label": (
             "Fresh"
-            if freshness_minutes is not None
-            and freshness_minutes <= stale_after_minutes
+            if freshness_minutes is not None and freshness_minutes <= stale_after_minutes
             else "Stale"
         ),
-        "internal_temperature_c": _as_float(
-            row.get("internal_temperature_c")
-        ),
-        "internal_humidity_pct": _as_float(
-            row.get("internal_humidity_pct")
-        ),
+        "internal_temperature_c": _as_float(row.get("internal_temperature_c")),
+        "internal_humidity_pct": _as_float(row.get("internal_humidity_pct")),
         "co2_ppm": _as_float(row.get("co2_ppm")),
         "weight_kg": _as_float(row.get("weight_kg")),
-        "external_temperature_c": _as_float(
-            row.get("external_temperature_c")
-        ),
-        "external_humidity_pct": _as_float(
-            row.get("external_humidity_pct")
-        ),
+        "external_temperature_c": _as_float(row.get("external_temperature_c")),
+        "external_humidity_pct": _as_float(row.get("external_humidity_pct")),
         "battery_voltage": _as_float(row.get("battery_voltage")),
     }
 
@@ -228,9 +199,7 @@ def register_harvesting_live_sensor_routes(app: Flask) -> None:
                 "status": "live_sensor_snapshot_ready",
                 "generated_at": datetime.now(UTC).isoformat(),
                 "source": "PostgreSQL IoT",
-                "available_hives": [
-                    item["hive_id"] for item in snapshots
-                ],
+                "available_hives": [item["hive_id"] for item in snapshots],
                 "latest_sensor_by_hive": snapshots,
                 "domain_warnings": _domain_warnings(),
             }

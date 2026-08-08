@@ -26,13 +26,9 @@ def test_consecutive_positive_rows_form_one_event() -> None:
         }
     )
 
-    result = add_harvest_event_identifiers(
-        frame
-    )
+    result = add_harvest_event_identifiers(frame)
 
-    assert result[
-        "harvest_event_start_1"
-    ].tolist() == [
+    assert result["harvest_event_start_1"].tolist() == [
         0,
         1,
         0,
@@ -65,9 +61,7 @@ def test_consecutive_positive_rows_form_one_event() -> None:
         == "h1_harvest_002"
     )
 
-    events = build_harvest_event_table(
-        result
-    )
+    events = build_harvest_event_table(result)
 
     assert len(events) == 2
     assert events.loc[0, "positive_rows"] == 2
@@ -98,9 +92,7 @@ def test_event_numbering_is_separate_for_each_hive() -> None:
         }
     )
 
-    result = add_harvest_event_identifiers(
-        frame
-    )
+    result = add_harvest_event_identifiers(frame)
 
     observed = result.loc[
         result["honey_harvested_1"].eq(1),

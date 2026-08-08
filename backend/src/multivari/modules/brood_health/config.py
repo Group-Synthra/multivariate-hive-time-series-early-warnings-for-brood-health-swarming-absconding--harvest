@@ -36,10 +36,7 @@ class BroodPaths:
     @property
     def raw_workbook(self) -> Path:
         return (
-            self.backend
-            / "data"
-            / "raw"
-            / "Common_Beehive_Complete_Training_Dataset_311044.xlsx"
+            self.backend / "data" / "raw" / "Common_Beehive_Complete_Training_Dataset_311044.xlsx"
         )
 
     @property
@@ -150,37 +147,21 @@ class IoTSettings:
                 "IOT_BATTERY_COLUMN",
                 default="battery_voltage",
             ),
-            reading_at_column=_first_env(
-                "IOT_READING_AT_COLUMN", default="reading_at"
-            ),
-            lookback_hours=max(
-                24, int(_first_env("IOT_LOOKBACK_HOURS", default="168"))
-            ),
-            minimum_hourly_rows=max(
-                6, int(_first_env("IOT_MIN_HOURLY_ROWS", default="72"))
-            ),
-            refresh_seconds=max(
-                30, int(_first_env("IOT_REFRESH_SECONDS", default="600"))
-            ),
+            reading_at_column=_first_env("IOT_READING_AT_COLUMN", default="reading_at"),
+            lookback_hours=max(24, int(_first_env("IOT_LOOKBACK_HOURS", default="168"))),
+            minimum_hourly_rows=max(6, int(_first_env("IOT_MIN_HOURLY_ROWS", default="72"))),
+            refresh_seconds=max(30, int(_first_env("IOT_REFRESH_SECONDS", default="600"))),
             connect_timeout_seconds=max(
                 2, int(_first_env("IOT_CONNECT_TIMEOUT_SECONDS", default="12"))
             ),
-            timestamps_are_utc=_first_env(
-                "IOT_TIMESTAMPS_ARE_UTC", default="true"
-            ).lower()
+            timestamps_are_utc=_first_env("IOT_TIMESTAMPS_ARE_UTC", default="true").lower()
             in {"1", "true", "yes", "on"},
-            feature_timezone=_first_env(
-                "IOT_FEATURE_TIMEZONE", default="Asia/Colombo"
-            ),
+            feature_timezone=_first_env("IOT_FEATURE_TIMEZONE", default="Asia/Colombo"),
             sslmode=_first_env("DATABASE_SSLMODE", default="require"),
             # Use 0.001 when the database stores grams; keep 1.0 for kilograms.
-            weight_scale_factor=float(
-                _first_env("IOT_WEIGHT_SCALE_FACTOR", default="1.0")
-            ),
+            weight_scale_factor=float(_first_env("IOT_WEIGHT_SCALE_FACTOR", default="1.0")),
             # Optional tare correction after unit conversion.
-            weight_offset_kg=float(
-                _first_env("IOT_WEIGHT_OFFSET_KG", default="0.0")
-            ),
+            weight_offset_kg=float(_first_env("IOT_WEIGHT_OFFSET_KG", default="0.0")),
         )
 
 

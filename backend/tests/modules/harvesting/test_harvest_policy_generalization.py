@@ -4,15 +4,9 @@ from runpy import run_path
 import pandas as pd
 
 _REVIEWER = run_path(
-    str(
-        Path(__file__).resolve().parents[3]
-        / "scripts"
-        / "review_harvest_policy_generalization.py"
-    )
+    str(Path(__file__).resolve().parents[3] / "scripts" / "review_harvest_policy_generalization.py")
 )
-evaluate_generalization = _REVIEWER[
-    "evaluate_generalization"
-]
+evaluate_generalization = _REVIEWER["evaluate_generalization"]
 
 
 def _detection(

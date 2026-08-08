@@ -115,8 +115,7 @@ def calibrate_component_weights(
         accuracy = float(accuracy_score(observed, predicted))
         distance = float(
             np.abs(
-                np.array([temperature, humidity, co2, weight_stability], dtype=float)
-                - prior
+                np.array([temperature, humidity, co2, weight_stability], dtype=float) - prior
             ).sum()
         )
         # The objective favours class-balanced alignment while discouraging arbitrary
@@ -141,10 +140,14 @@ def calibrate_component_weights(
             }
         )
 
-    comparison = pd.DataFrame(rows).sort_values(
-        ["objective", "balanced_accuracy", "macro_f1"],
-        ascending=False,
-    ).reset_index(drop=True)
+    comparison = (
+        pd.DataFrame(rows)
+        .sort_values(
+            ["objective", "balanced_accuracy", "macro_f1"],
+            ascending=False,
+        )
+        .reset_index(drop=True)
+    )
     best = comparison.iloc[0]
     selected_config = cfg.with_weights(
         temperature=float(best["temperature_weight"]),
@@ -164,9 +167,7 @@ def calibrate_component_weights(
                 "- 0.08 L1 distance from the prior weights"
             ),
             "health_alignment_threshold": 60.0,
-            "ordering_constraint": (
-                "temperature >= humidity >= CO2 >= relative weight stability"
-            ),
+            "ordering_constraint": ("temperature >= humidity >= CO2 >= relative weight stability"),
             "prior_weights": cfg.weights,
             "selected_weights": selected_config.weights,
             "interpretation": (

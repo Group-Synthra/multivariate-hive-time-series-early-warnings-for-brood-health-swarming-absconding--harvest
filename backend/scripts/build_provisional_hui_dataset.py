@@ -12,8 +12,7 @@ from multivari.modules.harvesting.provisional_hui_regression import (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Build the transparent current Provisional HUI and "
-            "future HUI regression targets."
+            "Build the transparent current Provisional HUI and future HUI regression targets."
         )
     )
     parser.add_argument(

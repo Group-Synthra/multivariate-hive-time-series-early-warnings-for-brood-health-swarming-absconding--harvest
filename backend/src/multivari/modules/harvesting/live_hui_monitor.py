@@ -110,19 +110,13 @@ class LiveHuiMonitor:
         if not hive_id:
             return payload
         latest = [
-            row
-            for row in payload.get("latest_by_hive", [])
-            if str(row.get("hive_id")) == hive_id
+            row for row in payload.get("latest_by_hive", []) if str(row.get("hive_id")) == hive_id
         ]
         series = [
-            row
-            for row in payload.get("hui_series", [])
-            if str(row.get("hive_id")) == hive_id
+            row for row in payload.get("hui_series", []) if str(row.get("hive_id")) == hive_id
         ]
         diagnostics = [
-            row
-            for row in payload.get("hive_diagnostics", [])
-            if str(row.get("hive_id")) == hive_id
+            row for row in payload.get("hive_diagnostics", []) if str(row.get("hive_id")) == hive_id
         ]
         output = dict(payload)
         output["available_hives"] = [hive_id] if latest else []
@@ -140,11 +134,9 @@ class LiveHuiMonitor:
         force_refresh: bool = False,
     ) -> dict[str, Any]:
         with self._lock:
-            stale = (
-                self._last_success_at is None
-                or datetime.now(UTC) - self._last_success_at
-                >= timedelta(minutes=self.interval_minutes)
-            )
+            stale = self._last_success_at is None or datetime.now(
+                UTC
+            ) - self._last_success_at >= timedelta(minutes=self.interval_minutes)
             if force_refresh or self._payload is None or stale:
                 payload = self.refresh(hive_id=None)
             else:
@@ -165,9 +157,7 @@ class LiveHuiMonitor:
                     self._last_success_at.isoformat() if self._last_success_at else None
                 ),
                 "last_error": self._last_error,
-                "cached_hives": (
-                    self._payload.get("available_hives", []) if self._payload else []
-                ),
+                "cached_hives": (self._payload.get("available_hives", []) if self._payload else []),
             }
 
     def _run(self) -> None:
@@ -209,9 +199,7 @@ def create_live_hui_monitor(
 ) -> LiveHuiMonitor | UnavailableLiveHuiMonitor:
     try:
         sensor_settings = PostgresSensorSettings.from_env()
-        artifact_settings = LiveHuiArtifactSettings.from_env(
-            backend_root=Path(backend_root)
-        )
+        artifact_settings = LiveHuiArtifactSettings.from_env(backend_root=Path(backend_root))
         repository = PostgresSensorRepository(sensor_settings)
         engine = LiveHuiInferenceEngine(
             backend_root=backend_root,

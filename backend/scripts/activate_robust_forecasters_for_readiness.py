@@ -13,19 +13,15 @@ def main() -> None:
     if "forecast_readiness" not in config:
         raise KeyError("forecast_readiness is missing from harvesting.yaml.")
     if "robust_weight_forecasting" not in config:
-        raise KeyError(
-            "robust_weight_forecasting is missing from harvesting.yaml."
-        )
+        raise KeyError("robust_weight_forecasting is missing from harvesting.yaml.")
 
     robust = config["robust_weight_forecasting"]
     readiness = config["forecast_readiness"]
     readiness["comparison_path"] = (
-        f"{robust['output_directory']}/"
-        "robust_weight_forecasting_comparison.csv"
+        f"{robust['output_directory']}/robust_weight_forecasting_comparison.csv"
     )
     readiness["forecasting_summary_path"] = (
-        f"{robust['output_directory']}/"
-        "robust_weight_forecasting_summary.json"
+        f"{robust['output_directory']}/robust_weight_forecasting_summary.json"
     )
     readiness["forecaster_directory"] = robust["model_directory"]
     readiness["gate_output_path"] = robust["research_gate_path"]

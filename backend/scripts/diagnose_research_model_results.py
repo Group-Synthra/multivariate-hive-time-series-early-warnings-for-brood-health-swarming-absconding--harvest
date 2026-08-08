@@ -8,20 +8,11 @@ import pandas as pd
 def main() -> None:
     backend_root = Path(__file__).resolve().parents[1]
     report_root = (
-        backend_root
-        / "artifacts"
-        / "reports"
-        / "harvesting"
-        / "reviewed"
-        / "research_models"
+        backend_root / "artifacts" / "reports" / "harvesting" / "reviewed" / "research_models"
     )
 
-    comparison_path = (
-        report_root / "model_feature_set_comparison.csv"
-    )
-    predictions_path = (
-        report_root / "selected_validation_predictions.parquet"
-    )
+    comparison_path = report_root / "model_feature_set_comparison.csv"
+    predictions_path = report_root / "selected_validation_predictions.parquet"
 
     comparison = pd.read_csv(comparison_path)
     predictions = pd.read_parquet(predictions_path)
@@ -32,13 +23,9 @@ def main() -> None:
     prevalence = float(predictions[target_column].mean())
     probability = predictions[probability_column]
 
-    successful = comparison.loc[
-        comparison["status"].eq("ok")
-    ].copy()
+    successful = comparison.loc[comparison["status"].eq("ok")].copy()
     successful["validation_no_skill_pr_auc"] = prevalence
-    successful["validation_pr_auc_lift"] = (
-        successful["validation_pr_auc"] / prevalence
-    )
+    successful["validation_pr_auc_lift"] = successful["validation_pr_auc"] / prevalence
 
     columns = [
         "model",
@@ -57,11 +44,7 @@ def main() -> None:
     print(f"{prevalence:.10f}")
 
     print("\nSELECTED PROBABILITY DISTRIBUTION")
-    print(
-        probability.describe(
-            percentiles=[0.01, 0.1, 0.5, 0.9, 0.99]
-        ).to_string()
-    )
+    print(probability.describe(percentiles=[0.01, 0.1, 0.5, 0.9, 0.99]).to_string())
     print(
         "\nUnique probabilities rounded to 8 decimals:",
         probability.round(8).nunique(),
@@ -80,21 +63,14 @@ def main() -> None:
         )
     )
 
-    best_lift = float(
-        successful["validation_pr_auc_lift"].max()
-    )
+    best_lift = float(successful["validation_pr_auc_lift"].max())
     probability_std = float(probability.std())
 
     print("\nDIAGNOSTIC")
     if probability_std < 1e-6:
-        print(
-            "FAIL: Selected probabilities are effectively constant."
-        )
+        print("FAIL: Selected probabilities are effectively constant.")
     elif best_lift <= 1.05:
-        print(
-            "FAIL: No candidate materially exceeds the no-skill "
-            "PR-AUC baseline."
-        )
+        print("FAIL: No candidate materially exceeds the no-skill PR-AUC baseline.")
     else:
         print(
             "PASS: At least one candidate exceeds the no-skill "

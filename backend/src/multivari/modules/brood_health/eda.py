@@ -80,7 +80,9 @@ def _cohens_d(healthy: pd.Series, unhealthy: pd.Series) -> float | None:
     b = pd.to_numeric(unhealthy, errors="coerce").dropna().to_numpy(dtype=float)
     if len(a) < 2 or len(b) < 2:
         return None
-    pooled = np.sqrt(((len(a) - 1) * a.var(ddof=1) + (len(b) - 1) * b.var(ddof=1)) / (len(a) + len(b) - 2))
+    pooled = np.sqrt(
+        ((len(a) - 1) * a.var(ddof=1) + (len(b) - 1) * b.var(ddof=1)) / (len(a) + len(b) - 2)
+    )
     return _finite((a.mean() - b.mean()) / pooled) if pooled > 0 else 0.0
 
 
@@ -126,7 +128,9 @@ def _sensor_distributions(frame: pd.DataFrame, bins: int = 28) -> dict[str, list
         edges = np.linspace(lower, upper, bins + 1)
         rows: list[dict[str, Any]] = []
         for label, name in ((1, "healthy"), (0, "unhealthy")):
-            selected = pd.to_numeric(frame.loc[frame[TARGET_COLUMN].eq(label), sensor], errors="coerce").dropna()
+            selected = pd.to_numeric(
+                frame.loc[frame[TARGET_COLUMN].eq(label), sensor], errors="coerce"
+            ).dropna()
             counts, _ = np.histogram(selected.clip(lower, upper), bins=edges)
             denominator = max(int(counts.sum()), 1)
             for index, count in enumerate(counts):
@@ -217,12 +221,18 @@ def _transitions_and_episodes(frame: pd.DataFrame) -> dict[str, Any]:
     matrix = matrix.sort_index().sort_index(axis=1)
     probability = matrix.div(matrix.sum(axis=1).replace(0, np.nan), axis=0).fillna(0.0)
 
-    changed = ordered[TARGET_COLUMN].ne(previous) | ordered["hive_id"].ne(ordered["hive_id"].shift(1))
+    changed = ordered[TARGET_COLUMN].ne(previous) | ordered["hive_id"].ne(
+        ordered["hive_id"].shift(1)
+    )
     run_id = changed.astype("int64").cumsum()
     episodes = (
         ordered.assign(run_id=run_id)
         .groupby(["hive_id", "run_id", TARGET_COLUMN], observed=True)
-        .agg(start=("timestamp", "min"), end=("timestamp", "max"), duration_hours=(TARGET_COLUMN, "size"))
+        .agg(
+            start=("timestamp", "min"),
+            end=("timestamp", "max"),
+            duration_hours=(TARGET_COLUMN, "size"),
+        )
         .reset_index()
     )
     episode_summary = (
@@ -236,10 +246,30 @@ def _transitions_and_episodes(frame: pd.DataFrame) -> dict[str, Any]:
     recovery_count = int(((previous == 0) & (ordered[TARGET_COLUMN] == 1)).sum())
     return {
         "counts": [
-            {"from": "Unhealthy", "to": "Unhealthy", "count": int(matrix.loc[0, 0]), "probability": float(probability.loc[0, 0] * 100)},
-            {"from": "Unhealthy", "to": "Healthy", "count": int(matrix.loc[0, 1]), "probability": float(probability.loc[0, 1] * 100)},
-            {"from": "Healthy", "to": "Unhealthy", "count": int(matrix.loc[1, 0]), "probability": float(probability.loc[1, 0] * 100)},
-            {"from": "Healthy", "to": "Healthy", "count": int(matrix.loc[1, 1]), "probability": float(probability.loc[1, 1] * 100)},
+            {
+                "from": "Unhealthy",
+                "to": "Unhealthy",
+                "count": int(matrix.loc[0, 0]),
+                "probability": float(probability.loc[0, 0] * 100),
+            },
+            {
+                "from": "Unhealthy",
+                "to": "Healthy",
+                "count": int(matrix.loc[0, 1]),
+                "probability": float(probability.loc[0, 1] * 100),
+            },
+            {
+                "from": "Healthy",
+                "to": "Unhealthy",
+                "count": int(matrix.loc[1, 0]),
+                "probability": float(probability.loc[1, 0] * 100),
+            },
+            {
+                "from": "Healthy",
+                "to": "Healthy",
+                "count": int(matrix.loc[1, 1]),
+                "probability": float(probability.loc[1, 1] * 100),
+            },
         ],
         "unhealthy_onsets": onset_count,
         "recoveries": recovery_count,
@@ -251,7 +281,12 @@ def _precursor_analysis(frame: pd.DataFrame) -> dict[str, Any]:
     ordered = frame.sort_values(["hive_id", "timestamp"]).copy()
     previous = ordered.groupby("hive_id", sort=False)[TARGET_COLUMN].shift(1)
     onset_positions = np.flatnonzero(((previous == 1) & (ordered[TARGET_COLUMN] == 0)).to_numpy())
-    windows = ((0, 6, "0–6 h before"), (6, 12, "6–12 h before"), (12, 24, "12–24 h before"), (24, 48, "24–48 h before"))
+    windows = (
+        (0, 6, "0–6 h before"),
+        (6, 12, "6–12 h before"),
+        (12, 24, "12–24 h before"),
+        (24, 48, "24–48 h before"),
+    )
     aggregate: dict[tuple[str, str], list[float]] = {}
     baseline: dict[str, list[float]] = {sensor: [] for sensor in SENSORS}
     accepted_events = 0
@@ -268,10 +303,15 @@ def _precursor_analysis(frame: pd.DataFrame) -> dict[str, Any]:
         hive = ordered.loc[hive_indices].reset_index(drop=True)
         accepted_events += 1
         for sensor in SENSORS:
-            base_value = pd.to_numeric(hive.loc[local_position - 96 : local_position - 49, sensor], errors="coerce").mean()
+            base_value = pd.to_numeric(
+                hive.loc[local_position - 96 : local_position - 49, sensor], errors="coerce"
+            ).mean()
             baseline[sensor].append(float(base_value))
             for start, end, label in windows:
-                values = pd.to_numeric(hive.loc[local_position - end : local_position - start - 1, sensor], errors="coerce")
+                values = pd.to_numeric(
+                    hive.loc[local_position - end : local_position - start - 1, sensor],
+                    errors="coerce",
+                )
                 aggregate.setdefault((sensor, label), []).append(float(values.mean()))
 
     rows: list[dict[str, Any]] = []
@@ -291,11 +331,22 @@ def _precursor_analysis(frame: pd.DataFrame) -> dict[str, Any]:
                     "events": len(values),
                 }
             )
-    return {"accepted_onsets": accepted_events, "baseline_window": "48–96 h before onset", "rows": rows}
+    return {
+        "accepted_onsets": accepted_events,
+        "baseline_window": "48–96 h before onset",
+        "rows": rows,
+    }
 
 
 def _data_quality(frame: pd.DataFrame) -> dict[str, Any]:
-    missing = [{"column": column, "count": int(frame[column].isna().sum()), "percentage": float(frame[column].isna().mean() * 100)} for column in frame.columns]
+    missing = [
+        {
+            "column": column,
+            "count": int(frame[column].isna().sum()),
+            "percentage": float(frame[column].isna().mean() * 100),
+        }
+        for column in frame.columns
+    ]
     outliers: list[dict[str, Any]] = []
     for sensor in SENSORS:
         values = pd.to_numeric(frame[sensor], errors="coerce")
@@ -348,12 +399,21 @@ def _scatter_sample(frame: pd.DataFrame, maximum: int = 2000) -> list[dict[str, 
 
 
 def _condition_level_balance(frame: pd.DataFrame) -> list[dict[str, Any]]:
-    counts = frame["condition_level"].value_counts().reindex([item["level"] for item in HEALTH_LEVELS], fill_value=0)
+    counts = (
+        frame["condition_level"]
+        .value_counts()
+        .reindex([item["level"] for item in HEALTH_LEVELS], fill_value=0)
+    )
     total = max(int(counts.sum()), 1)
-    return [{"level": level, "count": int(count), "percentage": float(count / total * 100)} for level, count in counts.items()]
+    return [
+        {"level": level, "count": int(count), "percentage": float(count / total * 100)}
+        for level, count in counts.items()
+    ]
 
 
-def _save_report_images(payload: dict[str, Any], frame: pd.DataFrame, directory: Path) -> list[dict[str, str]]:
+def _save_report_images(
+    payload: dict[str, Any], frame: pd.DataFrame, directory: Path
+) -> list[dict[str, str]]:
     directory.mkdir(parents=True, exist_ok=True)
     images: list[dict[str, str]] = []
 
@@ -361,7 +421,9 @@ def _save_report_images(payload: dict[str, Any], frame: pd.DataFrame, directory:
         fig.tight_layout()
         fig.savefig(directory / filename, dpi=180, bbox_inches="tight")
         plt.close(fig)
-        images.append({"filename": filename, "title": title, "url": f"/api/brood-health/reports/{filename}"})
+        images.append(
+            {"filename": filename, "title": title, "url": f"/api/brood-health/reports/{filename}"}
+        )
 
     balance = payload["class_balance"]
     fig, ax = plt.subplots(figsize=(7, 4.5))
@@ -397,7 +459,12 @@ def _save_report_images(payload: dict[str, Any], frame: pd.DataFrame, directory:
     save(fig, "healthy_rate_by_hive.png", "Healthy rate by hive")
 
     transition = payload["transitions"]["counts"]
-    matrix = np.array([[transition[0]["probability"], transition[1]["probability"]], [transition[2]["probability"], transition[3]["probability"]]])
+    matrix = np.array(
+        [
+            [transition[0]["probability"], transition[1]["probability"]],
+            [transition[2]["probability"], transition[3]["probability"]],
+        ]
+    )
     fig, ax = plt.subplots(figsize=(6, 5))
     image = ax.imshow(matrix, vmin=0, vmax=100)
     ax.set_xticks([0, 1], ["Unhealthy", "Healthy"])
@@ -414,7 +481,12 @@ def _save_report_images(payload: dict[str, Any], frame: pd.DataFrame, directory:
     precursor = pd.DataFrame(payload["precursor_analysis"]["rows"])
     fig, ax = plt.subplots(figsize=(10, 5))
     for sensor, group in precursor.groupby("sensor", sort=False):
-        ax.plot(group["window"], group["delta_from_baseline"], marker="o", label=SENSOR_META[sensor]["label"])
+        ax.plot(
+            group["window"],
+            group["delta_from_baseline"],
+            marker="o",
+            label=SENSOR_META[sensor]["label"],
+        )
     ax.axhline(0, linewidth=1)
     ax.set_ylabel("Change from 48–96 h baseline")
     ax.set_title("Sensor changes before unhealthy-status onset")
@@ -490,8 +562,18 @@ def build_brood_eda(*, data_path: Path | None = None, save_cache: bool = True) -
             "condition_score_note": "The 1–100 condition score is a transparent sensor-derived research index. The historical binary status is used for EDA and training-only weight calibration, never as a forecasting feature.",
         },
         "class_balance": [
-            {"label": "Healthy", "target_value": 1, "count": healthy_count, "percentage": float(healthy_count / max(total, 1) * 100.0)},
-            {"label": "Unhealthy", "target_value": 0, "count": unhealthy_count, "percentage": float(unhealthy_count / max(total, 1) * 100.0)},
+            {
+                "label": "Healthy",
+                "target_value": 1,
+                "count": healthy_count,
+                "percentage": float(healthy_count / max(total, 1) * 100.0),
+            },
+            {
+                "label": "Unhealthy",
+                "target_value": 0,
+                "count": unhealthy_count,
+                "percentage": float(unhealthy_count / max(total, 1) * 100.0),
+            },
         ],
         "sensor_statistics": _sensor_statistics(frame),
         "sensor_distributions": _sensor_distributions(frame),

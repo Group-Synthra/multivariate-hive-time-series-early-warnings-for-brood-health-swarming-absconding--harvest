@@ -28,9 +28,7 @@ def _require_columns(
 ) -> None:
     missing = sorted(required.difference(frame.columns))
     if missing:
-        raise ValueError(
-            f"{frame_name} is missing required columns: {missing}"
-        )
+        raise ValueError(f"{frame_name} is missing required columns: {missing}")
 
 
 def _json_safe(value: Any) -> Any:
@@ -68,30 +66,19 @@ def add_contiguous_segment_id(
         frame[TIMESTAMP_COLUMN],
         errors="raise",
     )
-    frame = frame.sort_values(
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    ).reset_index(drop=True)
+    frame = frame.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN]).reset_index(drop=True)
 
-    duplicate_count = int(
-        frame.duplicated([HIVE_COLUMN, TIMESTAMP_COLUMN]).sum()
-    )
+    duplicate_count = int(frame.duplicated([HIVE_COLUMN, TIMESTAMP_COLUMN]).sum())
     if duplicate_count:
         raise ValueError(
-            "Prediction rows contain duplicate hive-timestamp keys: "
-            f"{duplicate_count}"
+            f"Prediction rows contain duplicate hive-timestamp keys: {duplicate_count}"
         )
 
     previous_hive = frame[HIVE_COLUMN].shift()
     elapsed_hours = (
-        frame[TIMESTAMP_COLUMN]
-        .sub(frame[TIMESTAMP_COLUMN].shift())
-        .dt.total_seconds()
-        .div(3600)
+        frame[TIMESTAMP_COLUMN].sub(frame[TIMESTAMP_COLUMN].shift()).dt.total_seconds().div(3600)
     )
-    starts_segment = (
-        frame[HIVE_COLUMN].ne(previous_hive)
-        | elapsed_hours.ne(1.0)
-    )
+    starts_segment = frame[HIVE_COLUMN].ne(previous_hive) | elapsed_hours.ne(1.0)
     frame["_segment_id"] = starts_segment.cumsum().astype("int64")
     return frame
 
@@ -103,9 +90,7 @@ def add_smoothed_probability(
     smoothing_window_hours: int,
 ) -> pd.DataFrame:
     if smoothing_window_hours <= 0:
-        raise ValueError(
-            "smoothing_window_hours must be greater than zero"
-        )
+        raise ValueError("smoothing_window_hours must be greater than zero")
 
     _require_columns(
         predictions,
@@ -118,17 +103,14 @@ def add_smoothed_probability(
     )
 
     frame = predictions.copy()
-    frame["smoothed_probability"] = (
-        frame.groupby(
-            [HIVE_COLUMN, "_segment_id"],
-            sort=False,
-        )[probability_column]
-        .transform(
-            lambda values: values.rolling(
-                window=smoothing_window_hours,
-                min_periods=smoothing_window_hours,
-            ).mean()
-        )
+    frame["smoothed_probability"] = frame.groupby(
+        [HIVE_COLUMN, "_segment_id"],
+        sort=False,
+    )[probability_column].transform(
+        lambda values: values.rolling(
+            window=smoothing_window_hours,
+            min_periods=smoothing_window_hours,
+        ).mean()
     )
     return frame
 
@@ -175,9 +157,7 @@ def apply_alert_policy(
     minimum_consecutive_hours: int,
 ) -> pd.DataFrame:
     if minimum_consecutive_hours <= 0:
-        raise ValueError(
-            "minimum_consecutive_hours must be greater than zero"
-        )
+        raise ValueError("minimum_consecutive_hours must be greater than zero")
 
     frame = add_contiguous_segment_id(predictions)
     frame = add_smoothed_probability(
@@ -187,9 +167,7 @@ def apply_alert_policy(
     )
     frame = add_consecutive_run_length(frame, threshold=threshold)
     frame["alert"] = (
-        frame["_consecutive_above_threshold"]
-        .ge(minimum_consecutive_hours)
-        .astype("int8")
+        frame["_consecutive_above_threshold"].ge(minimum_consecutive_hours).astype("int8")
     )
     return frame
 
@@ -216,21 +194,9 @@ def calculate_alert_metrics(
 
     precision_denominator = true_positive + false_positive
     recall_denominator = true_positive + false_negative
-    precision = (
-        true_positive / precision_denominator
-        if precision_denominator
-        else 0.0
-    )
-    recall = (
-        true_positive / recall_denominator
-        if recall_denominator
-        else 0.0
-    )
-    f1 = (
-        2 * precision * recall / (precision + recall)
-        if precision + recall
-        else 0.0
-    )
+    precision = true_positive / precision_denominator if precision_denominator else 0.0
+    recall = true_positive / recall_denominator if recall_denominator else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
 
     return {
         "precision": precision,
@@ -255,20 +221,14 @@ def count_false_alert_episodes(
         raise ValueError("gap_hours cannot be negative")
 
     false_alerts = predictions.loc[
-        predictions[target_column].eq(0)
-        & predictions[alert_column].eq(1)
+        predictions[target_column].eq(0) & predictions[alert_column].eq(1)
     ].copy()
     if false_alerts.empty:
         return 0
 
-    false_alerts = false_alerts.sort_values(
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    )
+    false_alerts = false_alerts.sort_values([HIVE_COLUMN, TIMESTAMP_COLUMN])
     elapsed = (
-        false_alerts.groupby(HIVE_COLUMN)[TIMESTAMP_COLUMN]
-        .diff()
-        .dt.total_seconds()
-        .div(3600)
+        false_alerts.groupby(HIVE_COLUMN)[TIMESTAMP_COLUMN].diff().dt.total_seconds().div(3600)
     )
     starts_episode = elapsed.isna() | elapsed.gt(gap_hours)
     return int(starts_episode.sum())
@@ -306,24 +266,15 @@ def build_event_detection_table(
     for event in split_events.itertuples(index=False):
         event_rows = predictions.loc[
             predictions[HIVE_COLUMN].eq(event.hive_id)
-            & predictions[TIMESTAMP_COLUMN].ge(
-                event.event_start - horizon
-            )
+            & predictions[TIMESTAMP_COLUMN].ge(event.event_start - horizon)
             & predictions[TIMESTAMP_COLUMN].lt(event.event_start)
         ].sort_values(TIMESTAMP_COLUMN)
 
         alert_rows = event_rows.loc[event_rows[alert_column].eq(1)]
         detected = not alert_rows.empty
-        first_alert_time = (
-            alert_rows[TIMESTAMP_COLUMN].iloc[0]
-            if detected
-            else pd.NaT
-        )
+        first_alert_time = alert_rows[TIMESTAMP_COLUMN].iloc[0] if detected else pd.NaT
         lead_hours = (
-            (event.event_start - first_alert_time).total_seconds()
-            / 3600
-            if detected
-            else np.nan
+            (event.event_start - first_alert_time).total_seconds() / 3600 if detected else np.nan
         )
 
         record = {
@@ -369,31 +320,22 @@ def summarize_event_detection(
 
     detected = detection["detected"].astype(bool)
     detected_rows = detection.loc[detected]
-    session_detected = (
-        detection.groupby(
-            SESSION_ID_COLUMN,
-            observed=True,
-        )["detected"]
-        .max()
-    )
+    session_detected = detection.groupby(
+        SESSION_ID_COLUMN,
+        observed=True,
+    )["detected"].max()
     return {
         "event_count": len(detection),
         "detected_event_count": int(detected.sum()),
         "event_recall": float(detected.mean()),
-        "session_count": int(
-            detection[SESSION_ID_COLUMN].nunique()
-        ),
+        "session_count": int(detection[SESSION_ID_COLUMN].nunique()),
         "detected_session_count": int(session_detected.sum()),
         "session_recall": float(session_detected.mean()),
         "median_lead_hours": (
-            float(detected_rows["lead_hours"].median())
-            if not detected_rows.empty
-            else None
+            float(detected_rows["lead_hours"].median()) if not detected_rows.empty else None
         ),
         "minimum_lead_hours": (
-            float(detected_rows["lead_hours"].min())
-            if not detected_rows.empty
-            else None
+            float(detected_rows["lead_hours"].min()) if not detected_rows.empty else None
         ),
     }
 
@@ -425,18 +367,14 @@ def evaluate_policy(
     )
     negative_rows = int(predictions[target_column].eq(0).sum())
     false_alerts_per_30_hive_days = (
-        false_alert_episodes * 720 / negative_rows
-        if negative_rows
-        else 0.0
+        false_alert_episodes * 720 / negative_rows if negative_rows else 0.0
     )
     return (
         {
             **row_metrics,
             **event_metrics,
             "false_alert_episodes": false_alert_episodes,
-            "false_alerts_per_30_hive_days": (
-                false_alerts_per_30_hive_days
-            ),
+            "false_alerts_per_30_hive_days": (false_alerts_per_30_hive_days),
         },
         detection,
     )
@@ -448,15 +386,11 @@ def _build_threshold_grid(
     threshold_grid_points: int,
 ) -> np.ndarray:
     if threshold_grid_points < 3:
-        raise ValueError(
-            "threshold_grid_points must be at least three"
-        )
+        raise ValueError("threshold_grid_points must be at least three")
 
     finite = probabilities.dropna().to_numpy(dtype=float)
     if finite.size == 0:
-        raise ValueError(
-            "No finite smoothed probabilities are available."
-        )
+        raise ValueError("No finite smoothed probabilities are available.")
 
     quantiles = np.quantile(
         finite,
@@ -521,9 +455,7 @@ def select_alert_policy(
             for consecutive_hours in minimum_consecutive_hours:
                 policy_predictions = runs.copy()
                 policy_predictions["alert"] = (
-                    policy_predictions[
-                        "_consecutive_above_threshold"
-                    ]
+                    policy_predictions["_consecutive_above_threshold"]
                     .ge(consecutive_hours)
                     .astype("int8")
                 )
@@ -546,12 +478,8 @@ def select_alert_policy(
                 )
                 records.append(
                     {
-                        "smoothing_window_hours": int(
-                            smoothing_window
-                        ),
-                        "minimum_consecutive_hours": int(
-                            consecutive_hours
-                        ),
+                        "smoothing_window_hours": int(smoothing_window),
+                        "minimum_consecutive_hours": int(consecutive_hours),
                         "threshold": float(threshold),
                         **metrics,
                     }
@@ -559,12 +487,8 @@ def select_alert_policy(
 
     sweep = pd.DataFrame(records)
     eligible = sweep.loc[
-        sweep["event_recall"].ge(
-            minimum_validation_event_recall
-        )
-        & sweep["median_lead_hours"]
-        .fillna(-np.inf)
-        .ge(minimum_median_lead_hours)
+        sweep["event_recall"].ge(minimum_validation_event_recall)
+        & sweep["median_lead_hours"].fillna(-np.inf).ge(minimum_median_lead_hours)
     ].copy()
 
     if eligible.empty:
@@ -580,9 +504,7 @@ def select_alert_policy(
             ],
             ascending=[False, False, True, False, False, True, True],
         )
-        selection_status = (
-            "fallback_no_policy_met_all_constraints"
-        )
+        selection_status = "fallback_no_policy_met_all_constraints"
     else:
         ranked = eligible.sort_values(
             [
@@ -696,9 +618,7 @@ def run_alert_policy_refinement_from_config(
     target_column = str(settings["target_column"])
     probability_column = str(settings["probability_column"])
     horizon_hours = int(settings["horizon_hours"])
-    false_alert_gap_hours = int(
-        settings["false_alert_gap_hours"]
-    )
+    false_alert_gap_hours = int(settings["false_alert_gap_hours"])
 
     required_columns = {
         TIMESTAMP_COLUMN,
@@ -745,21 +665,11 @@ def run_alert_policy_refinement_from_config(
         events,
         target_column=target_column,
         probability_column=probability_column,
-        smoothing_windows_hours=[
-            int(value)
-            for value in settings["smoothing_windows_hours"]
-        ],
-        minimum_consecutive_hours=[
-            int(value)
-            for value in settings["minimum_consecutive_hours"]
-        ],
+        smoothing_windows_hours=[int(value) for value in settings["smoothing_windows_hours"]],
+        minimum_consecutive_hours=[int(value) for value in settings["minimum_consecutive_hours"]],
         threshold_grid_points=int(settings["threshold_grid_points"]),
-        minimum_validation_event_recall=float(
-            settings["minimum_validation_event_recall"]
-        ),
-        minimum_median_lead_hours=float(
-            settings["minimum_median_lead_hours"]
-        ),
+        minimum_validation_event_recall=float(settings["minimum_validation_event_recall"]),
+        minimum_median_lead_hours=float(settings["minimum_median_lead_hours"]),
         false_alert_gap_hours=false_alert_gap_hours,
         horizon_hours=horizon_hours,
     )
@@ -776,13 +686,9 @@ def run_alert_policy_refinement_from_config(
     selected_test_predictions = apply_alert_policy(
         test,
         probability_column=probability_column,
-        smoothing_window_hours=int(
-            selected_policy["smoothing_window_hours"]
-        ),
+        smoothing_window_hours=int(selected_policy["smoothing_window_hours"]),
         threshold=float(selected_policy["threshold"]),
-        minimum_consecutive_hours=int(
-            selected_policy["minimum_consecutive_hours"]
-        ),
+        minimum_consecutive_hours=int(selected_policy["minimum_consecutive_hours"]),
     )
     test_metrics, test_detection = evaluate_policy(
         selected_test_predictions,
@@ -794,44 +700,26 @@ def run_alert_policy_refinement_from_config(
     )
 
     prevalence = float(validation[target_column].mean())
-    precision_lift = (
-        validation_metrics["precision"] / prevalence
-        if prevalence
-        else 0.0
-    )
-    baseline_false_alerts = baseline_validation.get(
-        "false_alert_episodes"
-    )
-    selected_false_alerts = validation_metrics[
-        "false_alert_episodes"
-    ]
+    precision_lift = validation_metrics["precision"] / prevalence if prevalence else 0.0
+    baseline_false_alerts = baseline_validation.get("false_alert_episodes")
+    selected_false_alerts = validation_metrics["false_alert_episodes"]
     false_alert_reduction_fraction = (
-        (baseline_false_alerts - selected_false_alerts)
-        / baseline_false_alerts
+        (baseline_false_alerts - selected_false_alerts) / baseline_false_alerts
         if baseline_false_alerts
         else None
     )
 
     gate = settings["readiness_gate"]
-    minimum_reduction = float(
-        gate["minimum_false_alert_reduction_fraction"]
-    )
-    minimum_precision_lift = float(
-        gate["minimum_precision_lift_over_prevalence"]
-    )
-    constraints_satisfied = (
-        selected_policy["selection_status"]
-        == "constraints_satisfied"
-    )
+    minimum_reduction = float(gate["minimum_false_alert_reduction_fraction"])
+    minimum_precision_lift = float(gate["minimum_precision_lift_over_prevalence"])
+    constraints_satisfied = selected_policy["selection_status"] == "constraints_satisfied"
     reduction_passed = bool(
         false_alert_reduction_fraction is not None
         and false_alert_reduction_fraction >= minimum_reduction
     )
     precision_passed = precision_lift >= minimum_precision_lift
     ready_for_calibration_review = bool(
-        constraints_satisfied
-        and reduction_passed
-        and precision_passed
+        constraints_satisfied and reduction_passed and precision_passed
     )
 
     output_directory.mkdir(parents=True, exist_ok=True)
@@ -850,30 +738,21 @@ def run_alert_policy_refinement_from_config(
     )
 
     validation_output_columns = [
-        column
-        for column in selected_validation_predictions.columns
-        if not column.startswith("_")
+        column for column in selected_validation_predictions.columns if not column.startswith("_")
     ]
-    selected_validation_predictions[
-        validation_output_columns
-    ].to_parquet(
-        output_directory
-        / "selected_validation_alert_predictions.parquet",
+    selected_validation_predictions[validation_output_columns].to_parquet(
+        output_directory / "selected_validation_alert_predictions.parquet",
         index=False,
     )
     test_output_columns = [
-        column
-        for column in selected_test_predictions.columns
-        if not column.startswith("_")
+        column for column in selected_test_predictions.columns if not column.startswith("_")
     ]
     selected_test_predictions[test_output_columns].to_parquet(
-        output_directory
-        / "selected_test_alert_predictions.parquet",
+        output_directory / "selected_test_alert_predictions.parquet",
         index=False,
     )
     selected_validation_detection.to_csv(
-        output_directory
-        / "selected_validation_event_detection.csv",
+        output_directory / "selected_validation_event_detection.csv",
         index=False,
     )
     test_detection.to_csv(
@@ -888,22 +767,14 @@ def run_alert_policy_refinement_from_config(
         "unchanged_test_evaluation": test_metrics,
         "validation_prevalence": prevalence,
         "validation_precision_lift_over_prevalence": precision_lift,
-        "validation_false_alert_reduction_fraction": (
-            false_alert_reduction_fraction
-        ),
+        "validation_false_alert_reduction_fraction": (false_alert_reduction_fraction),
         "readiness_gate": {
-            "minimum_false_alert_reduction_fraction": (
-                minimum_reduction
-            ),
-            "minimum_precision_lift_over_prevalence": (
-                minimum_precision_lift
-            ),
+            "minimum_false_alert_reduction_fraction": (minimum_reduction),
+            "minimum_precision_lift_over_prevalence": (minimum_precision_lift),
             "constraints_satisfied": constraints_satisfied,
             "false_alert_reduction_passed": reduction_passed,
             "precision_lift_passed": precision_passed,
-            "ready_for_calibration_review": (
-                ready_for_calibration_review
-            ),
+            "ready_for_calibration_review": (ready_for_calibration_review),
         },
         "interpretation": (
             "The policy consolidates hourly model scores into alert "
@@ -911,14 +782,8 @@ def run_alert_policy_refinement_from_config(
             "are not used to tune the policy."
         ),
         "warnings": [
-            (
-                "The policy was selected using only two reviewed "
-                "validation events."
-            ),
-            (
-                "The model score is not probability calibrated and "
-                "must not yet be displayed as HUI."
-            ),
+            ("The policy was selected using only two reviewed validation events."),
+            ("The model score is not probability calibrated and must not yet be displayed as HUI."),
             (
                 "The target represents probable harvest activity "
                 "within 72 hours, not verified optimal maturity."
@@ -937,34 +802,20 @@ def run_alert_policy_refinement_from_config(
             "horizon_hours": horizon_hours,
             "false_alert_gap_hours": false_alert_gap_hours,
             "calibration_status": "not_calibrated",
-            "ready_for_calibration_review": (
-                ready_for_calibration_review
-            ),
+            "ready_for_calibration_review": (ready_for_calibration_review),
         },
     )
 
     return {
         "selected_policy": selected_policy,
-        "validation_event_recall": validation_metrics[
-            "event_recall"
-        ],
-        "validation_median_lead_hours": validation_metrics[
-            "median_lead_hours"
-        ],
+        "validation_event_recall": validation_metrics["event_recall"],
+        "validation_median_lead_hours": validation_metrics["median_lead_hours"],
         "validation_precision": validation_metrics["precision"],
         "validation_false_alert_episodes": selected_false_alerts,
         "baseline_false_alert_episodes": baseline_false_alerts,
-        "false_alert_reduction_fraction": (
-            false_alert_reduction_fraction
-        ),
+        "false_alert_reduction_fraction": (false_alert_reduction_fraction),
         "test_event_recall": test_metrics["event_recall"],
-        "test_false_alert_episodes": test_metrics[
-            "false_alert_episodes"
-        ],
-        "ready_for_calibration_review": (
-            ready_for_calibration_review
-        ),
-        "summary_path": str(
-            output_directory / "selected_alert_policy.json"
-        ),
+        "test_false_alert_episodes": test_metrics["false_alert_episodes"],
+        "ready_for_calibration_review": (ready_for_calibration_review),
+        "summary_path": str(output_directory / "selected_alert_policy.json"),
     }

@@ -27,9 +27,7 @@ def _require_columns(
 ) -> None:
     missing = sorted(required.difference(frame.columns))
     if missing:
-        raise ValueError(
-            f"{frame_name} is missing required columns: {missing}"
-        )
+        raise ValueError(f"{frame_name} is missing required columns: {missing}")
 
 
 def _event_distance_hours(
@@ -48,12 +46,7 @@ def _event_distance_hours(
         previous = event_times[positions[previous_valid] - 1]
         distances[previous_valid] = np.minimum(
             distances[previous_valid],
-            np.abs(
-                (
-                    values[previous_valid] - previous
-                )
-                / np.timedelta64(1, "h")
-            ),
+            np.abs((values[previous_valid] - previous) / np.timedelta64(1, "h")),
         )
 
     next_valid = positions < len(event_times)
@@ -61,12 +54,7 @@ def _event_distance_hours(
         following = event_times[positions[next_valid]]
         distances[next_valid] = np.minimum(
             distances[next_valid],
-            np.abs(
-                (
-                    following - values[next_valid]
-                )
-                / np.timedelta64(1, "h")
-            ),
+            np.abs((following - values[next_valid]) / np.timedelta64(1, "h")),
         )
 
     return distances
@@ -115,9 +103,7 @@ def create_event_and_control_samples(
         errors="raise",
     )
 
-    indexed = feature_frame.set_index(
-        [HIVE_COLUMN, TIMESTAMP_COLUMN]
-    )
+    indexed = feature_frame.set_index([HIVE_COLUMN, TIMESTAMP_COLUMN])
     rng = np.random.default_rng(random_state)
 
     event_rows: list[dict[str, Any]] = []
@@ -126,9 +112,7 @@ def create_event_and_control_samples(
     used_control_keys: set[tuple[str, pd.Timestamp]] = set()
 
     events_by_hive = {
-        hive_id: group["event_start"]
-        .sort_values()
-        .to_numpy(dtype="datetime64[ns]")
+        hive_id: group["event_start"].sort_values().to_numpy(dtype="datetime64[ns]")
         for hive_id, group in event_frame.groupby(
             HIVE_COLUMN,
             sort=False,
@@ -148,16 +132,12 @@ def create_event_and_control_samples(
         ].copy()
 
         event_times = events_by_hive[hive_id]
-        hive_candidates["_event_distance_hours"] = (
-            _event_distance_hours(
-                hive_candidates[TIMESTAMP_COLUMN],
-                event_times,
-            )
+        hive_candidates["_event_distance_hours"] = _event_distance_hours(
+            hive_candidates[TIMESTAMP_COLUMN],
+            event_times,
         )
         hive_candidates = hive_candidates.loc[
-            hive_candidates["_event_distance_hours"].gt(
-                control_exclusion_hours
-            )
+            hive_candidates["_event_distance_hours"].gt(control_exclusion_hours)
         ]
 
         for lead in lead_hours:
@@ -182,9 +162,7 @@ def create_event_and_control_samples(
 
             event_sample = indexed.loc[key]
             if isinstance(event_sample, pd.DataFrame):
-                raise TypeError(
-                    "Duplicate feature rows found for an event lead."
-                )
+                raise TypeError("Duplicate feature rows found for an event lead.")
 
             event_record = {
                 "harvest_event_id": event_id,
@@ -199,17 +177,17 @@ def create_event_and_control_samples(
             event_rows.append(event_record)
 
             same_hour = hive_candidates.loc[
-                hive_candidates[TIMESTAMP_COLUMN].dt.hour.eq(
-                    sample_time.hour
-                )
+                hive_candidates[TIMESTAMP_COLUMN].dt.hour.eq(sample_time.hour)
             ]
             unused = same_hour.loc[
                 ~same_hour.apply(
                     lambda row: (
-                        row[HIVE_COLUMN],
-                        row[TIMESTAMP_COLUMN],
-                    )
-                    in used_control_keys,
+                        (
+                            row[HIVE_COLUMN],
+                            row[TIMESTAMP_COLUMN],
+                        )
+                        in used_control_keys
+                    ),
                     axis=1,
                 )
             ]
@@ -219,9 +197,7 @@ def create_event_and_control_samples(
                 coverage_rows.append(coverage)
                 continue
 
-            chosen_position = int(
-                rng.integers(0, len(pool))
-            )
+            chosen_position = int(rng.integers(0, len(pool)))
             chosen = pool.iloc[chosen_position]
             control_key = (
                 chosen[HIVE_COLUMN],
@@ -237,9 +213,7 @@ def create_event_and_control_samples(
                 "lead_hours": lead,
                 "sample_time": chosen[TIMESTAMP_COLUMN],
                 "matched_event_sample_time": sample_time,
-                "distance_from_nearest_event_hours": chosen[
-                    "_event_distance_hours"
-                ],
+                "distance_from_nearest_event_hours": chosen["_event_distance_hours"],
             }
             for feature in feature_columns:
                 control_record[feature] = chosen[feature]
@@ -263,18 +237,11 @@ def compare_event_and_control_features(
 ) -> pd.DataFrame:
     records: list[dict[str, Any]] = []
 
-    common_leads = sorted(
-        set(event_samples["lead_hours"])
-        .intersection(controls["lead_hours"])
-    )
+    common_leads = sorted(set(event_samples["lead_hours"]).intersection(controls["lead_hours"]))
 
     for lead in common_leads:
-        event_lead = event_samples.loc[
-            event_samples["lead_hours"].eq(lead)
-        ]
-        control_lead = controls.loc[
-            controls["lead_hours"].eq(lead)
-        ]
+        event_lead = event_samples.loc[event_samples["lead_hours"].eq(lead)]
+        control_lead = controls.loc[controls["lead_hours"].eq(lead)]
 
         for feature in feature_columns:
             event_values = pd.to_numeric(
@@ -290,22 +257,10 @@ def compare_event_and_control_features(
             control_mean = float(control_values.mean())
             mean_difference = event_mean - control_mean
             pooled_standard_deviation = float(
-                np.sqrt(
-                    (
-                        event_values.var(ddof=1)
-                        + control_values.var(ddof=1)
-                    )
-                    / 2
-                )
+                np.sqrt((event_values.var(ddof=1) + control_values.var(ddof=1)) / 2)
             )
-            if (
-                np.isfinite(pooled_standard_deviation)
-                and pooled_standard_deviation > 0
-            ):
-                standardized_mean_difference = (
-                    mean_difference
-                    / pooled_standard_deviation
-                )
+            if np.isfinite(pooled_standard_deviation) and pooled_standard_deviation > 0:
+                standardized_mean_difference = mean_difference / pooled_standard_deviation
             else:
                 standardized_mean_difference = np.nan
 
@@ -317,21 +272,13 @@ def compare_event_and_control_features(
                     "control_n": len(control_values),
                     "event_mean": event_mean,
                     "control_mean": control_mean,
-                    "event_median": float(
-                        event_values.median()
-                    ),
-                    "control_median": float(
-                        control_values.median()
-                    ),
+                    "event_median": float(event_values.median()),
+                    "control_median": float(control_values.median()),
                     "mean_difference": mean_difference,
-                    "standardized_mean_difference": (
-                        standardized_mean_difference
-                    ),
+                    "standardized_mean_difference": (standardized_mean_difference),
                     "absolute_standardized_mean_difference": (
                         abs(standardized_mean_difference)
-                        if np.isfinite(
-                            standardized_mean_difference
-                        )
+                        if np.isfinite(standardized_mean_difference)
                         else np.nan
                     ),
                 }
@@ -355,21 +302,13 @@ def _save_top_feature_plots(
 
     for lead in sorted(comparison["lead_hours"].unique()):
         subset = (
-            comparison.loc[
-                comparison["lead_hours"].eq(lead)
-            ]
-            .dropna(
-                subset=[
-                    "absolute_standardized_mean_difference"
-                ]
-            )
+            comparison.loc[comparison["lead_hours"].eq(lead)]
+            .dropna(subset=["absolute_standardized_mean_difference"])
             .nlargest(
                 top_features_to_plot,
                 "absolute_standardized_mean_difference",
             )
-            .sort_values(
-                "absolute_standardized_mean_difference"
-            )
+            .sort_values("absolute_standardized_mean_difference")
         )
         if subset.empty:
             continue
@@ -377,23 +316,14 @@ def _save_top_feature_plots(
         figure, axis = plt.subplots(figsize=(10, 6))
         axis.barh(
             subset["feature"],
-            subset[
-                "absolute_standardized_mean_difference"
-            ],
+            subset["absolute_standardized_mean_difference"],
         )
-        axis.set_title(
-            f"Top reviewed-event feature differences at {lead} h lead"
-        )
-        axis.set_xlabel(
-            "Absolute standardized mean difference"
-        )
+        axis.set_title(f"Top reviewed-event feature differences at {lead} h lead")
+        axis.set_xlabel("Absolute standardized mean difference")
         axis.set_ylabel("Feature")
         figure.tight_layout()
 
-        path = (
-            figure_directory
-            / f"top_features_lead_{lead}h.png"
-        )
+        path = figure_directory / f"top_features_lead_{lead}h.png"
         figure.savefig(path, dpi=160)
         plt.close(figure)
         figure_paths.append(str(path))
@@ -411,9 +341,7 @@ def run_reviewed_feature_eda_from_config(
     if not path.is_absolute():
         path = root / path
 
-    config = yaml.safe_load(
-        path.read_text(encoding="utf-8")
-    )
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
     settings = config["reviewed_feature_eda"]
     target_column = config["reviewed_target"]["output_column"]
 
@@ -439,21 +367,14 @@ def run_reviewed_feature_eda_from_config(
     manifest = pd.read_csv(manifest_path)
     feature_columns = manifest["feature_name"].tolist()
 
-    event_samples, controls, coverage = (
-        create_event_and_control_samples(
-            features,
-            events,
-            feature_columns=feature_columns,
-            target_column=target_column,
-            lead_hours=[
-                int(value)
-                for value in settings["lead_hours"]
-            ],
-            control_exclusion_hours=int(
-                settings["control_exclusion_hours"]
-            ),
-            random_state=int(settings["random_state"]),
-        )
+    event_samples, controls, coverage = create_event_and_control_samples(
+        features,
+        events,
+        feature_columns=feature_columns,
+        target_column=target_column,
+        lead_hours=[int(value) for value in settings["lead_hours"]],
+        control_exclusion_hours=int(settings["control_exclusion_hours"]),
+        random_state=int(settings["random_state"]),
     )
     comparison = compare_event_and_control_features(
         event_samples,
@@ -484,9 +405,7 @@ def run_reviewed_feature_eda_from_config(
     )
 
     top_features = (
-        comparison.dropna(
-            subset=["absolute_standardized_mean_difference"]
-        )
+        comparison.dropna(subset=["absolute_standardized_mean_difference"])
         .sort_values(
             [
                 "lead_hours",
@@ -495,9 +414,7 @@ def run_reviewed_feature_eda_from_config(
             ascending=[True, False],
         )
         .groupby("lead_hours", observed=True)
-        .head(
-            int(settings["top_features_to_plot"])
-        )
+        .head(int(settings["top_features_to_plot"]))
     )
     top_features.to_csv(
         output_directory / "top_features_by_lead.csv",
@@ -507,33 +424,20 @@ def run_reviewed_feature_eda_from_config(
     figure_paths = _save_top_feature_plots(
         comparison,
         output_directory=output_directory,
-        top_features_to_plot=int(
-            settings["top_features_to_plot"]
-        ),
+        top_features_to_plot=int(settings["top_features_to_plot"]),
     )
 
-    expected_samples = len(events) * len(
-        settings["lead_hours"]
-    )
+    expected_samples = len(events) * len(settings["lead_hours"])
     audit = {
         "reviewed_event_count": len(events),
         "expected_event_lead_samples": expected_samples,
         "available_event_lead_samples": len(event_samples),
         "available_matched_controls": len(controls),
-        "missing_event_lead_samples": int(
-            expected_samples - len(event_samples)
-        ),
-        "missing_controls": int(
-            expected_samples - len(controls)
-        ),
+        "missing_event_lead_samples": int(expected_samples - len(event_samples)),
+        "missing_controls": int(expected_samples - len(controls)),
         "feature_count": len(feature_columns),
-        "lead_hours": [
-            int(value)
-            for value in settings["lead_hours"]
-        ],
-        "control_exclusion_hours": int(
-            settings["control_exclusion_hours"]
-        ),
+        "lead_hours": [int(value) for value in settings["lead_hours"]],
+        "control_exclusion_hours": int(settings["control_exclusion_hours"]),
         "figure_count": len(figure_paths),
         "figure_paths": figure_paths,
         "warning": (
@@ -542,9 +446,7 @@ def run_reviewed_feature_eda_from_config(
             "be treated as confirmatory statistical evidence."
         ),
     }
-    (
-        output_directory / "reviewed_feature_eda_audit.json"
-    ).write_text(
+    (output_directory / "reviewed_feature_eda_audit.json").write_text(
         json.dumps(audit, indent=2),
         encoding="utf-8",
     )
