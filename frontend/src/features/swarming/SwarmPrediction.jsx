@@ -32,8 +32,8 @@ const SENSOR_META = [
   { key: "internal_humidity_pct", label: "Internal Humidity", unit: "%", icon: "💧", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
   { key: "co2_ppm", label: "CO₂", unit: "ppm", icon: "💨", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
   { key: "hive_weight_kg", label: "Hive Weight", unit: "kg", icon: "⚖️", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
-  // { key: "external_temperature_c", label: "External Temp", unit: "°C", icon: "☀️", color: "#ea580c", bg: "#fff7ed", border: "#fed7aa" },
-  // { key: "external_humidity_pct", label: "External Humidity", unit: "%", icon: "🌤️", color: "#0891b2", bg: "#ecfeff", border: "#a5f3fc" },
+  { key: "external_temperature_c", label: "External Temp", unit: "°C", icon: "☀️", color: "#ea580c", bg: "#fff7ed", border: "#fed7aa" },
+  { key: "external_humidity_pct", label: "External Humidity", unit: "%", icon: "🌤️", color: "#0891b2", bg: "#ecfeff", border: "#a5f3fc" },
   // { key: "battery_voltage", label: "Battery Voltage", unit: "V", icon: "🔋", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
 ];
 
