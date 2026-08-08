@@ -58,7 +58,7 @@ def prepare_brood_health_dataset(
     audit = {
         "source": str(source),
         "output": str(destination),
-        "rows": int(len(normalized)),
+        "rows": len(normalized),
         "hives": int(normalized["hive_id"].nunique()),
         "timestamp_storage": "UTC",
         "historical_local_timezone": HISTORICAL_FEATURE_TIMEZONE,

@@ -11,8 +11,8 @@ from .config import PATHS, IoTSettings
 from .eda import build_brood_eda
 from .predictor import BroodHealthPredictor, ModelNotReadyError
 from .repository import IoTConfigurationError, IoTRepositoryError, PostgresIoTRepository
-from .validation_log import BroodForecastValidationLog
 from .training import run_training
+from .validation_log import BroodForecastValidationLog
 
 
 class BroodHealthService:

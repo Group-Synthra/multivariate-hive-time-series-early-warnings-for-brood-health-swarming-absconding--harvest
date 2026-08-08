@@ -42,10 +42,10 @@ from .audit import binary_target_persistence_audit, feature_leakage_audit
 from .calibration import calibrate_component_weights
 from .config import PATHS
 from .features import (
-    FEATURE_SCHEMA_VERSION,
-    MINIMUM_TRAINING_HISTORY_HOURS,
     EXTERNAL_SENSORS,
+    FEATURE_SCHEMA_VERSION,
     HISTORICAL_FEATURE_TIMEZONE,
+    MINIMUM_TRAINING_HISTORY_HOURS,
     SENSORS,
     TARGET_COLUMN,
     build_supervised_dataset,

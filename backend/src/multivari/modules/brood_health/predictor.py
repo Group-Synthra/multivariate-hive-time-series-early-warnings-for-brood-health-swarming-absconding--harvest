@@ -15,8 +15,8 @@ from .analyzer import (
 )
 from .config import PATHS
 from .features import (
-    FEATURE_SCHEMA_VERSION,
     EXTERNAL_SENSORS,
+    FEATURE_SCHEMA_VERSION,
     SENSORS,
     aggregate_live_hourly,
     build_feature_frame,
@@ -560,7 +560,7 @@ class BroodHealthPredictor:
         observed_times: list[str] = []
         tolerance = pd.Timedelta(minutes=max(1, int(tolerance_minutes)))
 
-        for hour in range(0, int(horizon_hours) + 1):
+        for hour in range(int(horizon_hours) + 1):
             target = anchor + pd.Timedelta(hours=hour)
             prior = mapped.loc[mapped["timestamp"] <= target]
             if prior.empty:
