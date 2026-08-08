@@ -141,7 +141,7 @@ export function AbscondingPage() {
           className="absconding-autoplay-video"
           src="/videos/absconding.mp4"
           autoPlay
-          muted
+          unmuted
           loop
           playsInline
           preload="auto"
