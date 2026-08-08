@@ -42,7 +42,9 @@ def create_brood_health_blueprint(service: BroodHealthService | None = None) -> 
             fast_mode = bool(payload.get("fast_mode", False))
             if not 1 <= horizon <= 24:
                 raise ValueError("horizon_hours must be between 1 and 24")
-            return jsonify(module_service.start_training(horizon_hours=horizon, fast_mode=fast_mode)), 202
+            return jsonify(
+                module_service.start_training(horizon_hours=horizon, fast_mode=fast_mode)
+            ), 202
         # API boundary: preserve the existing JSON error contract for bad requests.
         except Exception as exc:  # noqa: BLE001
             return error_response(exc)

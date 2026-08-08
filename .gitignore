@@ -5,6 +5,8 @@
 .venv/
 venv/
 env/
+ENV/
+__pypackages__/
 
 __pycache__/
 *.py[cod]
@@ -13,29 +15,34 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.pyre/
+.hypothesis/
+.ipynb_checkpoints/
+
 .coverage
 .coverage.*
 htmlcov/
+coverage/
 coverage.xml
 
 *.egg-info/
 .eggs/
+pip-wheel-metadata/
+
 build/
 dist/
 
 
 # ============================================================
-# Environment variables and secrets
+# Environment variables, credentials and secrets
 # ============================================================
 
 .env
+.env.*
 backend/.env
+backend/.env.*
 frontend/.env
-
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+frontend/.env.*
 
 # Keep safe templates
 !.env.example
@@ -44,7 +51,7 @@ frontend/.env
 
 
 # ============================================================
-# Node and Vite
+# Node, npm and Vite
 # ============================================================
 
 node_modules/
@@ -52,6 +59,10 @@ frontend/node_modules/
 
 frontend/dist/
 frontend/.vite/
+frontend/coverage/
+
+.eslintcache
+*.tsbuildinfo
 
 npm-debug.log*
 yarn-debug.log*
@@ -75,8 +86,8 @@ backend/data/processed/*
 
 
 # ============================================================
-# Shared split manifest
-# Keep only the agreed common split file in Git
+# Shared split manifests
+# Keep only the agreed common split manifest
 # ============================================================
 
 backend/data/manifests/*
@@ -86,17 +97,33 @@ backend/data/manifests/*
 
 
 # ============================================================
-# Generated models, metrics and reports
+# Prospective validation data
+# Keep templates and data dictionaries, ignore collected records
+# ============================================================
+
+backend/data/prospective/*
+
+!backend/data/prospective/.gitkeep
+!backend/data/prospective/harvest_validation_template.csv
+!backend/data/prospective/harvest_validation_data_dictionary.csv
+
+
+# ============================================================
+# Generated models, reports, metrics and plots
 # ============================================================
 
 backend/artifacts/models/*
 backend/artifacts/metrics/*
 backend/artifacts/reports/*
+backend/artifacts/figures/*
+backend/artifacts/plots/*
 backend/artifacts/predictions/*
 
 !backend/artifacts/models/.gitkeep
 !backend/artifacts/metrics/.gitkeep
 !backend/artifacts/reports/.gitkeep
+!backend/artifacts/figures/.gitkeep
+!backend/artifacts/plots/.gitkeep
 !backend/artifacts/predictions/.gitkeep
 
 backend/artifacts/validation/
@@ -104,28 +131,103 @@ backend/data/modules/
 
 
 # ============================================================
-# Local databases, temporary files and archives
+# Machine-learning model binaries outside artifact directories
+# ============================================================
+
+*.joblib
+*.pkl
+*.pickle
+*.onnx
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+
+
+# ============================================================
+# Temporary configuration fragments
+# ============================================================
+
+backend/config/harvesting_*_section.yaml
+backend/config/harvesting_*_sections.yaml
+
+
+# ============================================================
+# Downloaded and extracted patch/package folders
+# ============================================================
+
+classifier_derived_hui_viva_backend_package/
+classifier_derived_hui_viva_frontend_package/
+
+harvesting_*_package/
+harvesting_*_patch/
+
+
+# ============================================================
+# Backup and editor-generated files
+# ============================================================
+
+*.bak
+*.backup
+*.orig
+*.rej
+*.swp
+*.swo
+
+*.before_*
+*.updated.jsx
+*.updated.js
+*.updated.py
+
+
+# ============================================================
+# Local databases, temporary files, logs and archives
 # ============================================================
 
 *.db
 *.sqlite
 *.sqlite3
+
 *.tmp
 *.temp
 *.log
+
 *.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
 
 temp/
 tmp/
+.cache/
+
+instance/
 
 
 # ============================================================
-# IDE and operating-system files
+# IDE files
 # ============================================================
 
 .vscode/
 .idea/
+*.code-workspace
+
+
+# ============================================================
+# Operating-system files
+# ============================================================
 
 .DS_Store
+.AppleDouble
+.LSOverride
+
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 desktop.ini
+
+$RECYCLE.BIN/
+
+backend/src/multivari/modules/swarming/data/swarming_risk_history.json

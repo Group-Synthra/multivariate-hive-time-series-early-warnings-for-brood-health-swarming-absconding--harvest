@@ -1,0 +1,10 @@
+column,description,required,allowed_values
+record_id,Unique prospective validation record.,True,unique text
+hive_id,Hive identifier matching telemetry data.,True,known hive identifier
+inspection_timestamp,Timestamp when the beekeeper inspected the hive.,True,ISO 8601 date-time
+harvest_decision,Decision made before observing the eventual outcome.,True,"harvest_now, wait, partial_harvest, no_harvest"
+actual_harvest_timestamp,Confirmed time of completed harvest.,False,ISO 8601 date-time
+harvested_honey_mass_kg,Measured harvested honey mass.,False,non-negative numeric
+comb_capping_percent,Estimated percentage of capped honey comb.,False,0 to 100
+honey_moisture_percent,Measured honey moisture percentage.,False,numeric percent
+harvest_confirmed,Whether the planned or observed harvest was completed.,True,"true, false"

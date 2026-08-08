@@ -55,9 +55,7 @@ class AbscondingService:
     _dashboard_cache: dict[str, Any] | None = field(default=None, init=False)
     _model_cache_signature: tuple[int, int] | None = field(default=None, init=False)
     _model_cache: dict[str, Any] | None = field(default=None, init=False)
-    _current_state_model_cache_signature: tuple[int, int] | None = field(
-        default=None, init=False
-    )
+    _current_state_model_cache_signature: tuple[int, int] | None = field(default=None, init=False)
     _current_state_model_cache: dict[str, Any] | None = field(default=None, init=False)
 
     def __post_init__(self) -> None:
@@ -235,9 +233,7 @@ class AbscondingService:
                     "current_state_risk_level": _current_state_risk_level_from_row(
                         row, current_bundle, settings
                     ),
-                    "current_state_arm": _optional_float(
-                        row.get("current_state_arm"), 8
-                    ),
+                    "current_state_arm": _optional_float(row.get("current_state_arm"), 8),
                     "current_state_arm_per_hour": _optional_float(
                         row.get("current_state_arm_per_hour"), 10
                     ),
@@ -503,19 +499,18 @@ class AbscondingService:
         valid["probability_change"] = valid["probability"] - valid["previous_probability"]
         valid["arm"] = valid["probability_change"].fillna(0.0)
         valid["arm_per_hour"] = valid["arm"] / max(settings.arm_change_hours, 1)
-        valid["current_state_previous_probability"] = grouped[
-            "current_state_probability"
-        ].shift(settings.arm_change_hours)
+        valid["current_state_previous_probability"] = grouped["current_state_probability"].shift(
+            settings.arm_change_hours
+        )
         valid["current_state_previous_timestamp"] = grouped[TIMESTAMP_COLUMN].shift(
             settings.arm_change_hours
         )
         valid["current_state_change"] = (
-            valid["current_state_probability"]
-            - valid["current_state_previous_probability"]
+            valid["current_state_probability"] - valid["current_state_previous_probability"]
         )
         valid["current_state_arm"] = valid["current_state_change"].fillna(0.0)
-        valid["current_state_arm_per_hour"] = (
-            valid["current_state_arm"] / max(settings.arm_change_hours, 1)
+        valid["current_state_arm_per_hour"] = valid["current_state_arm"] / max(
+            settings.arm_change_hours, 1
         )
         return bundle, current_bundle, settings, hourly, valid
 
@@ -553,18 +548,14 @@ class AbscondingService:
                 round(previous_probability, 8) if previous_probability is not None else None
             ),
             "previous_probability_percent": (
-                round(previous_probability * 100, 4)
-                if previous_probability is not None
-                else None
+                round(previous_probability * 100, 4) if previous_probability is not None else None
             ),
             "previous_probability_timestamp": previous_timestamp,
             "probability_change": (
                 round(probability_change, 8) if probability_change is not None else None
             ),
             "probability_change_percentage_points": (
-                round(probability_change * 100, 4)
-                if probability_change is not None
-                else None
+                round(probability_change * 100, 4) if probability_change is not None else None
             ),
             "comparison_hours": int(settings.arm_change_hours),
             "risk_level": risk_level,
@@ -646,14 +637,10 @@ class AbscondingService:
                 latest.get("current_state_previous_timestamp")
             ),
             "change": round(change, 8) if change is not None else None,
-            "change_percentage_points": (
-                round(change * 100, 4) if change is not None else None
-            ),
+            "change_percentage_points": (round(change * 100, 4) if change is not None else None),
             "comparison_hours": int(settings.arm_change_hours),
             "arm": round(arm, 8),
-            "arm_per_hour": round(
-                float(latest.get("current_state_arm_per_hour", 0.0)), 10
-            ),
+            "arm_per_hour": round(float(latest.get("current_state_arm_per_hour", 0.0)), 10),
             "trend": _arm_label(arm),
             "risk_level": risk_level,
             "thresholds": {
@@ -857,7 +844,6 @@ def _signal_explanations(row: pd.Series) -> list[dict[str, Any]]:
         }
         for factor, score, detail in candidates[:4]
     ]
-
 
 
 def _current_state_risk_level_from_row(

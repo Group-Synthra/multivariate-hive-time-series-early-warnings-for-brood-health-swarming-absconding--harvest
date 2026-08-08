@@ -74,7 +74,10 @@ def feature_leakage_audit(feature_columns: Iterable[str]) -> dict[str, Any]:
     target_like = sorted(
         column
         for column, name in lowered.items()
-        if any(fragment in name for fragment in ("brood_health_healthy", "target", "label", "observed_healthy"))
+        if any(
+            fragment in name
+            for fragment in ("brood_health_healthy", "target", "label", "observed_healthy")
+        )
     )
     future_like = sorted(
         column
@@ -89,8 +92,7 @@ def feature_leakage_audit(feature_columns: Iterable[str]) -> dict[str, Any]:
     absolute_time = sorted(
         column
         for column, name in lowered.items()
-        if name in {"timestamp", "date", "year", "month", "day_of_year"}
-        or "day_of_year" in name
+        if name in {"timestamp", "date", "year", "month", "day_of_year"} or "day_of_year" in name
     )
     absolute_weight = sorted(
         column

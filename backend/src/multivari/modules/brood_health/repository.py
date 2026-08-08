@@ -135,7 +135,9 @@ class PostgresIoTRepository:
             "schema": self.settings.schema,
             "table": self.settings.table,
             "latest_device_id": str(latest["device_id"]) if latest else None,
-            "latest_recorded_at": latest["recorded_at"].isoformat() if latest and latest["recorded_at"] else None,
+            "latest_recorded_at": latest["recorded_at"].isoformat()
+            if latest and latest["recorded_at"]
+            else None,
             "available_columns": sorted(available),
             "mapped_columns": self._contract(),
             "refresh_seconds": self.settings.refresh_seconds,
@@ -164,8 +166,12 @@ class PostgresIoTRepository:
             {
                 "device_id": str(row["device_id"]),
                 "hive": str(row["device_id"]),
-                "latest_recorded_at": row["latest_recorded_at"].isoformat() if row["latest_recorded_at"] else None,
-                "latest_timestamp": row["latest_recorded_at"].isoformat() if row["latest_recorded_at"] else None,
+                "latest_recorded_at": row["latest_recorded_at"].isoformat()
+                if row["latest_recorded_at"]
+                else None,
+                "latest_timestamp": row["latest_recorded_at"].isoformat()
+                if row["latest_recorded_at"]
+                else None,
                 "reading_count": int(row["reading_count"]),
             }
             for row in rows
@@ -182,7 +188,9 @@ class PostgresIoTRepository:
             available = self._available_columns(connection)
             self._validate(available)
             contract = self._contract()
-            selected = [(alias, source) for alias, source in contract.items() if source in available]
+            selected = [
+                (alias, source) for alias, source in contract.items() if source in available
+            ]
             columns = sql.SQL(", ").join(
                 sql.SQL("{source} AS {alias}").format(
                     source=sql.Identifier(source), alias=sql.Identifier(alias)

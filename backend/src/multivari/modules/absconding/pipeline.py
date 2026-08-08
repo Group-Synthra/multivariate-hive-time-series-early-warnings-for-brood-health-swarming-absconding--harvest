@@ -482,7 +482,6 @@ def run_absconding_pipeline(
     return dashboard
 
 
-
 def _train_current_state_model(
     *,
     split_frames: dict[str, pd.DataFrame],
@@ -632,9 +631,7 @@ def _train_current_state_model(
         joblib.dump(bundle, model_path)
 
         comparison_path = paths.metrics_directory / "current_state_model_comparison.json"
-        comparison_path.write_text(
-            json.dumps(_json_ready(comparison), indent=2), encoding="utf-8"
-        )
+        comparison_path.write_text(json.dumps(_json_ready(comparison), indent=2), encoding="utf-8")
         pd.json_normalize(comparison).to_csv(
             paths.metrics_directory / "current_state_model_comparison.csv", index=False
         )
@@ -689,13 +686,8 @@ def _current_state_selection_score(metrics: dict[str, Any]) -> float:
     balanced_accuracy = float(metrics.get("balanced_accuracy") or 0.0)
     recall = float(metrics.get("recall") or 0.0)
     precision = float(metrics.get("precision") or 0.0)
-    return (
-        0.40 * pr_auc
-        + 0.25 * f2
-        + 0.15 * balanced_accuracy
-        + 0.15 * recall
-        + 0.05 * precision
-    )
+    return 0.40 * pr_auc + 0.25 * f2 + 0.15 * balanced_accuracy + 0.15 * recall + 0.05 * precision
+
 
 def prepare_absconding_dataset(
     clean: pd.DataFrame,

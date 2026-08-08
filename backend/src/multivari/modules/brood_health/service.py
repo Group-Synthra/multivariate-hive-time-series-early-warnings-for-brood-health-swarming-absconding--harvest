@@ -43,11 +43,7 @@ class BroodHealthService:
             else PATHS.raw_workbook
         )
         source_mtime = source.stat().st_mtime if source.exists() else None
-        if (
-            not force
-            and self._eda_cache is not None
-            and self._eda_source_mtime == source_mtime
-        ):
+        if not force and self._eda_cache is not None and self._eda_source_mtime == source_mtime:
             return self._eda_cache
         if (
             not force
@@ -55,9 +51,7 @@ class BroodHealthService:
             and source_mtime is not None
             and PATHS.eda_cache.stat().st_mtime >= source_mtime
         ):
-            self._eda_cache = json.loads(
-                PATHS.eda_cache.read_text(encoding="utf-8")
-            )
+            self._eda_cache = json.loads(PATHS.eda_cache.read_text(encoding="utf-8"))
             self._eda_source_mtime = source_mtime
             return self._eda_cache
 
@@ -95,9 +89,7 @@ class BroodHealthService:
                             self._training_state.get("progress", 0),
                         )
                     ),
-                    "message": payload.get(
-                        "message", self._training_state.get("message")
-                    ),
+                    "message": payload.get("message", self._training_state.get("message")),
                     "model": payload.get("model"),
                     "error": None,
                 }
@@ -317,14 +309,9 @@ class BroodHealthService:
             lookback_hours=lookback_hours,
         )
         if history.empty:
-            raise ValueError(
-                f"No IoT readings were found for device {device_id}"
-            )
+            raise ValueError(f"No IoT readings were found for device {device_id}")
         prediction = self._predict_frame(history)
-        if (
-            int(prediction.get("hourly_rows", 0))
-            < self.repository.settings.minimum_hourly_rows
-        ):
+        if int(prediction.get("hourly_rows", 0)) < self.repository.settings.minimum_hourly_rows:
             raise ValueError(
                 f"At least {self.repository.settings.minimum_hourly_rows} complete "
                 f"hourly rows are required; received "
@@ -365,9 +352,7 @@ class BroodHealthService:
                         "latest_timestamp": prediction["latest_timestamp"],
                         "exact_score": prediction["prediction"]["exact_score"],
                         "exact_level": prediction["prediction"]["exact_level"],
-                        "safety_minimum_score": prediction["prediction"][
-                            "safety_minimum_score"
-                        ],
+                        "safety_minimum_score": prediction["prediction"]["safety_minimum_score"],
                         "warning_level": prediction["warning"]["level"],
                     }
                 )
@@ -379,10 +364,7 @@ class BroodHealthService:
         if not readings:
             raise ValueError("readings must be a non-empty array")
         prediction = self._predict_frame(pd.DataFrame(readings))
-        if (
-            int(prediction.get("hourly_rows", 0))
-            < self.repository.settings.minimum_hourly_rows
-        ):
+        if int(prediction.get("hourly_rows", 0)) < self.repository.settings.minimum_hourly_rows:
             raise ValueError(
                 f"At least {self.repository.settings.minimum_hourly_rows} complete "
                 f"hourly rows are required; received "

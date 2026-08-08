@@ -1,3 +1,6 @@
-# Swarming module
+# Swarming Module
 
-Create a future-event target such as swarming within the next stated horizon. Use PR-AUC, recall, precision, false-positive rate, and event-level lead time. Do not use random row splits.
+This folder contains the complete swarming-only implementation: EDA, PELT
+feature engineering, model training, live LSTM inference, risk classification,
+IoT database access, and Flask endpoints. Swarming logic is intentionally kept
+out of `multivari.common`.

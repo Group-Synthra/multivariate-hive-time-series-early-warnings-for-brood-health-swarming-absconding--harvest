@@ -68,29 +68,18 @@ def main() -> None:
                 "test_mse": exact["mse"],
                 "test_rmse_score_points": exact["rmse"],
                 "test_r2": exact["r2"],
-                "overall_level_accuracy_percent": 100
-                * exact["health_level_accuracy"],
+                "overall_level_accuracy_percent": 100 * exact["health_level_accuracy"],
                 "transition_level_accuracy_percent": 100
                 * float(transition.get("health_level_accuracy") or 0.0),
                 "critical_recall_percent": 100 * exact["critical_recall"],
-                "deterioration_recall_percent": 100
-                * metrics["deterioration"]["recall"],
+                "deterioration_recall_percent": 100 * metrics["deterioration"]["recall"],
                 "forecast_bhsi_mae": forecast_indicators.get("forecast_bhsi_mae"),
                 "forecast_bhsi_level_accuracy_percent": 100
-                * float(
-                    forecast_indicators.get("forecast_bhsi_level_accuracy")
-                    or 0.0
-                ),
-                "forecast_rod_mae_points_per_hour": forecast_indicators.get(
-                    "forecast_rod_mae"
-                ),
+                * float(forecast_indicators.get("forecast_bhsi_level_accuracy") or 0.0),
+                "forecast_rod_mae_points_per_hour": forecast_indicators.get("forecast_rod_mae"),
                 "forecast_trend_accuracy_percent": 100
-                * float(
-                    forecast_indicators.get("forecast_trend_accuracy") or 0.0
-                ),
-                "selected_score_weights": summary["weight_calibration"].get(
-                    "selected_weights"
-                ),
+                * float(forecast_indicators.get("forecast_trend_accuracy") or 0.0),
+                "selected_score_weights": summary["weight_calibration"].get("selected_weights"),
             },
             indent=2,
         )

@@ -89,9 +89,7 @@ class BroodHealthPredictor:
             "primary_target": bundle["primary_target"],
             "target_kind": bundle["target_kind"],
             "target_range": bundle.get("target_range", [1.0, 100.0]),
-            "forecast_horizons": list(
-                range(1, int(bundle["horizon_hours"]) + 1)
-            ),
+            "forecast_horizons": list(range(1, int(bundle["horizon_hours"]) + 1)),
             "native_model_resolution_minutes": 60,
             "feature_time_semantics": bundle.get(
                 "feature_time_semantics", "local_hive_clock"
@@ -122,13 +120,10 @@ class BroodHealthPredictor:
             value = latest.get(sensor)
             limits = reference.get(sensor, {})
             if value is None or pd.isna(value):
-                warnings.append(
-                    f"{sensor} is missing in the latest rolling hourly aggregate"
-                )
+                warnings.append(f"{sensor} is missing in the latest rolling hourly aggregate")
                 continue
             if limits and (
-                float(value) < float(limits["p01"])
-                or float(value) > float(limits["p99"])
+                float(value) < float(limits["p01"]) or float(value) > float(limits["p99"])
             ):
                 warnings.append(
                     f"{sensor}={float(value):.2f} is outside the historical "
@@ -169,8 +164,7 @@ class BroodHealthPredictor:
             matrix = np.repeat(matrix[:, None], horizon, axis=1)
         if matrix.shape[1] != horizon:
             raise ModelNotReadyError(
-                f"The saved model returned {matrix.shape[1]} horizons; "
-                f"expected {horizon}."
+                f"The saved model returned {matrix.shape[1]} horizons; expected {horizon}."
             )
         return np.clip(matrix, 1.0, 100.0)
 
@@ -208,9 +202,7 @@ class BroodHealthPredictor:
             raise ValueError("Live prediction accepts one hive/device at a time")
 
         data = data.sort_values(["hive_id", "timestamp"]).reset_index(drop=True)
-        data[list(SENSORS)] = data.groupby("hive_id", sort=False)[
-            list(SENSORS)
-        ].ffill(limit=2)
+        data[list(SENSORS)] = data.groupby("hive_id", sort=False)[list(SENSORS)].ffill(limit=2)
         data = data.dropna(subset=list(SENSORS)).reset_index(drop=True)
         if data.empty:
             raise ValueError("No complete hourly sensor observation is available")
@@ -253,12 +245,8 @@ class BroodHealthPredictor:
 
         result["exact_forecast_score"] = prediction_matrix[:, -1]
         result["safety_minimum_score"] = prediction_matrix.min(axis=1)
-        result["exact_forecast_level"] = result["exact_forecast_score"].map(
-            classify_health_level
-        )
-        result["safety_minimum_level"] = result["safety_minimum_score"].map(
-            classify_health_level
-        )
+        result["exact_forecast_level"] = result["exact_forecast_score"].map(classify_health_level)
+        result["safety_minimum_level"] = result["safety_minimum_score"].map(classify_health_level)
         result["exact_forecast_change_points"] = (
             result["exact_forecast_score"] - result["condition_score"]
         )
@@ -269,13 +257,9 @@ class BroodHealthPredictor:
             result["condition_score"] - result["safety_minimum_score"]
         ).clip(lower=0.0)
         result["forecast_bhsi"] = forecast_bhsi_values
-        result["forecast_stability_level"] = result["forecast_bhsi"].map(
-            classify_stability
-        )
+        result["forecast_stability_level"] = result["forecast_bhsi"].map(classify_stability)
         result["forecast_rod_points_per_hour"] = forecast_rod_values
-        result["forecast_trend_label"] = result[
-            "forecast_rod_points_per_hour"
-        ].map(classify_trend)
+        result["forecast_trend_label"] = result["forecast_rod_points_per_hour"].map(classify_trend)
 
         latest = result.iloc[-1]
         latest_features = feature_frame.iloc[-1]
@@ -283,9 +267,7 @@ class BroodHealthPredictor:
             latest,
             bundle["training_sensor_reference"],
         )
-        domain_shift.extend(
-            self._weight_domain_shift(data, bundle["training_sensor_reference"])
-        )
+        domain_shift.extend(self._weight_domain_shift(data, bundle["training_sensor_reference"]))
 
         history_sufficient = len(data) >= 72
         warning = build_warning_payload(
@@ -293,12 +275,8 @@ class BroodHealthPredictor:
             safety_minimum_score=float(latest["safety_minimum_score"]),
             current_condition_score=float(latest["condition_score"]),
             forecast_bhsi=float(latest["forecast_bhsi"]),
-            forecast_rod_points_per_hour=float(
-                latest["forecast_rod_points_per_hour"]
-            ),
-            exact_forecast_drop_points=float(
-                latest["exact_forecast_drop_points"]
-            ),
+            forecast_rod_points_per_hour=float(latest["forecast_rod_points_per_hour"]),
+            exact_forecast_drop_points=float(latest["exact_forecast_drop_points"]),
             safety_drop_points=float(latest["safety_drop_points"]),
             domain_shift_warnings=domain_shift,
             history_sufficient=history_sufficient,
@@ -324,9 +302,7 @@ class BroodHealthPredictor:
             {
                 "offset_minutes": hour * 60,
                 "horizon_hours": hour,
-                "forecast_timestamp": (
-                    latest_timestamp + pd.Timedelta(hours=hour)
-                ).isoformat(),
+                "forecast_timestamp": (latest_timestamp + pd.Timedelta(hours=hour)).isoformat(),
                 "score": float(latest_trajectory[hour - 1]),
                 "level": classify_health_level(latest_trajectory[hour - 1]),
                 "is_native_model_point": True,
@@ -357,9 +333,7 @@ class BroodHealthPredictor:
         ):
             if column in data.columns:
                 value = data.iloc[-1][column]
-                optional_context[column] = (
-                    None if pd.isna(value) else float(value)
-                )
+                optional_context[column] = None if pd.isna(value) else float(value)
 
         context_warnings: list[str] = []
         raw_weight_reference = bundle["training_sensor_reference"].get(
@@ -368,12 +342,9 @@ class BroodHealthPredictor:
         )
         if raw_weight_reference:
             live_weight = float(latest["weight_kg"])
-            if (
-                live_weight
-                < float(raw_weight_reference.get("p01", live_weight))
-                or live_weight
-                > float(raw_weight_reference.get("p99", live_weight))
-            ):
+            if live_weight < float(
+                raw_weight_reference.get("p01", live_weight)
+            ) or live_weight > float(raw_weight_reference.get("p99", live_weight)):
                 context_warnings.append(
                     "Absolute live hive weight differs from the historical "
                     "hive-weight range. The forecast does not use absolute weight; "
@@ -388,23 +359,13 @@ class BroodHealthPredictor:
             "forecast_timestamp": forecast_timestamp.isoformat(),
             "data_freshness_minutes": freshness_minutes,
             "hourly_rows": len(data),
-            "raw_readings_in_latest_hour": optional_context.get(
-                "raw_reading_count"
-            ),
-            "feature_completeness_percentage": self._feature_completeness(
-                latest_features
-            ),
+            "raw_readings_in_latest_hour": optional_context.get("raw_reading_count"),
+            "feature_completeness_percentage": self._feature_completeness(latest_features),
             "minimum_recommended_history_hours": 72,
-            "history_sufficiency": (
-                "good" if history_sufficient else "limited"
-            ),
+            "history_sufficiency": ("good" if history_sufficient else "limited"),
             "model": self.model_info(),
-            "latest_sensors": {
-                sensor: float(latest[sensor]) for sensor in SENSORS
-            },
-            "latest_raw_sensors": {
-                sensor: float(latest[sensor]) for sensor in SENSORS
-            },
+            "latest_sensors": {sensor: float(latest[sensor]) for sensor in SENSORS},
+            "latest_raw_sensors": {sensor: float(latest[sensor]) for sensor in SENSORS},
             "score_components": {
                 "temperature": float(latest["temperature_component"]),
                 "humidity": float(latest["humidity_component"]),
@@ -417,18 +378,10 @@ class BroodHealthPredictor:
                 "exact_level": str(latest["exact_forecast_level"]),
                 "forecast_anchor_timestamp": latest_timestamp.isoformat(),
                 "exact_forecast_timestamp": forecast_timestamp.isoformat(),
-                "safety_minimum_score": float(
-                    latest["safety_minimum_score"]
-                ),
-                "safety_minimum_level": str(
-                    latest["safety_minimum_level"]
-                ),
-                "exact_change_points": float(
-                    latest["exact_forecast_change_points"]
-                ),
-                "exact_drop_points": float(
-                    latest["exact_forecast_drop_points"]
-                ),
+                "safety_minimum_score": float(latest["safety_minimum_score"]),
+                "safety_minimum_level": str(latest["safety_minimum_level"]),
+                "exact_change_points": float(latest["exact_forecast_change_points"]),
+                "exact_drop_points": float(latest["exact_forecast_drop_points"]),
                 "safety_drop_points": float(latest["safety_drop_points"]),
                 "horizon_hours": horizon,
                 "native_model_resolution_minutes": 60,
@@ -460,40 +413,26 @@ class BroodHealthPredictor:
             },
             "forecast_indicators": {
                 "bhsi": float(latest["forecast_bhsi"]),
-                "stability_level": str(
-                    latest["forecast_stability_level"]
-                ),
-                "rod_points_per_hour": float(
-                    latest["forecast_rod_points_per_hour"]
-                ),
+                "stability_level": str(latest["forecast_stability_level"]),
+                "rod_points_per_hour": float(latest["forecast_rod_points_per_hour"]),
                 "trend_label": str(latest["forecast_trend_label"]),
                 "window_start_timestamp": latest_timestamp.isoformat(),
                 "window_end_timestamp": forecast_timestamp.isoformat(),
                 "source": "current score plus predicted +1 to +6 hour scores",
-                "bhsi_definition": bundle[
-                    "forecast_indicator_definition"
-                ]["bhsi"],
-                "rod_definition": bundle[
-                    "forecast_indicator_definition"
-                ]["rod"],
+                "bhsi_definition": bundle["forecast_indicator_definition"]["bhsi"],
+                "rod_definition": bundle["forecast_indicator_definition"]["rod"],
             },
             "current_condition": {
                 "score": float(latest["condition_score"]),
                 "level": str(latest["condition_level"]),
                 "bhsi": float(latest["bhsi"]),
                 "stability_level": str(latest["stability_level"]),
-                "rod_points_per_hour": float(
-                    latest["rod_points_per_hour"]
-                ),
+                "rod_points_per_hour": float(latest["rod_points_per_hour"]),
                 "trend_label": str(latest["trend_label"]),
-                "score_window": (
-                    "rolling one-hour median ending at the latest IoT reading"
-                ),
+                "score_window": ("rolling one-hour median ending at the latest IoT reading"),
             },
             "deployment": {
-                "aggregation": (
-                    "rolling one-hour median aligned to latest reading"
-                ),
+                "aggregation": ("rolling one-hour median aligned to latest reading"),
                 "forecast_anchor_updates_with_each_reading": True,
                 "native_model_resolution_minutes": 60,
                 "dashboard_trajectory_resolution_minutes": 10,
@@ -635,9 +574,7 @@ class BroodHealthPredictor:
         if mapped.empty:
             raise ValueError("No valid live IoT readings are available")
 
-        mapped = mapped.sort_values(["hive_id", "timestamp"]).reset_index(
-            drop=True
-        )
+        mapped = mapped.sort_values(["hive_id", "timestamp"]).reset_index(drop=True)
         if mapped["hive_id"].nunique() != 1:
             raise ValueError("Live prediction accepts one hive/device at a time")
 
@@ -647,18 +584,11 @@ class BroodHealthPredictor:
             latest_raw_timestamp = latest_raw_timestamp.tz_localize("UTC")
 
         diffs = (
-            mapped["timestamp"]
-            .sort_values()
-            .drop_duplicates()
-            .diff()
-            .dt.total_seconds()
-            .div(60.0)
+            mapped["timestamp"].sort_values().drop_duplicates().diff().dt.total_seconds().div(60.0)
         )
         positive_diffs = diffs[diffs > 0]
         reading_interval_minutes = (
-            float(positive_diffs.tail(200).median())
-            if not positive_diffs.empty
-            else None
+            float(positive_diffs.tail(200).median()) if not positive_diffs.empty else None
         )
 
         hourly = aggregate_live_hourly(
@@ -671,21 +601,14 @@ class BroodHealthPredictor:
         result["latest_timestamp"] = latest_raw_timestamp.isoformat()
         result["data_freshness_minutes"] = max(
             0.0,
-            float(
-                (
-                    pd.Timestamp.now(tz="UTC") - latest_raw_timestamp
-                ).total_seconds()
-                / 60.0
-            ),
+            float((pd.Timestamp.now(tz="UTC") - latest_raw_timestamp).total_seconds() / 60.0),
         )
         result["reading_interval_minutes"] = reading_interval_minutes
 
         raw_sensor_payload: dict[str, float | None] = {}
         for sensor in SENSORS:
             value = latest_raw.get(sensor)
-            raw_sensor_payload[sensor] = (
-                None if value is None or pd.isna(value) else float(value)
-            )
+            raw_sensor_payload[sensor] = None if value is None or pd.isna(value) else float(value)
         result["latest_raw_sensors"] = raw_sensor_payload
 
         raw_context = dict(result.get("context") or {})
@@ -696,11 +619,7 @@ class BroodHealthPredictor:
         ):
             if column in mapped.columns:
                 value = latest_raw.get(column)
-                raw_context[column] = (
-                    None if value is None or pd.isna(value) else float(value)
-                )
+                raw_context[column] = None if value is None or pd.isna(value) else float(value)
         result["context"] = raw_context
-        result["deployment"]["observed_reading_interval_minutes"] = (
-            reading_interval_minutes
-        )
+        result["deployment"]["observed_reading_interval_minutes"] = reading_interval_minutes
         return result

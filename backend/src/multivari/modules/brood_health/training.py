@@ -139,9 +139,7 @@ def _assign_hive_splits(
 
     quantiles = min(5, max(2, int(hive_stats["observed_rate"].nunique())))
     try:
-        hive_stats["stratum"] = pd.qcut(
-            hive_stats["observed_rate"], q=quantiles, duplicates="drop"
-        )
+        hive_stats["stratum"] = pd.qcut(hive_stats["observed_rate"], q=quantiles, duplicates="drop")
     except ValueError:
         hive_stats["stratum"] = "all"
 
@@ -162,9 +160,7 @@ def _assign_hive_splits(
                 ("train", "validation", "test"),
                 key=lambda name: list(assignments.values()).count(name),
             )
-            candidate = next(
-                hive for hive, split in assignments.items() if split == donor
-            )
+            candidate = next(hive for hive, split in assignments.items() if split == donor)
             assignments[candidate] = required
     return assignments
 
@@ -288,16 +284,12 @@ def _systematic_cap(
         positions = np.flatnonzero(metadata["hive_id"].eq(hive_id).to_numpy())
         quota = max(30, round(maximum * float(proportion)))
         if len(positions) > quota:
-            positions = positions[
-                np.linspace(0, len(positions) - 1, quota, dtype=int)
-            ]
+            positions = positions[np.linspace(0, len(positions) - 1, quota, dtype=int)]
         selected.extend(positions.tolist())
     selected = sorted(set(selected))
     if len(selected) > maximum:
         selected = (
-            np.asarray(selected)[
-                np.linspace(0, len(selected) - 1, maximum, dtype=int)
-            ]
+            np.asarray(selected)[np.linspace(0, len(selected) - 1, maximum, dtype=int)]
             .astype(int)
             .tolist()
         )
@@ -324,12 +316,8 @@ def _classification_metrics(
     critical_true = actual_level == 0
     critical_predicted = predicted_level == 0
     return {
-        "health_level_accuracy": float(
-            accuracy_score(actual_level, predicted_level)
-        ),
-        "balanced_accuracy": float(
-            balanced_accuracy_score(actual_level, predicted_level)
-        ),
+        "health_level_accuracy": float(accuracy_score(actual_level, predicted_level)),
+        "balanced_accuracy": float(balanced_accuracy_score(actual_level, predicted_level)),
         "macro_f1": float(
             f1_score(
                 actual_level,
@@ -338,9 +326,7 @@ def _classification_metrics(
                 zero_division=0,
             )
         ),
-        "critical_recall": float(
-            recall_score(critical_true, critical_predicted, zero_division=0)
-        ),
+        "critical_recall": float(recall_score(critical_true, critical_predicted, zero_division=0)),
         "confusion_matrix": confusion_matrix(
             actual_level,
             predicted_level,
@@ -372,18 +358,14 @@ def _score_metrics(
     exact = {
         "mae": float(mean_absolute_error(exact_actual, exact_predicted)),
         "mse": float(mean_squared_error(exact_actual, exact_predicted)),
-        "rmse": float(
-            math.sqrt(mean_squared_error(exact_actual, exact_predicted))
-        ),
+        "rmse": float(math.sqrt(mean_squared_error(exact_actual, exact_predicted))),
         "r2": float(r2_score(exact_actual, exact_predicted)),
         **_classification_metrics(exact_actual, exact_predicted),
     }
     safety = {
         "mae": float(mean_absolute_error(minimum_actual, minimum_predicted)),
         "mse": float(mean_squared_error(minimum_actual, minimum_predicted)),
-        "rmse": float(
-            math.sqrt(mean_squared_error(minimum_actual, minimum_predicted))
-        ),
+        "rmse": float(math.sqrt(mean_squared_error(minimum_actual, minimum_predicted))),
         "r2": float(r2_score(minimum_actual, minimum_predicted)),
         **_classification_metrics(minimum_actual, minimum_predicted),
     }
@@ -397,9 +379,7 @@ def _score_metrics(
                 "horizon_hours": index + 1,
                 "mae": float(mean_absolute_error(actual, forecast)),
                 "mse": float(mean_squared_error(actual, forecast)),
-                "rmse": float(
-                    math.sqrt(mean_squared_error(actual, forecast))
-                ),
+                "rmse": float(math.sqrt(mean_squared_error(actual, forecast))),
                 "r2": float(r2_score(actual, forecast)),
                 "health_level_accuracy": float(
                     accuracy_score(
@@ -412,9 +392,8 @@ def _score_metrics(
 
     transition_mask = metadata["transition_window"].fillna(False).to_numpy(bool)
     deterioration_true = metadata["deterioration_event"].fillna(False).to_numpy(bool)
-    predicted_deterioration = (
-        (health_level_code(exact_predicted) < health_level_code(current))
-        | ((current - exact_predicted) >= 10.0)
+    predicted_deterioration = (health_level_code(exact_predicted) < health_level_code(current)) | (
+        (current - exact_predicted) >= 10.0
     )
 
     transition_metrics: dict[str, Any]
@@ -423,14 +402,8 @@ def _score_metrics(
         transition_predicted = exact_predicted[transition_mask]
         transition_metrics = {
             "rows": int(transition_mask.sum()),
-            "mae": float(
-                mean_absolute_error(transition_actual, transition_predicted)
-            ),
-            "rmse": float(
-                math.sqrt(
-                    mean_squared_error(transition_actual, transition_predicted)
-                )
-            ),
+            "mae": float(mean_absolute_error(transition_actual, transition_predicted)),
+            "rmse": float(math.sqrt(mean_squared_error(transition_actual, transition_predicted))),
             **_classification_metrics(
                 transition_actual,
                 transition_predicted,
@@ -484,9 +457,7 @@ def _score_metrics(
     )
 
     return {
-        "multi_horizon_mae": float(
-            mean_absolute_error(actual_matrix, predicted_matrix)
-        ),
+        "multi_horizon_mae": float(mean_absolute_error(actual_matrix, predicted_matrix)),
         "exact_horizon": exact,
         "safety_minimum": safety,
         "transition": transition_metrics,
@@ -504,9 +475,7 @@ def _score_metrics(
         "critical_recall": exact["critical_recall"],
         "transition_mae": transition_metrics["mae"],
         "transition_rmse": transition_metrics["rmse"],
-        "transition_level_accuracy": transition_metrics[
-            "health_level_accuracy"
-        ],
+        "transition_level_accuracy": transition_metrics["health_level_accuracy"],
         "transition_critical_recall": transition_metrics["critical_recall"],
         "confusion_matrix": exact["confusion_matrix"],
         "level_labels": exact["level_labels"],
@@ -568,18 +537,12 @@ def _selection_key(
     exact = validation["exact_horizon"]
     transition = validation["transition"]
     indicators = validation.get("forecast_indicators", {})
-    beats_persistence = float(
-        exact["mae"] < persistence["exact_horizon"]["mae"]
-    )
+    beats_persistence = float(exact["mae"] < persistence["exact_horizon"]["mae"])
     transition_accuracy = float(transition.get("health_level_accuracy") or 0.0)
     deterioration_recall = float(validation["deterioration"]["recall"])
     critical_recall = float(exact["critical_recall"])
-    forecast_trend_accuracy = float(
-        indicators.get("forecast_trend_accuracy") or 0.0
-    )
-    forecast_bhsi_accuracy = float(
-        indicators.get("forecast_bhsi_level_accuracy") or 0.0
-    )
+    forecast_trend_accuracy = float(indicators.get("forecast_trend_accuracy") or 0.0)
+    forecast_bhsi_accuracy = float(indicators.get("forecast_bhsi_level_accuracy") or 0.0)
     return (
         beats_persistence,
         transition_accuracy,
@@ -622,13 +585,9 @@ def _feature_importance(
         child_values = []
         for estimator in regressor.estimators_:
             if hasattr(estimator, "feature_importances_"):
-                child_values.append(
-                    np.asarray(estimator.feature_importances_, dtype=float)
-                )
+                child_values.append(np.asarray(estimator.feature_importances_, dtype=float))
             elif hasattr(estimator, "coef_"):
-                child_values.append(
-                    np.abs(np.asarray(estimator.coef_, dtype=float)).reshape(-1)
-                )
+                child_values.append(np.abs(np.asarray(estimator.coef_, dtype=float)).reshape(-1))
         if child_values:
             values = np.vstack(child_values).mean(axis=0)
 
@@ -712,16 +671,11 @@ def _save_reports(
             }
         )
 
-    successful = [
-        row for row in summary["all_models"] if row.get("status") == "ok"
-    ]
+    successful = [row for row in summary["all_models"] if row.get("status") == "ok"]
     names = [row["model"] for row in successful]
     exact_mae = [row["test"]["exact_horizon"]["mae"] for row in successful]
     transition_accuracy = [
-        100.0
-        * float(
-            row["test"]["transition"].get("health_level_accuracy") or 0.0
-        )
+        100.0 * float(row["test"]["transition"].get("health_level_accuracy") or 0.0)
         for row in successful
     ]
 
@@ -841,9 +795,7 @@ def run_training(
     )
     frame = _load_frame(data_path)
     hive_assignments = _assign_hive_splits(frame)
-    training_hives = {
-        hive for hive, split in hive_assignments.items() if split == "train"
-    }
+    training_hives = {hive for hive, split in hive_assignments.items() if split == "train"}
 
     _notify(
         progress_callback,
@@ -868,9 +820,7 @@ def run_training(
         progress_callback,
         "features",
         progress=11,
-        message=(
-            "Building causal features and exact 1–6 hour future score targets"
-        ),
+        message=("Building causal features and exact 1–6 hour future score targets"),
     )
     x, y, metadata, feature_columns = build_supervised_dataset(
         frame,
@@ -878,9 +828,7 @@ def run_training(
         score_config=score_config,
         feature_timezone=HISTORICAL_FEATURE_TIMEZONE,
     )
-    metadata["split"] = (
-        metadata["hive_id"].astype(str).map(hive_assignments).astype("string")
-    )
+    metadata["split"] = metadata["hive_id"].astype(str).map(hive_assignments).astype("string")
     schema_audit = feature_leakage_audit(feature_columns)
     if not schema_audit["passed"]:
         raise RuntimeError(f"Feature-schema leakage audit failed: {schema_audit}")
@@ -906,11 +854,7 @@ def run_training(
     if min(len(x_train), len(x_validation), len(x_test)) == 0:
         raise ValueError("Train, validation or test partition is empty")
 
-    limits = (
-        (18_000, 7_000, 7_000)
-        if fast_mode
-        else (160_000, 55_000, 55_000)
-    )
+    limits = (18_000, 7_000, 7_000) if fast_mode else (160_000, 55_000, 55_000)
     x_train, y_train, meta_train = _systematic_cap(
         x_train,
         y_train,
@@ -1019,9 +963,7 @@ def run_training(
                 ),
             )
         except Exception as exc:  # noqa: BLE001
-            comparison.append(
-                {"model": name, "status": "failed", "error": str(exc)}
-            )
+            comparison.append({"model": name, "status": "failed", "error": str(exc)})
             _notify(
                 progress_callback,
                 "model_end",
@@ -1069,8 +1011,7 @@ def run_training(
         horizon,
     )
     validation_exact_residual = np.abs(
-        y_validation.iloc[:, -1].to_numpy(dtype=float)
-        - validation_prediction[:, -1]
+        y_validation.iloc[:, -1].to_numpy(dtype=float) - validation_prediction[:, -1]
     )
     interval_80 = float(np.quantile(validation_exact_residual, 0.80))
     interval_90 = float(np.quantile(validation_exact_residual, 0.90))
@@ -1082,12 +1023,10 @@ def run_training(
     )
 
     reference_frame = frame.loc[
-        frame["hive_id"].astype(str).isin(
-            {
-                hive
-                for hive, split in hive_assignments.items()
-                if split in {"train", "validation"}
-            }
+        frame["hive_id"]
+        .astype(str)
+        .isin(
+            {hive for hive, split in hive_assignments.items() if split in {"train", "validation"}}
         )
     ]
     bundle = {
@@ -1183,9 +1122,7 @@ def run_training(
                 "r2": exact["r2"],
                 "health_level_accuracy": exact["health_level_accuracy"],
                 "critical_recall": exact["critical_recall"],
-                "transition_level_accuracy": transition.get(
-                    "health_level_accuracy"
-                ),
+                "transition_level_accuracy": transition.get("health_level_accuracy"),
                 "transition_mae": transition.get("mae"),
                 "deterioration_recall": item["test"]["deterioration"]["recall"],
                 "cv_mae_mean": item["test"].get("cv_mae_mean"),
@@ -1194,9 +1131,7 @@ def run_training(
     pd.DataFrame(comparison_rows).to_csv(PATHS.model_comparison, index=False)
 
     grouped_importance = (
-        importance.groupby("sensor_group", observed=True)[
-            "importance_percentage"
-        ]
+        importance.groupby("sensor_group", observed=True)["importance_percentage"]
         .sum()
         .sort_values(ascending=False)
         .reset_index()
@@ -1284,15 +1219,9 @@ def run_training(
             "train_hives": int(meta_train["hive_id"].nunique()),
             "validation_hives": int(meta_validation["hive_id"].nunique()),
             "test_hives": int(meta_test["hive_id"].nunique()),
-            "train_hive_ids": sorted(
-                meta_train["hive_id"].astype(str).unique().tolist()
-            ),
-            "validation_hive_ids": sorted(
-                meta_validation["hive_id"].astype(str).unique().tolist()
-            ),
-            "test_hive_ids": sorted(
-                meta_test["hive_id"].astype(str).unique().tolist()
-            ),
+            "train_hive_ids": sorted(meta_train["hive_id"].astype(str).unique().tolist()),
+            "validation_hive_ids": sorted(meta_validation["hive_id"].astype(str).unique().tolist()),
+            "test_hive_ids": sorted(meta_test["hive_id"].astype(str).unique().tolist()),
             "minimum_history_hours": MINIMUM_TRAINING_HISTORY_HOURS,
             "future_target_uses_only_later_rows": True,
             "score_weights_calibrated_on_training_hives_only": True,
@@ -1302,18 +1231,10 @@ def run_training(
                 100.0 * best_metrics["exact_horizon"]["health_level_accuracy"]
             ),
             "transition_level_accuracy_percent": float(
-                100.0
-                * float(
-                    best_metrics["transition"].get("health_level_accuracy")
-                    or 0.0
-                )
+                100.0 * float(best_metrics["transition"].get("health_level_accuracy") or 0.0)
             ),
-            "deterioration_recall_percent": float(
-                100.0 * best_metrics["deterioration"]["recall"]
-            ),
-            "persistence_exact_mae": float(
-                persistence_test["exact_horizon"]["mae"]
-            ),
+            "deterioration_recall_percent": float(100.0 * best_metrics["deterioration"]["recall"]),
+            "persistence_exact_mae": float(persistence_test["exact_horizon"]["mae"]),
             "model_exact_mae": float(best_metrics["exact_horizon"]["mae"]),
             "explanation": (
                 "Overall accuracy may be high because most hours are stable. Transition-level "

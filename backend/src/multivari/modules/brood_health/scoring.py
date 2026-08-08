@@ -168,9 +168,7 @@ def compute_unweighted_components(
     out["weight_component"] = (
         100.0 - change_pct.abs() * cfg.weight_penalty_per_percentage_point
     ).clip(0.0, 100.0)
-    out["weight_component"] = out["weight_component"].fillna(
-        cfg.missing_weight_neutral_score
-    )
+    out["weight_component"] = out["weight_component"].fillna(cfg.missing_weight_neutral_score)
     return out
 
 

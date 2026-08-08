@@ -1,0 +1,646 @@
+.classifier-hui-tab.decision-hui-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.decision-hui-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.decision-hui-header h2 {
+  margin: 0.25rem 0 0.35rem;
+  color: var(--navy);
+  font-size: clamp(1.75rem, 2.6vw, 2.35rem);
+}
+
+.decision-hui-header p,
+.decision-hui-section-heading p {
+  max-width: 920px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.decision-hui-hive-select {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.decision-hui-hive-select select {
+  min-width: 155px;
+  padding: 0.58rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--navy);
+}
+
+.decision-hui-process-panel {
+  padding: 0.85rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #eff6ff, #fff);
+}
+
+.decision-hui-process-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  color: #2563eb;
+}
+
+.decision-hui-process-title > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.decision-hui-process-title strong {
+  color: var(--navy);
+}
+
+.decision-hui-process-title small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.decision-hui-process-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.decision-hui-process-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.7rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.decision-hui-process-step > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.decision-hui-process-step > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+}
+
+.decision-hui-process-step strong {
+  color: var(--navy);
+  font-size: 0.76rem;
+}
+
+.decision-hui-process-step small {
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+.decision-hui-overview-grid {
+  display: grid;
+  grid-template-columns: 0.82fr 1.5fr 1fr;
+  gap: 0.75rem;
+}
+
+.decision-hui-current-card,
+.decision-hui-forecast-overview,
+.decision-hui-action-card,
+.decision-hui-simple-card,
+.decision-hui-sensor-section {
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
+}
+
+.decision-hui-current-card,
+.decision-hui-forecast-overview,
+.decision-hui-action-card,
+.decision-hui-simple-card,
+.decision-hui-sensor-section {
+  padding: 0.9rem;
+}
+
+.decision-hui-current-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.decision-hui-current-card.is-not-ready {
+  border-color: #cbd5e1;
+}
+
+.decision-hui-current-card.is-approaching {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.decision-hui-current-card.is-ready {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.decision-hui-current-card.is-high-priority {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.decision-hui-current-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.decision-hui-current-icon {
+  display: grid;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.decision-hui-current-heading > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.decision-hui-current-heading small {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.decision-hui-current-heading strong {
+  margin-top: 0.1rem;
+  color: var(--navy);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.decision-hui-current-heading b {
+  margin-top: 0.2rem;
+  color: var(--navy);
+  font-size: 0.78rem;
+}
+
+.decision-hui-current-scale {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 1rem;
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.decision-hui-current-scale > div {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.decision-hui-current-scale i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #2563eb;
+}
+
+.decision-hui-current-card p,
+.decision-hui-action-card p,
+.decision-hui-simple-card p {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.decision-hui-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.decision-hui-section-heading.compact small {
+  color: #2563eb;
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.decision-hui-section-heading h3 {
+  margin: 0.16rem 0 0.3rem;
+  color: var(--navy);
+}
+
+.decision-hui-gate-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 0.64rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.decision-hui-forecast-grid,
+.decision-hui-current-plus-forecast {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.decision-hui-current-plus-forecast {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.decision-hui-forecast-grid {
+  margin-top: 0.65rem;
+}
+
+.decision-hui-forecast-card {
+  display: flex;
+  min-height: 112px;
+  flex-direction: column;
+  padding: 0.7rem;
+  border: 1px solid #dbe3ef;
+  border-radius: 11px;
+  background: #f8fafc;
+}
+
+.decision-hui-forecast-card.is-approaching {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.decision-hui-forecast-card.is-ready {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.decision-hui-forecast-card.is-high-priority {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.decision-hui-forecast-card.is-current {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.decision-hui-forecast-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.decision-hui-forecast-heading span {
+  color: #2563eb;
+  font-size: 0.65rem;
+  font-weight: 850;
+}
+
+.decision-hui-forecast-heading small {
+  overflow: hidden;
+  max-width: 84px;
+  color: var(--muted);
+  font-size: 0.58rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.decision-hui-forecast-card > strong {
+  margin-top: 0.55rem;
+  color: var(--navy);
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.decision-hui-forecast-card > b {
+  margin-top: auto;
+  color: #475569;
+  font-size: 0.7rem;
+}
+
+.decision-hui-action-card {
+  display: flex;
+  flex-direction: column;
+  border-color: #bbf7d0;
+  background: linear-gradient(145deg, #f0fdf4, #fff);
+}
+
+.decision-hui-action-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 10px;
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.decision-hui-action-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  margin-top: auto;
+  padding: 0.65rem;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.decision-hui-action-summary span,
+.decision-hui-action-summary small {
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.decision-hui-action-summary strong {
+  color: var(--navy);
+}
+
+.decision-hui-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.decision-hui-mini-metric {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem;
+  align-items: center;
+  min-height: 78px;
+  padding: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.decision-hui-mini-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 9px;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.decision-hui-mini-metric > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.decision-hui-mini-metric small,
+.decision-hui-mini-metric span {
+  color: var(--muted);
+  font-size: 0.63rem;
+}
+
+.decision-hui-mini-metric strong {
+  color: var(--navy);
+  font-size: 0.93rem;
+}
+
+.decision-hui-trajectory-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.classifier-hui-trajectory-chart.decision-hui-trajectory-chart {
+  width: 100%;
+  height: 320px;
+  margin-top: 0;
+}
+
+.decision-hui-explanation-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 0.75rem;
+}
+
+.decision-hui-class-key {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.decision-hui-class-key span {
+  padding: 0.45rem;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 750;
+}
+
+.decision-hui-class-key .is-not-ready {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.decision-hui-class-key .is-approaching {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.decision-hui-class-key .is-ready {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.decision-hui-class-key .is-high-priority {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.decision-hui-factor-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.2rem;
+  color: #334155;
+}
+
+.decision-hui-factor-list li {
+  margin-bottom: 0.55rem;
+  line-height: 1.45;
+}
+
+.decision-hui-sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+.decision-hui-sensor-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem;
+  align-items: center;
+  min-height: 75px;
+  padding: 0.7rem;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.decision-hui-sensor-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 9px;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.decision-hui-sensor-card > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.decision-hui-sensor-card small {
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.decision-hui-sensor-card strong {
+  color: var(--navy);
+  font-size: 0.86rem;
+}
+
+.decision-hui-history-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.decision-hui-range-buttons,
+.decision-hui-series-buttons {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.decision-hui-range-buttons button,
+.decision-hui-series-buttons button {
+  padding: 0.38rem 0.58rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.decision-hui-range-buttons button.is-active,
+.decision-hui-series-buttons button.is-active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 800;
+}
+
+.classifier-hui-history-chart.decision-hui-history-chart {
+  width: 100%;
+  height: 430px;
+}
+
+.decision-hui-footnote {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.66rem;
+}
+
+.decision-hui-error {
+  color: #b91c1c;
+}
+
+@media (max-width: 1200px) {
+  .decision-hui-overview-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .decision-hui-action-card {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .decision-hui-header,
+  .decision-hui-section-heading,
+  .decision-hui-history-toolbar {
+    flex-direction: column;
+  }
+
+  .decision-hui-process-grid,
+  .decision-hui-overview-grid,
+  .decision-hui-mini-grid,
+  .decision-hui-explanation-grid,
+  .decision-hui-sensor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .decision-hui-current-plus-forecast,
+  .decision-hui-forecast-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .decision-hui-action-card {
+    grid-column: auto;
+  }
+
+  .decision-hui-class-key {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .decision-hui-current-plus-forecast,
+  .decision-hui-forecast-grid,
+  .decision-hui-class-key {
+    grid-template-columns: 1fr;
+  }
+
+  .classifier-hui-history-chart.decision-hui-history-chart {
+    height: 500px;
+  }
+}
