@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  AlertTriangle, CheckCircle, Info, RefreshCw, ShieldCheck, TrendingUp
+  AlertTriangle, CheckCircle, Info, RefreshCw, ShieldCheck
 } from 'lucide-react';
 import {
   Area, AreaChart, CartesianGrid, Legend, Line, LineChart, ReferenceLine,
@@ -438,22 +438,7 @@ export default function AbscondingLiveDashboard({
   const riskRows = useMemo(() => makeChartRows(iotLiveData?.timeline || [], riskRange), [iotLiveData?.timeline, riskRange]);
   const sensorRows = useMemo(() => makeChartRows(iotLiveData?.timeline || [], sensorRange), [iotLiveData?.timeline, sensorRange]);
   const zoomedRiskDomain = useMemo(() => adaptiveRiskDomain(riskRows), [riskRows]);
-  const armMiniRows = useMemo(() => {
-    const rows = riskRows.slice(-8);
-    const values = rows
-      .map((row) => (Number.isFinite(row.currentRisk) ? row.currentRisk : null))
-      .filter(Number.isFinite);
-    const min = values.length ? Math.min(...values) : 0;
-    const max = values.length ? Math.max(...values) : 0;
-    const spread = Math.max(max - min, 0.001);
-    return rows
-      .filter((row) => Number.isFinite(row.currentRisk))
-      .map((row, index, currentRows) => ({
-        ...row,
-        left: currentRows.length <= 1 ? 0 : (index / (currentRows.length - 1)) * 100,
-        top: 78 - ((row.currentRisk - min) / spread) * 42,
-      }));
-  }, [riskRows]);
+  
 
   if (iotLiveError && !iotLiveData) {
     return <EmptyLiveState error={iotLiveError} onRetry={refetchIotLive} loading={iotLiveLoading} />;
@@ -474,6 +459,14 @@ export default function AbscondingLiveDashboard({
   }
 
   const latest = iotLiveData.latest_sensor_readings || {};
+  const environmentalStressRaw = getOptionalNum(
+  latest.environmental_stress_score
+);
+
+const environmentalStressPercent =
+  environmentalStressRaw !== null
+    ? clamp(environmentalStressRaw * 100)
+    : null;
   const forecast = iotLiveData.forecast_24h || iotLiveData;
   const currentState = iotLiveData.current_state || {};
   const forecastNotification = iotLiveData.early_warning
@@ -693,19 +686,42 @@ export default function AbscondingLiveDashboard({
           </p>
         </OutputStatusCard>
 
-        <OutputStatusCard title="Current Risk Movement">
-          <div className="iot-mini-arm-chart">
-            {armMiniRows.map((row, index) => (
-              <span
-                key={`${row.time}-${index}`}
-                style={{ left: `${row.left}%`, top: `${row.top}%` }}
-              />
-            ))}
-            <TrendingUp className="iot-arm-trend-icon" size={28} />
-          </div>
-          <p className="iot-trend-text">Trend: {armTrend}</p>
-          
-        </OutputStatusCard>
+        <OutputStatusCard
+  title="Environmental Stress Score"
+  className="iot-environmental-stress-card"
+>
+  <div className="iot-stress-score-wrap">
+
+    <div className="iot-stress-score-value">
+      {environmentalStressPercent !== null
+        ? probabilityPercent(environmentalStressPercent, 2)
+        : '—'}
+    </div>
+
+    <div className="iot-stress-progress">
+      <div
+        className="iot-stress-progress-fill"
+        style={{
+          width: `${environmentalStressPercent ?? 0}%`,
+        }}
+      />
+    </div>
+
+    <div className="iot-stress-scale-labels">
+      <span>0%</span>
+      <span>100%</span>
+    </div>
+
+    <p className="iot-stress-description">
+      Composite environmental stress
+    </p>
+
+    <small className="iot-stress-factors">
+      Temperature · Humidity · CO₂ · Weight
+    </small>
+
+  </div>
+</OutputStatusCard>
 
         <OutputStatusCard title="Current Condition Alert" className="iot-alert-status-card">
           <div className="iot-warning-symbol"><AlertTriangle size={82} /></div>
