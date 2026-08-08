@@ -14,30 +14,28 @@ async function apiRequest(path, { method = 'GET', body, signal } = {}) {
     method,
     headers: {
       Accept: 'application/json',
-      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : JSON.stringify(body),
     signal,
   });
 
-  const responseBody = await response.json().catch(() => null);
-
+  const payload = await response.json().catch(() => null);
   if (!response.ok) {
     throw new ApiError(
-      responseBody?.error || responseBody?.message || `Request failed with HTTP ${response.status}`,
+      payload?.error || payload?.message || `Request failed with HTTP ${response.status}`,
       response.status,
-      responseBody,
+      payload,
     );
   }
-
-  return responseBody;
+  return payload;
 }
 
 export function apiGet(path, { signal } = {}) {
   return apiRequest(path, { method: 'GET', signal });
 }
 
-export function apiPost(path, body, { signal } = {}) {
+export function apiPost(path, body = {}, { signal } = {}) {
   return apiRequest(path, { method: 'POST', body, signal });
 }
 

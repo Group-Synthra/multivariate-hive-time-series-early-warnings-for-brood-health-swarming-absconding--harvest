@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flask import Blueprint, jsonify, request, send_from_directory
+from flask import Blueprint, Response, jsonify, request, send_from_directory
 
 from .config import PATHS
 from .predictor import ModelNotReadyError
@@ -78,6 +78,42 @@ def create_brood_health_blueprint(service: BroodHealthService | None = None) -> 
         # API boundary: prediction validation errors must remain JSON responses.
         except Exception as exc:  # noqa: BLE001
             return error_response(exc)
+
+    @blueprint.get("/iot/validation-log")
+    def validation_log():
+        try:
+            device_id = request.args.get("device_id", "").strip() or None
+            limit = int(request.args.get("limit", "100"))
+            return jsonify(
+                module_service.validation_summary(
+                    device_id=device_id,
+                    limit=max(1, min(limit, 500)),
+                )
+            )
+        except (IoTConfigurationError, IoTRepositoryError) as exc:
+            return error_response(exc, 503)
+        except Exception as exc:  # noqa: BLE001
+            return error_response(exc)
+
+    @blueprint.get("/iot/validation-log/download")
+    def download_validation_log():
+        device_id = request.args.get("device_id", "").strip() or None
+        try:
+            csv_text = module_service.validation_csv(device_id=device_id)
+        except (IoTConfigurationError, IoTRepositoryError) as exc:
+            return error_response(exc, 503)
+        except Exception as exc:  # noqa: BLE001
+            return error_response(exc)
+
+        suffix = f"_{device_id}" if device_id else ""
+        filename = f"brood_health_forecast_validation{suffix}.csv"
+        return Response(
+            csv_text,
+            mimetype="text/csv",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            },
+        )
 
     @blueprint.get("/iot/predict-all")
     def predict_all():

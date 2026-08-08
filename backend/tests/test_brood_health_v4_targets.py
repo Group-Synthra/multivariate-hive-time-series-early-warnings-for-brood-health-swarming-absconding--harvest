@@ -3,6 +3,7 @@ import pandas as pd
 
 from multivari.modules.brood_health.features import (
     build_supervised_dataset,
+    normalise_historical,
     target_columns,
 )
 from multivari.modules.brood_health.scoring import (
@@ -29,7 +30,8 @@ def _frame(hours: int = 110) -> pd.DataFrame:
 def test_exact_six_hour_target_matches_group_shift() -> None:
     frame = _frame()
     config = BroodHealthScoreConfig()
-    scored = compute_score_components(frame, config=config)
+    normalized = normalise_historical(frame)
+    scored = compute_score_components(normalized, config=config)
     x, y, metadata, feature_columns = build_supervised_dataset(
         frame,
         horizon_hours=6,
@@ -37,7 +39,7 @@ def test_exact_six_hour_target_matches_group_shift() -> None:
     )
 
     expected = scored["brood_health_score"].shift(-6)
-    source_timestamps = pd.to_datetime(frame["timestamp"], utc=True)
+    source_timestamps = normalized["timestamp"]
     source_rows = metadata["timestamp"].map(
         dict(zip(source_timestamps, expected, strict=True))
     )

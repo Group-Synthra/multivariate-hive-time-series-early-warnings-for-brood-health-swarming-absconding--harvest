@@ -95,6 +95,9 @@ backend/artifacts/reports/*
 !backend/artifacts/metrics/.gitkeep
 !backend/artifacts/reports/.gitkeep
 
+backend/artifacts/validation/
+backend/data/modules/
+
 
 # ============================================================
 # Local databases, temporary files and archives

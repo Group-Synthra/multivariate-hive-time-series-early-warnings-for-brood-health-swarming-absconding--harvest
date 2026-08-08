@@ -55,24 +55,29 @@ def _records(frame: pd.DataFrame, columns: list[str]) -> list[dict[str, Any]]:
 
 
 def _load_source(path: Path | None = None) -> pd.DataFrame:
-    source = Path(path or PATHS.clean_data)
-    if source.exists():
+    candidates = []
+    if path is not None:
+        candidates.append(Path(path))
+    candidates.extend(
+        [
+            PATHS.module_processed,
+            PATHS.module_workbook,
+            PATHS.clean_data,
+            PATHS.raw_workbook,
+        ]
+    )
+    for source in candidates:
+        if not source.exists():
+            continue
         if source.suffix.lower() in {".xlsx", ".xls"}:
             return normalise_historical(pd.read_excel(source, sheet_name="Common_Dataset"))
         if source.suffix.lower() == ".csv":
             return normalise_historical(pd.read_csv(source))
         try:
             return normalise_historical(pd.read_parquet(source))
-        except ImportError:
-            # A local environment may not have a Parquet engine even though the raw
-            # workbook is available. Falling back keeps EDA reproducible without
-            # silently changing the brood-specific preprocessing logic.
-            pass
-    if PATHS.raw_workbook.exists():
-        return normalise_historical(pd.read_excel(PATHS.raw_workbook, sheet_name="Common_Dataset"))
-    raise FileNotFoundError(
-        "The cleaned common dataset is missing. Run scripts/run_common_pipeline.py before requesting brood-health EDA."
-    )
+        except (ImportError, ValueError):
+            continue
+    raise FileNotFoundError("No Brood Health EDA dataset was found.")
 
 
 def _cohens_d(healthy: pd.Series, unhealthy: pd.Series) -> float | None:

@@ -16,6 +16,7 @@ from .analyzer import (
 from .config import PATHS
 from .features import (
     FEATURE_SCHEMA_VERSION,
+    EXTERNAL_SENSORS,
     SENSORS,
     aggregate_live_hourly,
     build_feature_frame,
@@ -92,6 +93,12 @@ class BroodHealthPredictor:
                 range(1, int(bundle["horizon_hours"]) + 1)
             ),
             "native_model_resolution_minutes": 60,
+            "feature_time_semantics": bundle.get(
+                "feature_time_semantics", "local_hive_clock"
+            ),
+            "historical_feature_timezone": bundle.get(
+                "historical_feature_timezone", "America/Phoenix"
+            ),
             "live_anchor_strategy": (
                 "rolling one-hour medians aligned to the latest raw IoT reading"
             ),
@@ -111,7 +118,7 @@ class BroodHealthPredictor:
         reference: dict[str, dict[str, float]],
     ) -> list[str]:
         warnings: list[str] = []
-        for sensor in ("temperature_c", "humidity_pct", "co2_ppm"):
+        for sensor in ("temperature_c", "humidity_pct", "co2_ppm", *EXTERNAL_SENSORS):
             value = latest.get(sensor)
             limits = reference.get(sensor, {})
             if value is None or pd.isna(value):
@@ -186,7 +193,12 @@ class BroodHealthPredictor:
             records.append(cleaned)
         return records
 
-    def predict_hourly_history(self, hourly: pd.DataFrame) -> dict[str, Any]:
+    def predict_hourly_history(
+        self,
+        hourly: pd.DataFrame,
+        *,
+        feature_timezone: str = "Asia/Colombo",
+    ) -> dict[str, Any]:
         bundle = self._load_bundle()
         horizon = int(bundle["horizon_hours"])
         data = normalise_historical(hourly)
@@ -203,7 +215,7 @@ class BroodHealthPredictor:
         if data.empty:
             raise ValueError("No complete hourly sensor observation is available")
 
-        feature_frame = build_feature_frame(data).reindex(
+        feature_frame = build_feature_frame(data, feature_timezone=feature_timezone).reindex(
             columns=bundle["feature_columns"]
         )
         prediction_matrix = self._prediction_matrix(
@@ -487,9 +499,8 @@ class BroodHealthPredictor:
                 "dashboard_trajectory_resolution_minutes": 10,
                 "ten_minute_values_are_interpolated": True,
                 "external_weather_role": (
-                    "display and domain context only; excluded from the trained "
-                    "model because the common historical dataset has no equivalent "
-                    "external variables"
+                    "included in the trained forecast feature set from the "
+                    "Brood Health module dataset"
                 ),
             },
             "domain_shift_warnings": domain_shift,
@@ -515,17 +526,111 @@ class BroodHealthPredictor:
             ),
         }
 
+    def observed_validation_from_raw(
+        self,
+        raw: pd.DataFrame,
+        *,
+        forecast_anchor_timestamp: Any,
+        horizon_hours: int = 6,
+        weight_scale_factor: float = 1.0,
+        weight_offset_kg: float = 0.0,
+        timestamps_are_utc: bool = True,
+        feature_timezone: str = "Asia/Colombo",
+        tolerance_minutes: int = 15,
+    ) -> dict[str, Any]:
+        bundle = self._load_bundle()
+        mapped = map_iot_frame(
+            raw,
+            weight_scale_factor=weight_scale_factor,
+            weight_offset_kg=weight_offset_kg,
+            timestamps_are_utc=timestamps_are_utc,
+            feature_timezone=feature_timezone,
+        )
+        if mapped.empty:
+            raise ValueError("No IoT rows are available for validation")
+
+        anchor = pd.Timestamp(forecast_anchor_timestamp)
+        if anchor.tzinfo is None:
+            anchor = anchor.tz_localize("UTC")
+        else:
+            anchor = anchor.tz_convert("UTC")
+
+        score_config = BroodHealthScoreConfig.from_dict(bundle["score_config"])
+        scores: list[float] = []
+        observed_times: list[str] = []
+        tolerance = pd.Timedelta(minutes=max(1, int(tolerance_minutes)))
+
+        for hour in range(0, int(horizon_hours) + 1):
+            target = anchor + pd.Timedelta(hours=hour)
+            prior = mapped.loc[mapped["timestamp"] <= target]
+            if prior.empty:
+                raise ValueError(f"No IoT reading exists at or before {target.isoformat()}")
+            nearest_time = pd.Timestamp(prior["timestamp"].max())
+            if target - nearest_time > tolerance:
+                raise ValueError(
+                    f"No IoT reading is within {int(tolerance.total_seconds()/60)} "
+                    f"minutes before {target.isoformat()}"
+                )
+
+            hourly = aggregate_live_hourly(
+                mapped,
+                anchor_to_latest=True,
+                anchor_timestamp=target,
+            )
+            if hourly.empty:
+                raise ValueError(f"No hourly aggregate could be built for {target.isoformat()}")
+            condition = compute_condition_history(hourly, score_config=score_config)
+            scores.append(float(condition.iloc[-1]["condition_score"]))
+            observed_times.append(nearest_time.isoformat())
+
+        current = np.asarray([scores[0]], dtype=float)
+        future = np.asarray([scores[1:]], dtype=float)
+        actual_bhsi = float(
+            forecast_bhsi(
+                current,
+                future,
+                reference=bundle["forecast_stability_reference"],
+            )[0]
+        )
+        actual_rod = float(forecast_rod(current, future)[0])
+
+        return {
+            "actual_observed_at_utc": observed_times[-1],
+            "actual_score_6h": scores[-1],
+            "actual_level_6h": classify_health_level(scores[-1]),
+            "actual_bhsi": actual_bhsi,
+            "actual_bhsi_level": classify_stability(actual_bhsi),
+            "actual_rod": actual_rod,
+            "actual_trend": classify_trend(actual_rod),
+            "actual_score_trajectory": [
+                {
+                    "horizon_hours": hour,
+                    "target_timestamp": (
+                        anchor + pd.Timedelta(hours=hour)
+                    ).isoformat(),
+                    "observed_timestamp": observed_times[hour],
+                    "score": scores[hour],
+                    "level": classify_health_level(scores[hour]),
+                }
+                for hour in range(len(scores))
+            ],
+        }
+
     def predict_raw_iot(
         self,
         raw: pd.DataFrame,
         *,
         weight_scale_factor: float = 1.0,
         weight_offset_kg: float = 0.0,
+        timestamps_are_utc: bool = True,
+        feature_timezone: str = "Asia/Colombo",
     ) -> dict[str, Any]:
         mapped = map_iot_frame(
             raw,
             weight_scale_factor=weight_scale_factor,
             weight_offset_kg=weight_offset_kg,
+            timestamps_are_utc=timestamps_are_utc,
+            feature_timezone=feature_timezone,
         )
         if mapped.empty:
             raise ValueError("No valid live IoT readings are available")
@@ -560,7 +665,7 @@ class BroodHealthPredictor:
             mapped,
             anchor_to_latest=True,
         )
-        result = self.predict_hourly_history(hourly)
+        result = self.predict_hourly_history(hourly, feature_timezone=feature_timezone)
 
         result["live_latest_timestamp"] = latest_raw_timestamp.isoformat()
         result["latest_timestamp"] = latest_raw_timestamp.isoformat()
