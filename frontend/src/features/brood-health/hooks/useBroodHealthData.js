@@ -94,6 +94,17 @@ export function useBroodIoT(enabled = true) {
   const [selectedDevice, setSelectedDevice] = useState('');
   const [prediction, setPrediction] = useState({ data: null, loading: false, error: null });
   const predictionController = useRef(null);
+  const validationLoader = useCallback(
+    ({ signal }) => (
+      selectedDevice
+        ? broodHealthApi.getValidationLog(selectedDevice, { signal })
+        : Promise.resolve(null)
+    ),
+    [selectedDevice],
+  );
+  const validation = useRequest(validationLoader, {
+    enabled: enabled && Boolean(selectedDevice),
+  });
 
   useEffect(() => {
     if (!selectedDevice && devices.data?.devices?.length) {
@@ -122,10 +133,25 @@ export function useBroodIoT(enabled = true) {
     return () => predictionController.current?.abort();
   }, [enabled, loadPrediction, selectedDevice]);
 
+  useEffect(() => {
+    if (enabled && selectedDevice && prediction.data) {
+      validation.refetch();
+    }
+  }, [enabled, selectedDevice, prediction.data, validation.refetch]);
+
   const refresh = useCallback(async () => {
     await Promise.all([health.refetch(), devices.refetch()]);
-    if (selectedDevice) await loadPrediction(selectedDevice);
-  }, [devices.refetch, health.refetch, loadPrediction, selectedDevice]);
+    if (selectedDevice) {
+      await loadPrediction(selectedDevice);
+      await validation.refetch();
+    }
+  }, [
+    devices.refetch,
+    health.refetch,
+    loadPrediction,
+    selectedDevice,
+    validation.refetch,
+  ]);
 
   return {
     health,
@@ -133,6 +159,7 @@ export function useBroodIoT(enabled = true) {
     selectedDevice,
     setSelectedDevice,
     prediction,
+    validation,
     loadPrediction,
     refresh,
   };

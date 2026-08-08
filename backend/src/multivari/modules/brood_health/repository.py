@@ -215,3 +215,60 @@ class PostgresIoTRepository:
         if not frame.empty:
             frame["hive_id"] = frame["hive_id"].astype(str)
         return frame
+
+    def fetch_between(
+        self,
+        device_id: str,
+        *,
+        start_timestamp: Any,
+        end_timestamp: Any,
+    ) -> pd.DataFrame:
+        _, sql, _ = self._driver()
+        device_id = str(device_id).strip()
+        if not device_id:
+            raise ValueError("A valid device_id is required")
+
+        start = pd.Timestamp(start_timestamp)
+        end = pd.Timestamp(end_timestamp)
+        start = start.tz_localize("UTC") if start.tzinfo is None else start.tz_convert("UTC")
+        end = end.tz_localize("UTC") if end.tzinfo is None else end.tz_convert("UTC")
+
+        with self._connection() as connection:
+            available = self._available_columns(connection)
+            self._validate(available)
+            contract = self._contract()
+            selected = [(alias, source) for alias, source in contract.items() if source in available]
+            columns = sql.SQL(", ").join(
+                sql.SQL("{source} AS {alias}").format(
+                    source=sql.Identifier(source),
+                    alias=sql.Identifier(alias),
+                )
+                for alias, source in selected
+            )
+            table = self._table_identifier(sql)
+            device = sql.Identifier(self.settings.device_id_column)
+            timestamp = sql.Identifier(self.settings.timestamp_column)
+            query = sql.SQL(
+                "SELECT {columns} FROM {table} "
+                "WHERE {device}::text = %s "
+                "AND {timestamp} >= %s AND {timestamp} <= %s "
+                "AND {timestamp} IS NOT NULL "
+                "ORDER BY {timestamp} ASC"
+            ).format(
+                columns=columns,
+                table=table,
+                device=device,
+                timestamp=timestamp,
+            )
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    query,
+                    (device_id, start.to_pydatetime(), end.to_pydatetime()),
+                )
+                rows = cursor.fetchall()
+
+        frame = pd.DataFrame(rows)
+        if not frame.empty:
+            frame["hive_id"] = frame["hive_id"].astype(str)
+        return frame
+

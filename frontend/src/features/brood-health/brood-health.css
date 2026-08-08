@@ -942,3 +942,1510 @@
   .brood-warning-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .brood-warning-columns { grid-template-columns:1fr; }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Bottom collapsible forecast-validation panel                               */
+/* -------------------------------------------------------------------------- */
+
+.brood-validation-panel {
+  margin-top: .25rem;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition:
+    border-color .2s ease,
+    box-shadow .2s ease;
+}
+
+.brood-validation-panel.expanded {
+  border-color: #bfdbfe;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, .08);
+}
+
+.brood-validation-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  min-height: 64px;
+  padding: .7rem .82rem;
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #f8fafc 100%
+    );
+}
+
+.brood-validation-panel.expanded
+.brood-validation-panel-header {
+  border-bottom: 1px solid #e2e8f0;
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #eff6ff 100%
+    );
+}
+
+.brood-validation-toggle {
+  min-width: 0;
+  flex: 1 1 auto;
+
+  display: flex;
+  align-items: center;
+  gap: .68rem;
+
+  padding: .15rem;
+  border: 0;
+  border-radius: 9px;
+
+  background: transparent;
+  color: #172033;
+
+  text-align: left;
+  cursor: pointer;
+}
+
+.brood-validation-toggle:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, .14);
+  outline-offset: 3px;
+}
+
+.brood-validation-toggle-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid #dbeafe;
+  border-radius: 9px;
+
+  background: #eff6ff;
+  color: #1d4ed8;
+
+  transition:
+    background .2s ease,
+    transform .2s ease;
+}
+
+.brood-validation-panel.expanded
+.brood-validation-toggle-icon {
+  background: #dbeafe;
+}
+
+.brood-validation-toggle-copy {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: .12rem;
+}
+
+.brood-validation-toggle-copy strong {
+  color: var(--navy);
+  font-size: .88rem;
+}
+
+.brood-validation-toggle-copy small {
+  color: #64748b;
+  font-size: .64rem;
+  font-weight: 650;
+}
+
+.brood-validation-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .55rem;
+
+  flex-wrap: wrap;
+}
+
+.brood-validation-summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+
+.brood-validation-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: .18rem;
+
+  padding: .34rem .48rem;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+
+  background: #ffffff;
+
+  color: #64748b;
+
+  font-size: .65rem;
+  font-weight: 700;
+
+  white-space: nowrap;
+}
+
+.brood-validation-summary strong {
+  color: #172033;
+  font-variant-numeric: tabular-nums;
+}
+
+.brood-validation-download {
+  min-height: 34px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: .38rem;
+
+  padding: .4rem .62rem;
+
+  white-space: nowrap;
+  text-decoration: none;
+
+  font-size: .67rem;
+}
+
+.brood-validation-collapsible {
+  padding: .75rem .82rem .9rem;
+
+  animation:
+    brood-validation-expand .2s ease;
+}
+
+.brood-validation-collapsible[hidden] {
+  display: none;
+}
+
+@keyframes brood-validation-expand {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.brood-validation-table {
+  margin-top: 0;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  overflow: auto;
+}
+
+.brood-validation-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.brood-validation-table th,
+.brood-validation-table td {
+  padding: .58rem .7rem;
+
+  border-bottom: 1px solid #e2e8f0;
+
+  text-align: left;
+
+  font-size: .72rem;
+
+  white-space: nowrap;
+}
+
+.brood-validation-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.brood-validation-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+
+  color: #475569;
+  background: #f8fafc;
+
+  font-weight: 800;
+}
+
+.brood-validation-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.brood-validation-status {
+  display: inline-flex;
+
+  padding: .2rem .46rem;
+
+  border-radius: 999px;
+
+  background: #f1f5f9;
+  color: #475569;
+
+  font-size: .62rem;
+  font-weight: 800;
+
+  text-transform: capitalize;
+}
+
+.brood-validation-status.validated {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.brood-validation-status.pending {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.brood-validation-empty {
+  padding: 1.2rem;
+
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+
+  background: #f8fafc;
+  color: #64748b;
+
+  text-align: center;
+
+  font-size: .75rem;
+}
+
+@media (max-width: 1000px) {
+  .brood-validation-panel-header {
+    align-items: flex-start;
+  }
+
+  .brood-validation-header-actions {
+    max-width: 58%;
+  }
+}
+
+@media (max-width: 760px) {
+  .brood-validation-panel-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .brood-validation-header-actions {
+    max-width: none;
+    justify-content: space-between;
+  }
+
+  .brood-validation-summary {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 650px) {
+  .brood-validation-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .brood-validation-summary {
+    width: 100%;
+  }
+
+  .brood-validation-summary span {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .brood-validation-download {
+    width: 100%;
+  }
+
+  .brood-validation-collapsible {
+    padding: .65rem;
+  }
+}
+/* -------------------------------------------------------------------------- */
+/* EDA section controls                                                       */
+/* -------------------------------------------------------------------------- */
+
+.brood-date-range {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+
+  min-width: max-content;
+
+  padding: .7rem .8rem;
+
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+
+  background: #eff6ff;
+  color: #1e40af;
+
+  font-size: .74rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.brood-select-pair {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Loading / empty / error states                                             */
+/* -------------------------------------------------------------------------- */
+
+.brood-inline-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: .65rem;
+
+  min-height: 320px;
+  padding: 2rem;
+
+  border: 1px dashed #93c5fd;
+  border-radius: 14px;
+
+  background: #eff6ff;
+  color: #1e3a8a;
+
+  text-align: center;
+}
+
+.brood-inline-state.error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.brood-inline-state span {
+  max-width: 700px;
+
+  color: inherit;
+
+  font-size: .84rem;
+  line-height: 1.55;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* EDA KPI strip                                                              */
+/* -------------------------------------------------------------------------- */
+
+.brood-kpi-strip {
+  display: flex;
+  gap: .8rem;
+  flex-wrap: wrap;
+
+  margin-top: 1rem;
+}
+
+.brood-kpi-strip span {
+  flex: 1 1 150px;
+
+  min-width: 150px;
+
+  padding: .8rem;
+
+  border: 1px solid #eef2f7;
+  border-radius: 9px;
+
+  background: #f8fafc;
+  color: #475569;
+
+  font-size: .78rem;
+}
+
+.brood-kpi-strip strong {
+  display: block;
+
+  margin-bottom: .12rem;
+
+  color: var(--navy);
+
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Data quality summary                                                       */
+/* -------------------------------------------------------------------------- */
+
+.brood-quality-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: .65rem;
+
+  margin-bottom: .9rem;
+}
+
+.brood-quality-grid > div {
+  min-width: 0;
+
+  padding: .8rem;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+
+  background: #f8fafc;
+}
+
+.brood-quality-grid strong {
+  display: block;
+
+  color: var(--navy);
+
+  font-size: 1.12rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.brood-quality-grid span {
+  color: var(--muted);
+
+  font-size: .72rem;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* EDA lists and methodology notes                                            */
+/* -------------------------------------------------------------------------- */
+
+.brood-check-list,
+.brood-warning-list {
+  margin: 0;
+  padding-left: 1.2rem;
+
+  color: #334155;
+
+  font-size: .82rem;
+  line-height: 1.75;
+}
+
+.brood-check-list li::marker {
+  color: #0f766e;
+}
+
+.brood-warning-list li::marker {
+  color: #d97706;
+}
+
+.brood-method-box {
+  margin-top: .9rem;
+  padding: .85rem;
+
+  border-left: 4px solid #2563eb;
+  border-radius: 8px;
+
+  background: #eff6ff;
+  color: #1e3a8a;
+
+  font-size: .8rem;
+  line-height: 1.65;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Confusion / class matrix                                                   */
+/* -------------------------------------------------------------------------- */
+
+.brood-matrix-wrap,
+.brood-correlation-scroll {
+  width: 100%;
+  overflow-x: auto;
+
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.brood-matrix-wrap::-webkit-scrollbar,
+.brood-correlation-scroll::-webkit-scrollbar {
+  height: 7px;
+}
+
+.brood-matrix-wrap::-webkit-scrollbar-thumb,
+.brood-correlation-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
+.brood-matrix {
+  display: grid;
+
+  min-width: 480px;
+
+  gap: 4px;
+}
+
+.brood-matrix-three {
+  grid-template-columns:
+    120px
+    repeat(2, minmax(130px, 1fr));
+}
+
+.brood-matrix-corner,
+.brood-matrix-axis {
+  display: grid;
+  place-items: center;
+
+  min-height: 55px;
+  padding: .45rem;
+
+  border: 1px solid #eef2f7;
+  border-radius: 7px;
+
+  background: #f8fafc;
+  color: #475569;
+
+  font-size: .73rem;
+  font-weight: 800;
+
+  text-align: center;
+}
+
+.brood-matrix-cell {
+  display: grid;
+  place-items: center;
+
+  min-height: 105px;
+  padding: .7rem;
+
+  border-radius: 7px;
+
+  color: #0f172a;
+
+  text-align: center;
+
+  transition:
+    transform .16s ease,
+    box-shadow .16s ease,
+    filter .16s ease;
+}
+
+.brood-matrix-cell:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, .08);
+  filter: saturate(1.04);
+}
+
+.brood-matrix-cell strong {
+  display: block;
+
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.brood-matrix-cell span {
+  margin-top: .2rem;
+
+  font-size: .68rem;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Correlation matrix                                                         */
+/* -------------------------------------------------------------------------- */
+
+.brood-correlation-grid {
+  display: grid;
+
+  min-width: 690px;
+
+  gap: 3px;
+}
+
+.brood-correlation-cell {
+  display: grid;
+  place-items: center;
+
+  min-height: 67px;
+
+  border-radius: 5px;
+
+  color: #0f172a;
+
+  font-size: .76rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+
+  transition:
+    transform .15s ease,
+    box-shadow .15s ease;
+}
+
+.brood-correlation-cell:hover {
+  z-index: 2;
+
+  transform: scale(1.035);
+
+  box-shadow: 0 5px 14px rgba(15, 23, 42, .12);
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Generated EDA report figures                                               */
+/* -------------------------------------------------------------------------- */
+
+.brood-report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: .9rem;
+}
+
+.brood-report-figure {
+  margin: 0;
+
+  overflow: hidden;
+
+  border: 1px solid var(--border);
+  border-radius: 11px;
+
+  background: #f8fafc;
+
+  transition:
+    border-color .2s ease,
+    box-shadow .2s ease,
+    transform .2s ease;
+}
+
+.brood-report-figure:hover {
+  border-color: #bfdbfe;
+
+  box-shadow: 0 8px 22px rgba(15, 23, 42, .07);
+
+  transform: translateY(-1px);
+}
+
+.brood-report-figure figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: .5rem;
+
+  padding: .65rem .75rem;
+
+  border-bottom: 1px solid #eef2f7;
+
+  background: white;
+  color: var(--navy);
+
+  font-size: .76rem;
+  font-weight: 750;
+}
+
+.brood-report-figure figcaption span,
+.brood-report-figure figcaption a {
+  display: inline-flex;
+  align-items: center;
+
+  gap: .4rem;
+}
+
+.brood-report-figure figcaption a {
+  color: #2563eb;
+
+  text-decoration: none;
+}
+
+.brood-report-figure figcaption a:hover {
+  text-decoration: underline;
+}
+
+.brood-report-figure img {
+  display: block;
+
+  width: 100%;
+  height: auto;
+
+  background: white;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Model feature groups                                                       */
+/* -------------------------------------------------------------------------- */
+
+.brood-feature-groups {
+  display: flex;
+  flex-direction: column;
+
+  gap: .75rem;
+}
+
+.brood-feature-groups > div {
+  display: grid;
+  grid-template-columns: 120px minmax(80px, 1fr) 58px;
+  align-items: center;
+
+  gap: .6rem;
+
+  font-size: .75rem;
+}
+
+.brood-feature-groups > div > span {
+  overflow: hidden;
+
+  color: #475569;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brood-feature-groups > div > strong {
+  color: var(--navy);
+
+  text-align: right;
+
+  font-variant-numeric: tabular-nums;
+}
+
+.brood-feature-groups > div > div {
+  height: 8px;
+
+  overflow: hidden;
+
+  border-radius: 999px;
+
+  background: #e2e8f0;
+}
+
+.brood-feature-groups i {
+  display: block;
+
+  height: 100%;
+
+  border-radius: inherit;
+
+  background: var(--brood-purple);
+
+  transition: width .4s ease;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Feature-name chips                                                         */
+/* -------------------------------------------------------------------------- */
+
+.brood-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: .35rem;
+
+  margin-top: .7rem;
+}
+
+.brood-chip-list code {
+  padding: .25rem .4rem;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+
+  background: #f1f5f9;
+  color: #334155;
+
+  font-size: .66rem;
+
+  transition:
+    background .15s ease,
+    border-color .15s ease;
+}
+
+.brood-chip-list code:hover {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Chronological train / validation / test split                              */
+/* -------------------------------------------------------------------------- */
+
+.brood-split-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: .6rem;
+}
+
+.brood-split-grid > div {
+  display: flex;
+  flex-direction: column;
+
+  gap: .35rem;
+
+  min-width: 0;
+
+  padding: .8rem;
+
+  border: 1px solid #eef2f7;
+  border-radius: 9px;
+
+  background: #f8fafc;
+}
+
+.brood-split-grid span {
+  color: #2563eb;
+
+  font-size: .72rem;
+  font-weight: 800;
+
+  text-transform: uppercase;
+}
+
+.brood-split-grid strong {
+  color: var(--navy);
+
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.brood-split-grid small {
+  color: var(--muted);
+
+  font-size: .67rem;
+  line-height: 1.45;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Connection / source cards                                                  */
+/* -------------------------------------------------------------------------- */
+
+.brood-connection-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: .8rem;
+}
+
+.brood-connection-card {
+  display: flex;
+  align-items: center;
+
+  gap: .75rem;
+
+  min-width: 0;
+  padding: .9rem;
+
+  border: 1px solid;
+  border-radius: 12px;
+
+  background: white;
+
+  box-shadow: var(--shadow);
+}
+
+.brood-connection-card.connected {
+  border-color: #a7f3d0;
+  color: #047857;
+}
+
+.brood-connection-card.disconnected {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.brood-connection-card.neutral {
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.brood-connection-card div {
+  min-width: 0;
+}
+
+.brood-connection-card span,
+.brood-connection-card small {
+  display: block;
+
+  overflow: hidden;
+
+  color: var(--muted);
+
+  font-size: .69rem;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brood-connection-card strong {
+  display: block;
+
+  overflow: hidden;
+
+  margin: .15rem 0;
+
+  color: var(--navy);
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Context information chips                                                  */
+/* -------------------------------------------------------------------------- */
+
+.brood-context-grid {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: .55rem;
+}
+
+.brood-context-grid span {
+  display: inline-flex;
+  align-items: center;
+
+  gap: .35rem;
+
+  padding: .55rem .65rem;
+
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+
+  background: #f8fafc;
+  color: #64748b;
+
+  font-size: .72rem;
+}
+
+.brood-context-grid strong {
+  color: var(--navy);
+
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* All-clear status                                                           */
+/* -------------------------------------------------------------------------- */
+
+.brood-all-clear {
+  display: flex;
+  align-items: flex-start;
+
+  gap: .7rem;
+
+  padding: 1rem;
+
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.brood-all-clear p {
+  margin: .25rem 0 0;
+
+  color: #065f46;
+
+  font-size: .76rem;
+  line-height: 1.5;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Pipeline visualization                                                     */
+/* -------------------------------------------------------------------------- */
+
+.brood-pipeline {
+  display: flex;
+  align-items: stretch;
+
+  gap: .4rem;
+
+  overflow-x: auto;
+
+  padding-bottom: .3rem;
+
+  scrollbar-width: thin;
+}
+
+.brood-pipeline > div {
+  min-width: 155px;
+
+  padding: .75rem;
+
+  border: 1px solid #dbeafe;
+  border-radius: 9px;
+
+  background: #eff6ff;
+}
+
+.brood-pipeline > div strong {
+  display: grid;
+  place-items: center;
+
+  width: 25px;
+  height: 25px;
+
+  margin-bottom: .5rem;
+
+  border-radius: 50%;
+
+  background: #2563eb;
+  color: white;
+
+  font-size: .72rem;
+}
+
+.brood-pipeline > div span {
+  display: block;
+
+  color: var(--navy);
+
+  font-size: .76rem;
+  font-weight: 800;
+}
+
+.brood-pipeline > div small {
+  display: block;
+
+  margin-top: .25rem;
+
+  color: var(--muted);
+
+  font-size: .66rem;
+  line-height: 1.4;
+}
+
+.brood-pipeline > i {
+  align-self: center;
+
+  color: #94a3b8;
+
+  font-style: normal;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Compact disclaimer / footer note                                           */
+/* -------------------------------------------------------------------------- */
+
+.brood-disclaimer {
+  padding: .75rem .9rem;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+
+  background: #f1f5f9;
+  color: #475569;
+
+  font-size: .74rem;
+  line-height: 1.5;
+
+  text-align: center;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Optional legacy 3-gauge EDA layout                                         */
+/*                                                                           */
+/* Keep these only for EDA components that still use health-gauge-card.       */
+/* They DO NOT affect the newer SVG live-prediction gauges.                   */
+/* -------------------------------------------------------------------------- */
+
+.brood-gauge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: .9rem;
+}
+
+.health-gauge-card {
+  min-width: 0;
+
+  padding: 1rem;
+
+  border: 1px solid var(--border);
+  border-top: 4px solid #64748b;
+  border-radius: 14px;
+
+  background: white;
+
+  box-shadow: var(--shadow);
+
+  text-align: center;
+}
+
+.health-gauge-card.excellent {
+  border-top-color: var(--brood-excellent);
+}
+
+.health-gauge-card.good {
+  border-top-color: var(--brood-good);
+}
+
+.health-gauge-card.poor {
+  border-top-color: var(--brood-poor);
+}
+
+.health-gauge-card.critical {
+  border-top-color: var(--brood-critical);
+}
+
+.health-gauge-title {
+  color: #475569;
+
+  font-size: .77rem;
+  font-weight: 800;
+}
+
+.health-gauge {
+  position: relative;
+
+  width: 220px;
+  max-width: 100%;
+  height: 115px;
+
+  margin: .8rem auto 0;
+
+  overflow: hidden;
+}
+
+.health-gauge-track {
+  position: absolute;
+
+  top: 7px;
+  left: 50%;
+
+  width: 200px;
+  height: 200px;
+
+  border: 18px solid #e2e8f0;
+  border-bottom-color: transparent;
+  border-left-color: var(--brood-critical);
+  border-right-color: var(--brood-excellent);
+  border-radius: 50%;
+
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.health-gauge-needle {
+  position: absolute;
+
+  bottom: 10px;
+  left: 50%;
+
+  width: 82px;
+  height: 3px;
+
+  border-radius: 3px;
+
+  background: #14213d;
+
+  transform-origin: 0 50%;
+
+  transition: transform .45s ease;
+}
+
+.health-gauge-needle::after {
+  content: '';
+
+  position: absolute;
+
+  top: -5px;
+  left: -6px;
+
+  width: 13px;
+  height: 13px;
+
+  border-radius: 50%;
+
+  background: #14213d;
+}
+
+.health-gauge-centre {
+  position: absolute;
+
+  right: 0;
+  bottom: 0;
+  left: 0;
+
+  color: var(--navy);
+}
+
+.health-gauge-centre strong {
+  font-size: 1.45rem;
+}
+
+.health-gauge-centre span {
+  color: var(--muted);
+
+  font-size: .7rem;
+}
+
+.health-gauge-level {
+  display: inline-flex;
+
+  margin-top: .45rem;
+  padding: .28rem .6rem;
+
+  border-radius: 999px;
+
+  background: #f1f5f9;
+  color: var(--navy);
+
+  font-size: .74rem;
+  font-weight: 850;
+}
+
+.health-gauge-card p {
+  min-height: 2.5em;
+
+  margin: .5rem 0 0;
+
+  color: var(--muted);
+
+  font-size: .7rem;
+  line-height: 1.45;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Responsive EDA / model-training layout                                     */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 1150px) {
+  .brood-connection-grid,
+  .brood-gauge-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .health-gauge-card {
+    max-width: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .brood-date-range {
+    min-width: 0;
+  }
+
+  .brood-report-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .brood-split-grid,
+  .brood-quality-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .brood-select-pair {
+    width: 100%;
+  }
+
+  .brood-select-pair .brood-select {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: none;
+  }
+
+  .brood-feature-groups > div {
+    grid-template-columns: 90px minmax(70px, 1fr) 50px;
+  }
+
+  .brood-kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .brood-kpi-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .brood-feature-groups > div {
+    grid-template-columns: 1fr;
+    gap: .28rem;
+  }
+
+  .brood-feature-groups > div > strong {
+    text-align: left;
+  }
+}
+
+.brood-video-panel {
+  position: relative;
+
+  width: 100%;
+  margin: 0 0 1rem;
+
+  overflow: hidden;
+
+  border: 1px solid #dbe3ee;
+  border-radius: 16px;
+
+  background: #f8fafc;
+
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, .07);
+
+  isolation: isolate;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Video                                                                      */
+/* -------------------------------------------------------------------------- */
+
+.brood-autoplay-video {
+  display: block;
+
+  width: 100%;
+  height: clamp(230px, 30vw, 430px);
+
+  border: 0;
+
+  background: #f8fafc;
+
+  object-fit: cover;
+  object-position: center;
+
+  outline: none;
+}
+
+
+/* Prevent unwanted browser focus outline around the video */
+
+.brood-autoplay-video:focus,
+.brood-autoplay-video:focus-visible {
+  outline: none;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Subtle visual overlay                                                      */
+/* -------------------------------------------------------------------------- */
+
+.brood-video-panel::after {
+  content: '';
+
+  position: absolute;
+  inset: 0;
+
+  z-index: 1;
+
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(15, 23, 42, .02) 0%,
+      transparent 30%,
+      transparent 72%,
+      rgba(15, 23, 42, .08) 100%
+    );
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Loading appearance                                                         */
+/* -------------------------------------------------------------------------- */
+
+.brood-video-panel::before {
+  content: '';
+
+  position: absolute;
+  inset: 0;
+
+  z-index: -1;
+
+  background:
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(37, 99, 235, .08),
+      transparent 32%
+    ),
+    linear-gradient(
+      135deg,
+      #f8fafc 0%,
+      #eff6ff 52%,
+      #ecfdf5 100%
+    );
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Desktop                                                                    */
+/* -------------------------------------------------------------------------- */
+
+@media (min-width: 1200px) {
+  .brood-autoplay-video {
+    height: clamp(300px, 29vw, 440px);
+  }
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Tablet                                                                     */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .brood-video-panel {
+    border-radius: 14px;
+  }
+
+  .brood-autoplay-video {
+    height: clamp(230px, 43vw, 350px);
+  }
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Mobile                                                                     */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 650px) {
+  .brood-video-panel {
+    margin-bottom: .8rem;
+
+    border-radius: 12px;
+  }
+
+  .brood-autoplay-video {
+    height: clamp(190px, 55vw, 280px);
+  }
+}
+
+@media (max-width: 420px) {
+  .brood-autoplay-video {
+    height: 205px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brood-video-panel,
+  .brood-autoplay-video {
+    transition: none;
+  }
+}

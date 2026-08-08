@@ -40,6 +40,22 @@ class BroodPaths:
         )
 
     @property
+    def module_data_dir(self) -> Path:
+        return self.backend / "data" / "modules" / "brood_health"
+
+    @property
+    def module_workbook(self) -> Path:
+        return self.module_data_dir / "Common_Beehive_Brood_Health.xlsx"
+
+    @property
+    def module_processed(self) -> Path:
+        return self.module_data_dir / "processed" / "brood_health_training.parquet"
+
+    @property
+    def module_preprocessing_audit(self) -> Path:
+        return self.module_data_dir / "processed" / "preprocessing_audit.json"
+
+    @property
     def split_manifest(self) -> Path:
         return self.backend / "data" / "manifests" / "common_split_manifest.parquet"
 
@@ -83,6 +99,10 @@ class BroodPaths:
     def eda_cache(self) -> Path:
         return self.metrics_dir / "eda_cache_v6.json"
 
+    @property
+    def validation_log_csv(self) -> Path:
+        return self.backend / "artifacts" / "validation" / "brood_health" / "live_forecast_validation.csv"
+
 
 @dataclass(frozen=True)
 class IoTSettings:
@@ -108,6 +128,7 @@ class IoTSettings:
     sslmode: str
     weight_scale_factor: float
     weight_offset_kg: float
+    validation_tolerance_minutes: int = 15
 
     @classmethod
     def from_environment(cls) -> IoTSettings:
@@ -161,7 +182,13 @@ class IoTSettings:
             # Use 0.001 when the database stores grams; keep 1.0 for kilograms.
             weight_scale_factor=float(_first_env("IOT_WEIGHT_SCALE_FACTOR", default="1.0")),
             # Optional tare correction after unit conversion.
-            weight_offset_kg=float(_first_env("IOT_WEIGHT_OFFSET_KG", default="0.0")),
+            weight_offset_kg=float(
+                _first_env("IOT_WEIGHT_OFFSET_KG", default="0.0")
+            ),
+            validation_tolerance_minutes=max(
+                5,
+                int(_first_env("BROOD_VALIDATION_TOLERANCE_MINUTES", default="15")),
+            ),
         )
 
 

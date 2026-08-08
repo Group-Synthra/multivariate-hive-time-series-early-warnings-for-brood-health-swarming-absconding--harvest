@@ -3,9 +3,12 @@ import {
   AlertTriangle,
   Battery,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock3,
   Database,
   Droplets,
+  Download,
   RefreshCw,
   Scale,
   ShieldCheck,
@@ -18,6 +21,7 @@ import {
 import { Panel } from '../../../components/common/Panel';
 import { StatCard } from '../../../components/common/StatCard';
 import { useBroodIoT } from '../hooks/useBroodHealthData';
+import { broodHealthApi } from '../services/broodHealthApi';
 import {
   formatBhsi,
   formatHealthScore,
@@ -265,6 +269,197 @@ function IntervalCard({
   );
 }
 
+function ValidationPanel({ data, deviceId }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (!data) return null;
+
+  const rows = data.recent || [];
+  const validated = numberValue(
+    data.validated_forecasts,
+    0,
+  );
+  const pending = numberValue(
+    data.pending_forecasts,
+    0,
+  );
+  const mae =
+    data.mae == null
+      ? '—'
+      : numberValue(data.mae, 2);
+
+  return (
+    <section
+      className={`brood-validation-panel ${
+        expanded ? 'expanded' : 'collapsed'
+      }`}
+    >
+      <div className="brood-validation-panel-header">
+        <button
+          type="button"
+          className="brood-validation-toggle"
+          onClick={() =>
+            setExpanded((value) => !value)
+          }
+          aria-expanded={expanded}
+          aria-controls="brood-validation-content"
+        >
+          <span className="brood-validation-toggle-icon">
+            {expanded ? (
+              <ChevronUp size={18} />
+            ) : (
+              <ChevronDown size={18} />
+            )}
+          </span>
+
+          <span className="brood-validation-toggle-copy">
+            <strong>
+              Forecast Validation Log
+            </strong>
+
+            <small>
+              {expanded
+                ? 'Hide validation records'
+                : 'Show validation records'}
+            </small>
+          </span>
+        </button>
+
+        <div className="brood-validation-header-actions">
+          <div className="brood-validation-summary">
+            <span>
+              Validated{' '}
+              <strong>{validated}</strong>
+            </span>
+
+            <span>
+              Pending{' '}
+              <strong>{pending}</strong>
+            </span>
+
+            <span>
+              Live MAE{' '}
+              <strong>{mae}</strong>
+            </span>
+          </div>
+
+          <a
+            className="button button-outline brood-validation-download"
+            href={broodHealthApi.validationLogDownloadUrl(
+              deviceId,
+            )}
+            download
+          >
+            <Download size={15} />
+            Download CSV
+          </a>
+        </div>
+      </div>
+
+      <div
+        id="brood-validation-content"
+        className="brood-validation-collapsible"
+        hidden={!expanded}
+      >
+        {rows.length > 0 ? (
+          <div className="table-scroll brood-validation-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Prediction time</th>
+                  <th>Current</th>
+                  <th>Forecast target</th>
+                  <th>Predicted</th>
+                  <th>Actual time</th>
+                  <th>Actual</th>
+                  <th>Error</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {rows
+                  .slice(0, 20)
+                  .map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        {timestampValue(
+                          item.prediction_time,
+                        )}
+                      </td>
+
+                      <td>
+                        {formatHealthScore(
+                          item.current_score,
+                        )}
+                      </td>
+
+                      <td>
+                        {timestampValue(
+                          item.forecast_target_time,
+                        )}
+                      </td>
+
+                      <td>
+                        {formatHealthScore(
+                          item.predicted_score,
+                        )}
+                      </td>
+
+                      <td>
+                        {item.actual_time
+                          ? timestampValue(
+                            item.actual_time,
+                          )
+                          : '—'}
+                      </td>
+
+                      <td>
+                        {item.actual_score == null
+                          || item.actual_score === ''
+                          ? '—'
+                          : formatHealthScore(
+                            item.actual_score,
+                          )}
+                      </td>
+
+                      <td>
+                        {item.absolute_error === ''
+                          || item.absolute_error == null
+                          ? '—'
+                          : numberValue(
+                            item.absolute_error,
+                            2,
+                          )}
+                      </td>
+
+                      <td>
+                        <span
+                          className={`brood-validation-status ${
+                            item.status
+                            || 'pending'
+                          }`}
+                        >
+                          {item.status
+                            || 'pending'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="brood-validation-empty">
+            No forecast records yet.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+
 export function BroodIoTTab() {
   const iot = useBroodIoT(true);
 
@@ -280,6 +475,7 @@ export function BroodIoTTab() {
 
   const health = iot.health.data;
   const prediction = iot.prediction.data;
+  const validation = iot.validation?.data;
 
   const databaseReady = Boolean(
     health?.database?.connected,
@@ -1256,6 +1452,15 @@ export function BroodIoTTab() {
               data={prediction.history}
             />
           </Panel>
+
+          {/* ------------------------------------------------------------ */}
+          {/* Forecast validation — intentionally last on the page         */}
+          {/* ------------------------------------------------------------ */}
+
+          <ValidationPanel
+            data={validation}
+            deviceId={iot.selectedDevice}
+          />
         </>
       )}
     </div>

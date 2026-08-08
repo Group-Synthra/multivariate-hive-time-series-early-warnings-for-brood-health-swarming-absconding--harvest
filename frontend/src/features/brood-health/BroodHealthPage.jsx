@@ -31,6 +31,23 @@ export function BroodHealthPage() {
         </div>
       </section>
 
+
+      <section className="brood-video-panel" aria-label="Brood health monitoring video">
+        <video
+          className="brood-autoplay-video"
+          src="/videos/brood.mp4"
+          autoPlay
+          unmuted
+          loop
+          playsInline
+          preload="auto"
+          disablePictureInPicture
+          controlsList="nodownload noplaybackrate"
+        >
+          Your browser does not support the video element.
+        </video>
+      </section>
+
       <ModuleTabs activeTab={activeTab} onChange={setActiveTab} />
 
       <div role="tabpanel" aria-label={activeTab}>
