@@ -7,10 +7,13 @@ import pandas as pd
 
 from .scoring import BroodHealthScoreConfig, compute_score_components, health_level_code
 
-FEATURE_SCHEMA_VERSION = "brood-score-v6.0"
+FEATURE_SCHEMA_VERSION = "brood-score-v6.2-local-time-external"
 TARGET_COLUMN = "brood_health_healthy_1"
 SENSORS = ("temperature_c", "humidity_pct", "co2_ppm", "weight_kg")
 ENVIRONMENT_SENSORS = ("temperature_c", "humidity_pct", "co2_ppm")
+EXTERNAL_SENSORS = ("external_temp", "external_humidity")
+MODEL_ENVIRONMENT_SENSORS = (*ENVIRONMENT_SENSORS, *EXTERNAL_SENSORS)
+HISTORICAL_FEATURE_TIMEZONE = "America/Phoenix"
 LAGS = (1, 3, 6, 12, 24, 48, 72)
 ROLLING_WINDOWS = (3, 6, 12, 24, 72)
 CHANGES = (1, 3, 6, 12, 24)
@@ -39,6 +42,34 @@ CANONICAL_IOT_MAPPING = {
     "reading_at": "reading_at",
 }
 
+HISTORICAL_COLUMN_ALIASES = {
+    "external temperature": "external_temp",
+    "external humidity": "external_humidity",
+}
+
+
+def _canonical_utc_timestamp(
+    values: pd.Series,
+    *,
+    naive_timezone: str,
+) -> pd.Series:
+    sample = next((value for value in values if pd.notna(value)), None)
+    if sample is None:
+        return pd.to_datetime(values, errors="coerce", utc=True)
+
+    sample_timestamp = pd.Timestamp(sample)
+    if sample_timestamp.tzinfo is None:
+        parsed = pd.to_datetime(values, errors="coerce")
+        return (
+            parsed.dt.tz_localize(
+                naive_timezone,
+                ambiguous="NaT",
+                nonexistent="shift_forward",
+            )
+            .dt.tz_convert("UTC")
+        )
+    return pd.to_datetime(values, errors="coerce", utc=True)
+
 
 def _coerce_and_validate_ranges(frame: pd.DataFrame) -> pd.DataFrame:
     out = frame.copy()
@@ -51,21 +82,26 @@ def _coerce_and_validate_ranges(frame: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def normalise_historical(frame: pd.DataFrame) -> pd.DataFrame:
-    """Apply brood-specific preprocessing after the shared common pipeline.
-
-    The common clean table remains unchanged. This function applies only brood-health
-    range validation, timestamp standardisation and causal short-gap forward filling.
-    """
-
+def normalise_historical(
+    frame: pd.DataFrame,
+    *,
+    naive_timezone: str = HISTORICAL_FEATURE_TIMEZONE,
+) -> pd.DataFrame:
+    out = frame.rename(columns=HISTORICAL_COLUMN_ALIASES).copy()
     required = {"hive_id", "timestamp", *SENSORS}
-    missing = sorted(required.difference(frame.columns))
+    missing = sorted(required.difference(out.columns))
     if missing:
         raise ValueError(f"Historical brood-health data are missing columns: {missing}")
 
-    out = frame.copy()
+    for optional in EXTERNAL_SENSORS:
+        if optional not in out.columns:
+            out[optional] = np.nan
+
     out["hive_id"] = out["hive_id"].astype("string").str.strip()
-    out["timestamp"] = pd.to_datetime(out["timestamp"], errors="coerce", utc=True)
+    out["timestamp"] = _canonical_utc_timestamp(
+        out["timestamp"],
+        naive_timezone=naive_timezone,
+    )
     out = _coerce_and_validate_ranges(out)
 
     if TARGET_COLUMN in out.columns:
@@ -78,10 +114,12 @@ def normalise_historical(frame: pd.DataFrame) -> pd.DataFrame:
         .drop_duplicates(["hive_id", "timestamp"], keep="last")
         .reset_index(drop=True)
     )
-    for sensor in SENSORS:
+
+    fill_columns = [*SENSORS, *EXTERNAL_SENSORS]
+    for sensor in fill_columns:
         out[f"{sensor}_was_missing"] = out[sensor].isna().astype("int8")
-    # Forward-only, maximum two hourly gaps. No future interpolation is used.
-    out[list(SENSORS)] = out.groupby("hive_id", sort=False)[list(SENSORS)].ffill(limit=2)
+
+    out[fill_columns] = out.groupby("hive_id", sort=False)[fill_columns].ffill(limit=2)
     return out
 
 
@@ -91,6 +129,8 @@ def map_iot_frame(
     column_mapping: Mapping[str, str] | None = None,
     weight_scale_factor: float = 1.0,
     weight_offset_kg: float = 0.0,
+    timestamps_are_utc: bool = True,
+    feature_timezone: str = "Asia/Colombo",
 ) -> pd.DataFrame:
     mapping = dict(column_mapping or CANONICAL_IOT_MAPPING)
     available_mapping = {
@@ -102,10 +142,14 @@ def map_iot_frame(
     if missing:
         raise ValueError(f"Live IoT data are missing required mapped columns: {missing}")
 
-    out["weight_kg"] = pd.to_numeric(out["weight_kg"], errors="coerce") * float(
-        weight_scale_factor
-    ) + float(weight_offset_kg)
-    return normalise_historical(out)
+    out["weight_kg"] = (
+        pd.to_numeric(out["weight_kg"], errors="coerce") * float(weight_scale_factor)
+        + float(weight_offset_kg)
+    )
+    return normalise_historical(
+        out,
+        naive_timezone="UTC" if timestamps_are_utc else feature_timezone,
+    )
 
 
 def aggregate_live_hourly(
@@ -113,6 +157,7 @@ def aggregate_live_hourly(
     *,
     frequency: str = "1h",
     anchor_to_latest: bool = True,
+    anchor_timestamp: object | None = None,
 ) -> pd.DataFrame:
     """Aggregate live readings to complete rolling one-hour windows.
 
@@ -146,7 +191,18 @@ def aggregate_live_hourly(
             continue
 
         if anchor_to_latest:
-            anchor = pd.Timestamp(ordered["timestamp"].max())
+            anchor = (
+                pd.Timestamp(anchor_timestamp)
+                if anchor_timestamp is not None
+                else pd.Timestamp(ordered["timestamp"].max())
+            )
+            if anchor.tzinfo is None:
+                anchor = anchor.tz_localize("UTC")
+            else:
+                anchor = anchor.tz_convert("UTC")
+            ordered = ordered.loc[ordered["timestamp"] <= anchor].copy()
+            if ordered.empty:
+                continue
             seconds_back = (anchor - ordered["timestamp"]).dt.total_seconds()
             bucket_index = np.floor(
                 np.maximum(seconds_back.to_numpy(dtype=float), 0.0) / 3600.0
@@ -219,7 +275,11 @@ def _rolling_from_shifted(
     return result.reset_index(level=0, drop=True).reindex(shifted.index)
 
 
-def build_feature_frame(frame: pd.DataFrame) -> pd.DataFrame:
+def build_feature_frame(
+    frame: pd.DataFrame,
+    *,
+    feature_timezone: str = HISTORICAL_FEATURE_TIMEZONE,
+) -> pd.DataFrame:
     """Build causal features without labels, IDs, absolute date or future values.
 
     Columns are accumulated in a dictionary and concatenated once. This avoids
@@ -231,7 +291,7 @@ def build_feature_frame(frame: pd.DataFrame) -> pd.DataFrame:
     group_codes = pd.Series(pd.factorize(hive, sort=False)[0], index=data.index)
     columns: dict[str, pd.Series | np.ndarray] = {}
 
-    for sensor in ENVIRONMENT_SENSORS:
+    for sensor in MODEL_ENVIRONMENT_SENSORS:
         values = pd.to_numeric(data[sensor], errors="coerce")
         columns[sensor] = values
         columns[f"{sensor}_missing"] = data.get(f"{sensor}_was_missing", values.isna()).astype(
@@ -276,10 +336,23 @@ def build_feature_frame(frame: pd.DataFrame) -> pd.DataFrame:
         )
         columns[f"weight_cv_{window}h"] = std / median.abs().clip(lower=1.0)
 
-    hour = data["timestamp"].dt.hour.astype(float)
-    columns["hour_sin"] = np.sin(2.0 * np.pi * hour / 24.0)
-    columns["hour_cos"] = np.cos(2.0 * np.pi * hour / 24.0)
-    columns["is_night"] = ((hour < 6) | (hour >= 18)).astype("int8")
+    local_timestamp = data["timestamp"].dt.tz_convert(feature_timezone)
+    local_hour = (
+        local_timestamp.dt.hour.astype(float)
+        + local_timestamp.dt.minute.astype(float) / 60.0
+    )
+    columns["hour_sin"] = np.sin(2.0 * np.pi * local_hour / 24.0)
+    columns["hour_cos"] = np.cos(2.0 * np.pi * local_hour / 24.0)
+    columns["is_night"] = ((local_hour < 6) | (local_hour >= 18)).astype("int8")
+
+    columns["internal_external_temp_delta"] = (
+        pd.to_numeric(data["temperature_c"], errors="coerce")
+        - pd.to_numeric(data["external_temp"], errors="coerce")
+    )
+    columns["internal_external_humidity_delta"] = (
+        pd.to_numeric(data["humidity_pct"], errors="coerce")
+        - pd.to_numeric(data["external_humidity"], errors="coerce")
+    )
 
     columns["temperature_deviation_35"] = (data["temperature_c"] - 35.0).abs()
     columns["humidity_deviation_65"] = (data["humidity_pct"] - 65.0).abs()
@@ -301,6 +374,7 @@ def build_supervised_dataset(
     *,
     horizon_hours: int = 6,
     score_config: BroodHealthScoreConfig | None = None,
+    feature_timezone: str = HISTORICAL_FEATURE_TIMEZONE,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, list[str]]:
     """Create a multi-horizon regression task.
 
@@ -314,7 +388,7 @@ def build_supervised_dataset(
 
     data = normalise_historical(frame)
     scored = compute_score_components(data, config=score_config)
-    features = build_feature_frame(data)
+    features = build_feature_frame(data, feature_timezone=feature_timezone)
     groups = data["hive_id"]
 
     targets = pd.DataFrame(index=data.index)
@@ -392,9 +466,11 @@ def build_supervised_dataset(
 def build_latest_inference_rows(
     frame: pd.DataFrame,
     feature_columns: Sequence[str],
+    *,
+    feature_timezone: str = HISTORICAL_FEATURE_TIMEZONE,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     data = normalise_historical(frame)
-    features = build_feature_frame(data)
+    features = build_feature_frame(data, feature_timezone=feature_timezone)
     latest_positions = data.groupby("hive_id", sort=False)["timestamp"].idxmax()
     latest_meta = data.loc[latest_positions, ["hive_id", "timestamp", *SENSORS]].copy()
     latest_features = features.loc[latest_positions].reindex(columns=list(feature_columns))

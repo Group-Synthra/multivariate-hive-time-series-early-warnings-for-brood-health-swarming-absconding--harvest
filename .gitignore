@@ -126,6 +126,9 @@ backend/artifacts/predictions/*
 !backend/artifacts/plots/.gitkeep
 !backend/artifacts/predictions/.gitkeep
 
+backend/artifacts/validation/
+backend/data/modules/
+
 
 # ============================================================
 # Machine-learning model binaries outside artifact directories

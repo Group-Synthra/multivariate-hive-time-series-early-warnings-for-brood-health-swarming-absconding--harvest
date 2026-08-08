@@ -42,7 +42,9 @@ from .audit import binary_target_persistence_audit, feature_leakage_audit
 from .calibration import calibrate_component_weights
 from .config import PATHS
 from .features import (
+    EXTERNAL_SENSORS,
     FEATURE_SCHEMA_VERSION,
+    HISTORICAL_FEATURE_TIMEZONE,
     MINIMUM_TRAINING_HISTORY_HOURS,
     SENSORS,
     TARGET_COLUMN,
@@ -75,19 +77,39 @@ def _notify(callback: ProgressCallback | None, event: str, **payload: Any) -> No
 
 
 def _load_frame(path: Path | None = None) -> pd.DataFrame:
-    source = Path(path or PATHS.clean_data)
-    if source.exists():
+    candidates = []
+    if path is not None:
+        candidates.append(Path(path))
+    candidates.extend(
+        [
+            PATHS.module_processed,
+            PATHS.module_workbook,
+            PATHS.clean_data,
+            PATHS.raw_workbook,
+        ]
+    )
+
+    for source in candidates:
+        if not source.exists():
+            continue
         if source.suffix.lower() in {".xlsx", ".xls"}:
-            return normalise_historical(pd.read_excel(source, sheet_name="Common_Dataset"))
+            return normalise_historical(
+                pd.read_excel(source, sheet_name="Common_Dataset"),
+                naive_timezone=HISTORICAL_FEATURE_TIMEZONE,
+            )
         if source.suffix.lower() == ".csv":
-            return normalise_historical(pd.read_csv(source))
+            return normalise_historical(
+                pd.read_csv(source),
+                naive_timezone=HISTORICAL_FEATURE_TIMEZONE,
+            )
         try:
-            return normalise_historical(pd.read_parquet(source))
+            return normalise_historical(
+                pd.read_parquet(source),
+                naive_timezone=HISTORICAL_FEATURE_TIMEZONE,
+            )
         except (ImportError, ValueError):
-            pass
-    if PATHS.raw_workbook.exists():
-        return normalise_historical(pd.read_excel(PATHS.raw_workbook, sheet_name="Common_Dataset"))
-    raise FileNotFoundError("No common brood-health training dataset was found.")
+            continue
+    raise FileNotFoundError("No Brood Health training dataset was found.")
 
 
 def _assign_hive_splits(
@@ -601,7 +623,7 @@ def _training_reference(
     frame: pd.DataFrame,
 ) -> dict[str, dict[str, float]]:
     reference: dict[str, dict[str, float]] = {}
-    for sensor in ("temperature_c", "humidity_pct", "co2_ppm", "weight_kg"):
+    for sensor in ("temperature_c", "humidity_pct", "co2_ppm", "weight_kg", *EXTERNAL_SENSORS):
         values = pd.to_numeric(frame[sensor], errors="coerce").dropna()
         reference[sensor] = {
             "p01": float(values.quantile(0.01)),
@@ -804,6 +826,7 @@ def run_training(
         frame,
         horizon_hours=horizon,
         score_config=score_config,
+        feature_timezone=HISTORICAL_FEATURE_TIMEZONE,
     )
     metadata["split"] = metadata["hive_id"].astype(str).map(hive_assignments).astype("string")
     schema_audit = feature_leakage_audit(feature_columns)
@@ -1020,7 +1043,9 @@ def run_training(
         "level_order": list(HEALTH_LEVEL_ORDER),
         "trained_at_utc": pd.Timestamp.now(tz="UTC").isoformat(),
         "training_sensor_reference": _training_reference(reference_frame),
-        "prediction_inputs": list(SENSORS),
+        "prediction_inputs": [*SENSORS, *EXTERNAL_SENSORS],
+        "feature_time_semantics": "local_hive_clock",
+        "historical_feature_timezone": HISTORICAL_FEATURE_TIMEZONE,
         "prediction_interval_absolute_error": {
             "80_percent": interval_80,
             "90_percent": interval_90,
@@ -1045,7 +1070,7 @@ def run_training(
             f"The primary forecast is the exact score at +{horizon} hours. The minimum across the predicted trajectory is a secondary safety indicator.",
             "Historical evaluation holds out complete hives, but Sri Lankan field performance must be verified against physical brood inspections.",
             "No accuracy value is capped or deliberately reduced. Transition and deterioration metrics must be interpreted alongside overall accuracy.",
-            "External temperature and humidity are shown as context unless equivalent historical training variables are available.",
+            "External temperature and humidity are included as causal current/past predictors from the Brood Health module dataset.",
             "The live forecast timestamp may update every ten minutes through rolling one-hour windows, but the native model resolution remains hourly.",
             "Ten-minute trajectory points are display interpolation between native hourly model outputs and do not add new predictive information.",
         ],
