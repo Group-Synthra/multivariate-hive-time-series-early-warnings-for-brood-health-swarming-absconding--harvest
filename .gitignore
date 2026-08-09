@@ -231,3 +231,4 @@ desktop.ini
 $RECYCLE.BIN/
 
 backend/src/multivari/modules/swarming/data/swarming_risk_history.json
+/backend/src/multivari/modules/swarming/data/swarming_forecast_validation.json
