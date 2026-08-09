@@ -3875,3 +3875,314 @@
     display: none;
   }
 }
+
+/* =========================================================
+   EXPLORATORY ANALYSIS — COLLAPSIBLE ESS & ARM EVALUATION GUIDE
+   ========================================================= */
+
+.absconding-evaluation-guide {
+  overflow: hidden;
+  border: 1px solid var(--abs-card-border, #dce4ee);
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow: var(--abs-shadow, 0 10px 30px rgba(15, 23, 42, 0.07));
+}
+
+.absconding-evaluation-guide > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  color: var(--abs-heading, #14213d);
+  background: linear-gradient(135deg, #ffffff, #f8fbff);
+}
+
+.absconding-evaluation-guide > summary::-webkit-details-marker {
+  display: none;
+}
+
+.absconding-evaluation-guide > summary:hover {
+  background: linear-gradient(135deg, #f8fbff, #eff6ff);
+}
+
+.absconding-evaluation-guide-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.absconding-evaluation-guide-title strong {
+  color: var(--abs-heading, #14213d);
+  font-size: 0.98rem;
+}
+
+.absconding-evaluation-guide-title small {
+  color: var(--abs-muted, #64748b);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.absconding-evaluation-guide-toggle {
+  flex: 0 0 auto;
+  min-width: 122px;
+  padding: 0.46rem 0.7rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  text-align: center;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.absconding-evaluation-guide .guide-hide-label {
+  display: none;
+}
+
+.absconding-evaluation-guide[open] .guide-show-label {
+  display: none;
+}
+
+.absconding-evaluation-guide[open] .guide-hide-label {
+  display: inline;
+}
+
+.absconding-evaluation-guide[open] > summary {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.absconding-evaluation-guide-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  padding: 1rem;
+  background: #f8fafc;
+}
+
+.absconding-explanation-card {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid #dce4ee;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.absconding-explanation-card.ess-card {
+  border-top: 4px solid #d97706;
+}
+
+.absconding-explanation-card.arm-card {
+  border-top: 4px solid #2563eb;
+}
+
+.absconding-explanation-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.absconding-explanation-number {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  min-width: 48px;
+  min-height: 38px;
+  padding: 0.35rem 0.5rem;
+  border-radius: 10px;
+  color: #ffffff;
+  background: #334155;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+.ess-card .absconding-explanation-number {
+  background: #d97706;
+}
+
+.arm-card .absconding-explanation-number {
+  background: #2563eb;
+}
+
+.absconding-explanation-heading h4 {
+  margin: 0;
+  color: var(--abs-heading, #14213d);
+  font-size: 1rem;
+}
+
+.absconding-explanation-heading p {
+  margin: 0.28rem 0 0;
+  color: var(--abs-muted, #64748b);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.absconding-formula-box {
+  margin-top: 0.9rem;
+  padding: 0.8rem;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  color: #1e3a8a;
+  background: #eff6ff;
+  text-align: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.86rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.ess-card .absconding-formula-box {
+  color: #92400e;
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.absconding-weight-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+
+.absconding-weight-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  padding: 0.65rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.absconding-weight-grid span {
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.absconding-weight-grid strong {
+  color: #b45309;
+  font-size: 1rem;
+}
+
+.absconding-calculation-list {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.absconding-calculation-list > div {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.68rem 0.72rem;
+  border-left: 4px solid #f59e0b;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
+.absconding-calculation-list strong {
+  color: #334155;
+  font-size: 0.78rem;
+}
+
+.absconding-calculation-list code {
+  color: #1e3a8a;
+  font-size: 0.73rem;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.absconding-calculation-list span {
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.absconding-arm-meaning-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.absconding-arm-meaning-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.absconding-arm-meaning-grid strong {
+  font-size: 0.82rem;
+}
+
+.absconding-arm-meaning-grid span {
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.absconding-arm-meaning-grid .arm-up strong {
+  color: #b45309;
+}
+
+.absconding-arm-meaning-grid .arm-stable strong {
+  color: #2563eb;
+}
+
+.absconding-arm-meaning-grid .arm-down strong {
+  color: #047857;
+}
+
+.absconding-explanation-note {
+  margin-top: 0.8rem;
+  padding: 0.78rem;
+  border: 1px solid #dce4ee;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.absconding-explanation-note.secondary {
+  background: #f8fafc;
+}
+
+.absconding-explanation-note strong {
+  color: var(--abs-heading, #14213d);
+  font-size: 0.8rem;
+}
+
+.absconding-explanation-note p {
+  margin: 0.35rem 0 0;
+  color: var(--abs-muted, #64748b);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 980px) {
+  .absconding-evaluation-guide-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .absconding-evaluation-guide > summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .absconding-evaluation-guide-toggle {
+    min-width: 0;
+  }
+
+  .absconding-weight-grid,
+  .absconding-arm-meaning-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

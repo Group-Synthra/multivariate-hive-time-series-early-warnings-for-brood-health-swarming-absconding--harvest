@@ -206,6 +206,15 @@ function ExploratoryAnalysis({ exploratory, summary, data, risks, selectedHive, 
     stressScaled: Number(row.environmental_stress_score || 0) * 100,
     co2Scaled: Number(row.co2_ppm || 0) / 100,
   }));
+
+  const moduleRelatedPlots = Object.entries(data?.plots || {}).filter(([label]) => {
+    const normalizedLabel = String(label)
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+
+    return !['feature_importance', 'model_comparison'].includes(normalizedLabel);
+  });
   return (
     <>
       <Panel title="Absconding Risk Score — Meaning" subtitle="The dashboard combines model probability with ARM escalation.">
@@ -344,11 +353,11 @@ function ExploratoryAnalysis({ exploratory, summary, data, risks, selectedHive, 
 
       <Panel
         title="Module Related Images"
-        
+
       >
-        {Object.keys(data?.plots || {}).length ? (
+        {moduleRelatedPlots.length ? (
           <div className="report-figure-grid">
-            {Object.entries(data.plots).map(([label, imagePath]) => (
+            {moduleRelatedPlots.map(([label, imagePath]) => (
               <figure className="report-figure" key={label}>
                 <figcaption className="report-figure-toolbar">
                   <span>{label.replaceAll('_', ' ')}</span>
@@ -368,6 +377,122 @@ function ExploratoryAnalysis({ exploratory, summary, data, risks, selectedHive, 
           <EmptyState message="No generated Absconding images are available yet." />
         )}
       </Panel>
+
+      <details className="absconding-evaluation-guide">
+        <summary>
+          <span className="absconding-evaluation-guide-title">
+            <strong>Evaluation Reference — ESS & ARM</strong>
+            <small>Calculation, interpretation and key points for evaluator questions.</small>
+          </span>
+          <span className="absconding-evaluation-guide-toggle">
+            <span className="guide-show-label">Show explanation</span>
+            <span className="guide-hide-label">Hide explanation</span>
+          </span>
+        </summary>
+
+        <div className="absconding-evaluation-guide-body">
+          <article className="absconding-explanation-card ess-card">
+            <div className="absconding-explanation-heading">
+              <span className="absconding-explanation-number">ESS</span>
+              <div>
+                <h4>Environmental Stress Score</h4>
+                <p>Explains how environmentally stressed the hive appears. It is not the absconding probability.</p>
+              </div>
+            </div>
+
+            <div className="absconding-formula-box">
+              ESS = 0.28(T) + 0.20(H) + 0.24(CO₂) + 0.28(W)
+            </div>
+
+            <div className="absconding-weight-grid">
+              <div><span>Temperature</span><strong>28%</strong></div>
+              <div><span>Humidity</span><strong>20%</strong></div>
+              <div><span>CO₂</span><strong>24%</strong></div>
+              <div><span>Weight loss</span><strong>28%</strong></div>
+            </div>
+
+            <div className="absconding-calculation-list">
+              <div>
+                <strong>Temperature stress</strong>
+                <code>T = clip(|Temp − 35| / 5, 0, 1)</code>
+                <span>35°C is the reference; a 5°C or larger deviation reaches maximum temperature stress.</span>
+              </div>
+              <div>
+                <strong>Humidity stress</strong>
+                <code>H = clip(|Humidity − 60| / 30, 0, 1)</code>
+                <span>60% is the reference; deviation is normalized to the same 0–1 scale.</span>
+              </div>
+              <div>
+                <strong>CO₂ stress</strong>
+                <code>C = clip((CO₂ − 800) / 2200, 0, 1)</code>
+                <span>Stress begins above 800 ppm and increases progressively.</span>
+              </div>
+              <div>
+                <strong>Weight stress</strong>
+                <code>W = max(clip(−ΔW24h / 2), clip(−ΔW72h / 4))</code>
+                <span>The stronger of the 24-hour or 72-hour weight-loss signals is used.</span>
+              </div>
+            </div>
+
+            <div className="absconding-explanation-note">
+              <strong>Why these weights?</strong>
+              <p>
+                Temperature and weight receive
+                slightly higher emphasis, followed by CO₂ and humidity. The four weights sum to 1,
+                keeping ESS normalized between 0 and 1; the dashboard displays it as 0–100%.
+              </p>
+            </div>
+          </article>
+
+          <article className="absconding-explanation-card arm-card">
+            <div className="absconding-explanation-heading">
+              <span className="absconding-explanation-number">ARM</span>
+              <div>
+                <h4>Absconding Risk Momentum</h4>
+                <p>Shows the direction and speed of change in model-estimated absconding risk.</p>
+              </div>
+            </div>
+
+            <div className="absconding-formula-box">
+              ARM = (Rₜ − Rprevious) / Δt
+            </div>
+
+            <div className="absconding-arm-meaning-grid">
+              <div className="arm-up">
+                <strong>ARM &gt; 0</strong>
+                <span>Risk is increasing</span>
+              </div>
+              <div className="arm-stable">
+                <strong>ARM ≈ 0</strong>
+                <span>Risk is stable</span>
+              </div>
+              <div className="arm-down">
+                <strong>ARM &lt; 0</strong>
+                <span>Risk is decreasing</span>
+              </div>
+            </div>
+
+            <div className="absconding-explanation-note">
+              <strong>How to explain it</strong>
+              <p>
+                The probability tells how much absconding risk the model estimates, while ARM tells
+                whether that predicted risk is moving upward, remaining stable or moving downward.
+                ARM is calculated from genuine model outputs; it does not artificially change the
+                prediction.
+              </p>
+            </div>
+
+            <div className="absconding-explanation-note secondary">
+              <strong>ESS vs Risk vs ARM</strong>
+              <p>
+                ESS describes environmental stress. Absconding probability is the machine-learning
+                prediction. ARM describes how that prediction changes over time. They are related
+                decision-support signals, but they are not the same measurement.
+              </p>
+            </div>
+          </article>
+        </div>
+      </details>
     </>
   );
 }
