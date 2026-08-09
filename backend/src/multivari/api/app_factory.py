@@ -18,10 +18,13 @@ from multivari.modules.harvesting.live_hui_monitor import (
     create_live_hui_monitor,
     should_start_monitor_in_this_process,
 )
+from multivari.modules.swarming.forecast_validation import (
+    forecast_validation_bp,
+)
 from multivari.modules.swarming.iot.routes import iot_bp
 from multivari.modules.swarming.routes import swarming_live_bp
 from multivari.modules.swarming.training_routes import model_training_bp
-
+ 
 from .eda_service import EDAService
 from .harvesting_live_routes import create_harvesting_live_blueprint
 from .routes import create_api_blueprint
@@ -86,7 +89,7 @@ def create_app() -> Flask:
     app.register_blueprint(swarming_live_bp)
     app.register_blueprint(model_training_bp)
     app.register_blueprint(iot_bp)
-
+    app.register_blueprint(forecast_validation_bp)
     @app.get("/")
     def index():
         base_url = request.host_url.rstrip("/")

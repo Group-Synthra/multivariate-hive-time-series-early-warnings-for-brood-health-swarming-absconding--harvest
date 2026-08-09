@@ -1629,6 +1629,222 @@ function SwarmingRiskTimeline({ history, currentRisk, riskLevel }) {
   );
 }
 
+// ─── Multi-Horizon Forecast Validation Table ─────────────────────────
+
+function ForecastValidationTable({ rows }) {
+  const [displayLimit, setDisplayLimit] = useState(5);
+  const [sortOrder, setSortOrder] = useState("desc");
+
+  const groupedRows = useMemo(() => {
+    const groups = new Map();
+
+    for (const row of Array.isArray(rows) ? rows : []) {
+      const key = `${row.device_id}-${row.forecast_made_at}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          deviceId: row.device_id,
+          forecastMadeAt: row.forecast_made_at,
+          days: {},
+        });
+      }
+      groups.get(key).days[Number(row.forecast_day || 1)] = row;
+    }
+
+    return [...groups.values()]
+      .sort((a, b) => {
+        const aTime = new Date(a.forecastMadeAt).getTime();
+        const bTime = new Date(b.forecastMadeAt).getTime();
+
+        return sortOrder === "asc" ? aTime - bTime : bTime - aTime;
+      })
+      .slice(0, displayLimit);
+  }, [rows, displayLimit, sortOrder]);
+
+  if (groupedRows.length === 0) return null;
+
+  const formatDateTime = (value, waitingText = "—") => {
+    if (!value) return waitingText;
+    return new Date(value).toLocaleString("en-GB", {
+      timeZone: "Asia/Colombo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const dayColors = {
+    1: { main: "#2563eb", light: "#eff6ff", border: "#bfdbfe" },
+    2: { main: "#7c3aed", light: "#f5f3ff", border: "#ddd6fe" },
+    3: { main: "#c2410c", light: "#fff7ed", border: "#fed7aa" },
+  };
+
+  const renderDayCell = (row, day) => {
+    const colors = dayColors[day];
+
+    if (!row) {
+      return (
+        <div style={{ color: "#94a3b8", textAlign: "center", padding: "22px 8px" }}>
+          No record
+        </div>
+      );
+    }
+
+    const forecastRisk = Number(row.forecast_risk ?? row.day1_forecast_risk);
+    const isValidated = row.status === "VALIDATED";
+
+    return (
+      <div style={{
+        minWidth: "245px", padding: "11px 12px", borderRadius: "9px",
+        background: colors.light, border: `1px solid ${colors.border}`,
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", marginBottom: "8px" }}>
+          <strong style={{ color: colors.main, fontSize: "0.95rem" }}>
+            {Number.isFinite(forecastRisk) ? `${forecastRisk.toFixed(2)}%` : "—"}
+          </strong>
+          <span style={{
+            color: isValidated ? "#15803d" : "#b45309",
+            background: isValidated ? "#dcfce7" : "#fef3c7",
+            borderRadius: "12px", padding: "2px 7px",
+            fontSize: "0.61rem", fontWeight: 700,
+          }}>
+            {row.status}
+          </span>
+        </div>
+
+        <div style={{ display: "grid", gap: "5px", color: "#475569", fontSize: "0.67rem" }}>
+          <div><span style={{ color: "#64748b" }}>Target: </span>{formatDateTime(row.target_at)}</div>
+          <div><span style={{ color: "#64748b" }}>Actual time: </span>{formatDateTime(row.actual_observed_at, "Waiting")}</div>
+          <div>
+            <span style={{ color: "#64748b" }}>Current risk: </span>
+            <strong>{row.actual_current_risk == null ? "—" : `${Number(row.actual_current_risk).toFixed(2)}%`}</strong>
+          </div>
+          <div>
+            <span style={{ color: "#64748b" }}>Absolute error: </span>
+            <strong>{row.absolute_error == null ? "—" : `${Number(row.absolute_error).toFixed(2)} points`}</strong>
+          </div>
+          <div>
+            <span style={{ color: "#64748b" }}>Level match: </span>
+            <strong>{row.level_match == null ? "—" : row.level_match ? "Yes" : "No"}</strong>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const headerStyle = {
+    padding: "10px",
+    borderBottom: "1px solid #cbd5e1",
+    textAlign: "left",
+  };
+
+  return (
+    <div style={{
+      background: "#ffffff", border: "1px solid #dbe4f0",
+      borderRadius: "16px", padding: "20px 24px",
+      boxShadow: "0 6px 20px rgba(15,23,42,0.06)", overflowX: "auto",
+    }}>
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+        gap: "16px", marginBottom: "14px", flexWrap: "wrap",
+      }}>
+        <div>
+          <h3 style={{ margin: "0 0 5px", color: "#1e3a5f", fontSize: "1rem" }}>
+            Multi-Horizon Forecast Validation
+          </h3>
+          <p style={{ margin: 0, color: "#64748b", fontSize: "0.72rem" }}>
+            Day 1, Day 2 and Day 3 forecasts are grouped by prediction time and compared with the future current risk (±10 minutes).
+          </p>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <label
+              htmlFor="validation-sort-order"
+              style={{ color: "#475569", fontSize: "0.72rem", fontWeight: 600 }}
+            >
+              Order
+            </label>
+            <select
+              id="validation-sort-order"
+              value={sortOrder}
+              onChange={(event) => setSortOrder(event.target.value)}
+              style={{
+                minWidth: "125px", padding: "7px 10px",
+                border: "1px solid #cbd5e1", borderRadius: "7px",
+                background: "#ffffff", color: "#334155",
+                fontSize: "0.72rem", fontWeight: 600, cursor: "pointer",
+                outline: "none",
+              }}
+            >
+              <option value="desc">Latest first</option>
+              <option value="asc">Oldest first</option>
+            </select>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <label
+              htmlFor="validation-record-limit"
+              style={{ color: "#475569", fontSize: "0.72rem", fontWeight: 600 }}
+            >
+              Show
+            </label>
+            <select
+              id="validation-record-limit"
+              value={displayLimit}
+              onChange={(event) => setDisplayLimit(Number(event.target.value))}
+              style={{
+                minWidth: "105px", padding: "7px 10px",
+                border: "1px solid #cbd5e1", borderRadius: "7px",
+                background: "#ffffff", color: "#334155",
+                fontSize: "0.72rem", fontWeight: 600, cursor: "pointer",
+                outline: "none",
+              }}
+            >
+              <option value={5}>5 records</option>
+              <option value={10}>10 records</option>
+              <option value={20}>20 records</option>
+              <option value={100}>100 records</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <table style={{ width: "100%", minWidth: "1060px", borderCollapse: "collapse", fontSize: "0.74rem" }}>
+        <thead>
+          <tr style={{ background: "#f1f5f9", color: "#334155" }}>
+            <th style={headerStyle}>Hive</th>
+            <th style={headerStyle}>Forecast Made</th>
+            <th style={{ ...headerStyle, color: dayColors[1].main }}>Day 1 (+24h)</th>
+            <th style={{ ...headerStyle, color: dayColors[2].main }}>Day 2 (+48h)</th>
+            <th style={{ ...headerStyle, color: dayColors[3].main }}>Day 3 (+72h)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {groupedRows.map((group) => (
+            <tr key={group.key} style={{ verticalAlign: "top" }}>
+              <td style={{ padding: "13px 10px", borderBottom: "1px solid #e2e8f0", color: "#334155", fontWeight: 600 }}>
+                {group.deviceId}
+              </td>
+              <td style={{ padding: "13px 10px", borderBottom: "1px solid #e2e8f0", color: "#475569", whiteSpace: "nowrap" }}>
+                {formatDateTime(group.forecastMadeAt)}
+              </td>
+              {[1, 2, 3].map((day) => (
+                <td key={day} style={{ padding: "9px", borderBottom: "1px solid #e2e8f0" }}>
+                  {renderDayCell(group.days[day], day)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // Main SwarmPrediction Component
 // ─────────────────────────────────────────────────────────────────────
@@ -1647,6 +1863,7 @@ const SwarmPrediction = () => {
   const [modelHealth, setModelHealth] = useState(null);
   const [readingsCache, setReadingsCache] = useState([]);
   const [riskHistory, setRiskHistory] = useState([]);
+  const [validationRows, setValidationRows] = useState([]);
   const [dataTimestamp, setDataTimestamp] = useState(null);
   const [peltHistory, setPeltHistory] = useState([]);
 
@@ -1717,6 +1934,48 @@ const SwarmPrediction = () => {
       setSensorValues(data.latest_sensor);
       setResult(data.prediction);
       setForecast(data.forecast);
+
+      const validationForecasts = Array.isArray(data.forecast)
+        ? data.forecast
+            .filter((item) => [1, 2, 3].includes(Number(item.day)))
+            .map((item) => ({
+              day: Number(item.day),
+              risk: Number(item.risk),
+            }))
+        : [];
+
+      if (
+        latestDataTimestamp &&
+        data.prediction?.risk_percentage != null &&
+        validationForecasts.length === 3 &&
+        validationForecasts.every((item) => Number.isFinite(item.risk))
+      ) {
+        const validationResponse = await fetch(
+          `${API_BASE}/api/swarming/forecast-validation`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              device_id: hive,
+              observed_at: latestDataTimestamp,
+              current_risk: Number(data.prediction.risk_percentage),
+              forecasts: validationForecasts,
+            }),
+          }
+        );
+
+        if (validationResponse.ok) {
+          const validationData = await validationResponse.json();
+          setValidationRows(
+            Array.isArray(validationData.history) ? validationData.history : []
+          );
+        } else {
+          console.error(
+            "Could not save Day-1 forecast validation:",
+            await validationResponse.text()
+          );
+        }
+      }
   
       if (Array.isArray(data.readings)) {
         setReadingsCache(data.readings);
@@ -1979,10 +2238,56 @@ const SwarmPrediction = () => {
       {lastUpdated && (
         <div style={{ marginBottom: "16px" }}>
           <CountdownBar secondsLeft={countdown} total={REFRESH_INTERVAL / 1000} />
-          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "4px" }}>
-            Last updated: {lastUpdated.toLocaleTimeString()} · Data from: {dataTimestamp
-              ? formatTimestamp(dataTimestamp)
-              : "—"}
+          <div style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "8px",
+            marginTop: "8px",
+          }}>
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 10px",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "7px",
+              fontSize: "0.72rem",
+              color: "var(--text-secondary)",
+            }}>
+              <span style={{ fontWeight: 700 }}>Last updated:</span>
+              <span>{lastUpdated.toLocaleTimeString()}</span>
+            </div>
+
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 10px",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "7px",
+              fontSize: "0.72rem",
+              color: "var(--text-secondary)",
+            }}>
+              <span style={{ fontWeight: 700 }}>Data from:</span>
+              <span>{dataTimestamp ? formatTimestamp(dataTimestamp) : "—"}</span>
+            </div>
+
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 10px",
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
+              borderRadius: "7px",
+              fontSize: "0.72rem",
+              color: "#1d4ed8",
+            }}>
+              <span style={{ fontWeight: 700 }}>Refresh interval:</span>
+              <span>Every 10 minutes</span>
+            </div>
           </div>
         </div>
       )}
@@ -2172,6 +2477,11 @@ const SwarmPrediction = () => {
           {/* Sensor Value Trends Timeline (Full Width) */}
           <div style={{ animation: "fadeSlide 0.4s ease-out", marginTop: "8px" }}>
             <RealtimeSensorTrendsTimeline readings={readingsCache} />
+          </div>
+
+          {/* Multi-horizon forecast validation table */}
+          <div style={{ animation: "fadeSlide 0.4s ease-out", marginTop: "8px" }}>
+            <ForecastValidationTable rows={validationRows} />
           </div>
 
           {/* High Risk Alert */}

@@ -31,73 +31,114 @@ export default function SwarmingModule() {
         gap: "1.5rem",
       }}
     >
-    {/* Header Section */}
-<div className="dashboard-grid">
-  <div
-    className="card welcome-card"
-    style={{
-      border: "1px solid #dbe4f0",
-      borderLeft: "4px solid #2563eb",
-      borderRadius: "16px",
-      background:
-        "linear-gradient(135deg, #ffffff 0%, #f8fafc 60%, #eff6ff 100%)",
-      boxShadow: "0 8px 24px rgba(15, 23, 42, 0.07)",
-    }}
-  >
-    <div className="welcome-content">
-      <div className="welcome-text">
-        <h2
-          style={{
-            marginBottom: "8px",
-            color: "#0f172a",
-          }}
-        >
-          Module 2: Colony Swarming Prediction
-        </h2>
-
-        <p
-          style={{
-            margin: 0,
-            color: "#64748b",
-            lineHeight: 1.6,
-          }}
-        >
-          Swarming is the natural reproduction mechanism where half of
-          the worker colony leaves with the old queen to establish a new
-          home.
-        </p>
-      </div>
-
+      {/* Header Section */}
       <div
         style={{
-          width: "58px",
-          height: "58px",
-          flexShrink: 0,
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          background: "#eff6ff",
-          border: "1px solid #bfdbfe",
+          justifyContent: "space-between",
+          gap: "1.5rem",
+          padding: "1.5rem",
+          background: "#ffffff",
+          border: "1px solid #e2e8f0",
           borderRadius: "14px",
-          boxShadow: "0 6px 16px rgba(37, 99, 235, 0.12)",
+          boxShadow: "0 4px 12px rgba(15, 23, 42, 0.05)",
         }}
       >
-        <Zap size={32} color="#2563eb" />
-      </div>
-    </div>
-  </div>
-</div>
+        <div>
+          <p
+            style={{
+              margin: "0 0 6px",
+              color: "#2563eb",
+              fontSize: "0.75rem",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            Module 02
+          </p>
 
-      {/* Same navigation style used by the other modules */}
-      <ModuleTabs
-        activeTab={activeTab}
-        onChange={setActiveTab}
-      />
+          <h2
+            style={{
+              margin: "0 0 8px",
+              color: "#0f172a",
+              fontSize: "1.6rem",
+              fontWeight: 700,
+            }}
+          >
+            Colony Swarming Prediction
+          </h2>
+
+          <p
+            style={{
+              margin: 0,
+              color: "#64748b",
+              lineHeight: 1.6,
+            }}
+          >
+        Early identification of colony behavioural changes, 72-hour swarming
+        forecasts, current risk assessment and continuous per-hive monitoring.
+          </p>
+        </div>
+
+        <div
+          style={{
+            width: "58px",
+            height: "58px",
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#eff6ff",
+            border: "1px solid #bfdbfe",
+            borderRadius: "14px",
+            boxShadow: "0 6px 16px rgba(37, 99, 235, 0.12)",
+          }}
+        >
+          <Zap size={32} color="#2563eb" />
+        </div>
+      </div>
+
+      {/* Swarming Video */}
+      <section
+        aria-label="Honeybee swarming behavior video"
+        style={{
+          width: "100%",
+          overflow: "hidden",
+          backgroundColor: "#0f172a",
+          border: "1px solid #dbe3ec",
+          borderRadius: "14px",
+          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.08)",
+        }}
+      >
+        <video
+          src="/videos/swarming.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          disablePictureInPicture
+          controlsList="nodownload noplaybackrate"
+          style={{
+            display: "block",
+            width: "100%",
+            height: "auto",
+            maxHeight: "520px",
+            objectFit: "cover",
+            backgroundColor: "#0f172a",
+          }}
+        >
+          Your browser does not support the video element.
+        </video>
+      </section>
+
+      {/* Module Navigation */}
+      <ModuleTabs activeTab={activeTab} onChange={setActiveTab} />
 
       {/* Selected Tab Content */}
-      <div role="tabpanel">
-        {renderActiveTab()}
-      </div>
+      <div role="tabpanel">{renderActiveTab()}</div>
     </div>
   );
 }
