@@ -6,7 +6,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-
 _WRITE_LOCK = threading.Lock()
 
 FIELD_NAMES = [
