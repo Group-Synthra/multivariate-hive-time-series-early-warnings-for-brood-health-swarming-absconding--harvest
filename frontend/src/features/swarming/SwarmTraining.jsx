@@ -1,7 +1,617 @@
 import React, { useEffect, useState } from "react";
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Legend,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
+import {
+    Activity,
+    ArrowRight,
+    BarChart3,
+    BrainCircuit,
+    CheckCircle2,
+    Clock3,
+    Database,
+    GitBranch,
+    Layers3,
+    Settings2,
+    Timer,
+    Trophy,
+} from "lucide-react";
 // import PipelineCard from "./PipelineCard";
-import PeltFeatureCard from "./PeltFeatureCard";
-import HybridFramework from "./HybridFramework";
+
+// ============================================================
+// Research-style PELT feature card
+// ============================================================
+function PeltFeatureCard({ index, icon: Icon, title, points }) {
+    return (
+        <article
+            style={{
+                minHeight: "160px",
+                padding: "16px",
+                background: "#ffffff",
+                border: "1px solid #cbd5e1",
+                borderRadius: "8px",
+            }}
+        >
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "9px",
+                    marginBottom: "12px",
+                }}
+            >
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "32px",
+                        height: "32px",
+                        flexShrink: 0,
+                        color: "#1e3a5f",
+                        background: "#f1f5f9",
+                        border: "1px solid #dbe3ec",
+                        borderRadius: "6px",
+                    }}
+                >
+                    <Icon size={17} strokeWidth={1.8} />
+                </div>
+                <div>
+                    <span
+                        style={{
+                            display: "block",
+                            color: "#64748b",
+                            fontSize: "10px",
+                            fontWeight: 700,
+                            letterSpacing: "0.06em",
+                        }}
+                    >
+                        {index}
+                    </span>
+                    <h3
+                        style={{
+                            margin: 0,
+                            color: "#0f172a",
+                            fontSize: "14px",
+                            fontWeight: 650,
+                        }}
+                    >
+                        {title}
+                    </h3>
+                </div>
+            </div>
+
+            <ul
+                style={{
+                    display: "grid",
+                    gap: "8px",
+                    margin: 0,
+                    padding: 0,
+                    listStyle: "none",
+                    color: "#475569",
+                    fontSize: "12px",
+                    lineHeight: 1.45,
+                }}
+            >
+                {points.map((point) => (
+                    <li
+                        key={point}
+                        style={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: "7px",
+                        }}
+                    >
+                        <CheckCircle2
+                            size={14}
+                            color="#475569"
+                            strokeWidth={1.8}
+                            style={{ flexShrink: 0, marginTop: "2px" }}
+                        />
+                        <span>{point}</span>
+                    </li>
+                ))}
+            </ul>
+        </article>
+    );
+}
+
+function HybridFramework() {
+    const pipelineSteps = [
+        {
+            icon: Database,
+            title: "Raw Sensor Data",
+            subtitle: "Hive observations",
+        },
+        {
+            icon: Settings2,
+            title: "Preprocessing",
+            subtitle: "Clean and scale data",
+        },
+        {
+            icon: GitBranch,
+            title: "PELT Change Detection",
+            subtitle: "Detect behavioural shifts",
+        },
+        {
+            icon: Layers3,
+            title: "Feature Engineering",
+            subtitle: "Create temporal features",
+        },
+        {
+            icon: BrainCircuit,
+            title: "RF · XGB · LSTM",
+            subtitle: "Compare trained models",
+        },
+        {
+            icon: Trophy,
+            title: "Best Model",
+            subtitle: "Selected for prediction",
+            highlighted: true,
+        },
+    ];
+
+    return (
+        <section
+            aria-labelledby="hybrid-framework-title"
+            style={{
+                marginTop: "28px",
+                padding: "22px",
+                background: "#ffffff",
+                border: "1px solid #cbd5e1",
+                borderRadius: "12px",
+            }}
+        >
+            <div style={{ marginBottom: "20px" }}>
+                <span
+                    style={{
+                        display: "block",
+                        marginBottom: "5px",
+                        color: "#64748b",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                    }}
+                >
+                    Analytical workflow
+                </span>
+
+                <h2
+                    id="hybrid-framework-title"
+                    style={{
+                        margin: "0 0 8px",
+                        color: "#0f172a",
+                        fontSize: "17px",
+                        fontWeight: 650,
+                    }}
+                >
+                    Hybrid PELT–LSTM Prediction Framework
+                </h2>
+
+                <p
+                    style={{
+                        maxWidth: "980px",
+                        margin: 0,
+                        color: "#475569",
+                        fontSize: "13px",
+                        lineHeight: 1.6,
+                    }}
+                >
+                    Behavioural change points detected by the PELT algorithm are
+                    transformed into temporal features and combined with hive
+                    sensor measurements. The LSTM achieved the best predictive
+                    performance and was selected as the final swarming
+                    prediction model.
+                </p>
+            </div>
+
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "stretch",
+                    gap: "10px",
+                    padding: "18px",
+                    overflowX: "auto",
+                    background: "#f8fafc",
+                    border: "1px solid #dbe3ec",
+                    borderRadius: "10px",
+                }}
+            >
+                {pipelineSteps.map((step, index) => {
+                    const StepIcon = step.icon;
+
+                    return (
+                        <React.Fragment key={step.title}>
+                            <article
+                                style={{
+                                    display: "flex",
+                                    minWidth: "145px",
+                                    flex: "1 0 145px",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    minHeight: "128px",
+                                    padding: "14px 12px",
+                                    textAlign: "center",
+                                    background: step.highlighted
+                                        ? "#f0fdf4"
+                                        : "#ffffff",
+                                    border: step.highlighted
+                                        ? "1px solid #86b89a"
+                                        : "1px solid #cbd5e1",
+                                    borderRadius: "8px",
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        width: "38px",
+                                        height: "38px",
+                                        marginBottom: "10px",
+                                        color: step.highlighted
+                                            ? "#166534"
+                                            : "#1e3a5f",
+                                        background: step.highlighted
+                                            ? "#dcfce7"
+                                            : "#f1f5f9",
+                                        border: step.highlighted
+                                            ? "1px solid #bbddc5"
+                                            : "1px solid #dbe3ec",
+                                        borderRadius: "7px",
+                                    }}
+                                >
+                                    <StepIcon size={19} strokeWidth={1.8} />
+                                </div>
+
+                                <strong
+                                    style={{
+                                        color: step.highlighted
+                                            ? "#166534"
+                                            : "#0f172a",
+                                        fontSize: "12.5px",
+                                        fontWeight: 650,
+                                        lineHeight: 1.35,
+                                    }}
+                                >
+                                    {step.title}
+                                </strong>
+
+                                <span
+                                    style={{
+                                        marginTop: "5px",
+                                        color: "#64748b",
+                                        fontSize: "10.5px",
+                                        lineHeight: 1.35,
+                                    }}
+                                >
+                                    {step.subtitle}
+                                </span>
+                            </article>
+
+                            {index < pipelineSteps.length - 1 && (
+                                <div
+                                    aria-hidden="true"
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flex: "0 0 22px",
+                                        color: "#64748b",
+                                    }}
+                                >
+                                    <ArrowRight size={20} strokeWidth={1.7} />
+                                </div>
+                            )}
+                        </React.Fragment>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
+// ============================================================
+// Research-style model performance comparison
+// ============================================================
+function PerformanceComparisonChart({ comparison = [] }) {
+    if (!Array.isArray(comparison) || comparison.length === 0) {
+        return (
+            <p
+                style={{
+                    padding: "30px",
+                    color: "#64748b",
+                    textAlign: "center",
+                    fontSize: "14px",
+                }}
+            >
+                Model-comparison data are not available.
+            </p>
+        );
+    }
+
+    const modelColors = ["#1d4ed8", "#475569", "#0f766e", "#7c3aed"];
+
+    const getNumber = (value) => {
+        const number = Number(value);
+        return Number.isFinite(number) ? number : null;
+    };
+
+    const classificationData = [
+        {
+            metric: "Precision",
+            ...Object.fromEntries(
+                comparison.map((row) => [row.Model, getNumber(row.Precision)])
+            ),
+        },
+        {
+            metric: "Recall",
+            ...Object.fromEntries(
+                comparison.map((row) => [row.Model, getNumber(row.Recall)])
+            ),
+        },
+        {
+            metric: "F1-score",
+            ...Object.fromEntries(
+                comparison.map((row) => [
+                    row.Model,
+                    getNumber(row["F1-Score"]),
+                ])
+            ),
+        },
+    ];
+
+    const errorData = [
+        {
+            metric: "RMSE",
+            ...Object.fromEntries(
+                comparison.map((row) => [
+                    row.Model,
+                    getNumber(row.RMSE ?? row.rmse),
+                ])
+            ),
+        },
+        {
+            metric: "MAE",
+            ...Object.fromEntries(
+                comparison.map((row) => [
+                    row.Model,
+                    getNumber(row.MAE ?? row.mae),
+                ])
+            ),
+        },
+    ];
+
+    const tooltipFormatter = (value, modelName) => [
+        value === null || value === undefined
+            ? "Not available"
+            : Number(value).toFixed(4),
+        modelName,
+    ];
+
+    const chartPanelStyle = {
+        minWidth: 0,
+        padding: "20px",
+        background: "#ffffff",
+        border: "1px solid #d9e2ec",
+        borderRadius: "10px",
+    };
+
+    const chartTitleStyle = {
+        margin: "0 0 4px",
+        color: "#0f172a",
+        fontSize: "15px",
+        fontWeight: 600,
+    };
+
+    const chartDescriptionStyle = {
+        margin: "0 0 18px",
+        color: "#64748b",
+        fontSize: "12px",
+    };
+
+    const renderBars = () =>
+        comparison.map((row, index) => (
+            <Bar
+                key={row.Model}
+                dataKey={row.Model}
+                name={row.Model}
+                fill={modelColors[index % modelColors.length]}
+                radius={[2, 2, 0, 0]}
+                maxBarSize={42}
+            />
+        ));
+
+    return (
+        <section
+            aria-label="Model performance comparison charts"
+            style={{
+                padding: "22px",
+                background: "#f8fafc",
+                border: "1px solid #cbd5e1",
+                borderRadius: "12px",
+            }}
+        >
+            <div style={{ marginBottom: "20px" }}>
+                <h2
+                    style={{
+                        margin: "0 0 6px",
+                        color: "#0f172a",
+                        fontSize: "17px",
+                        fontWeight: 600,
+                    }}
+                >
+                    Model Performance Comparison
+                </h2>
+                <p
+                    style={{
+                        margin: 0,
+                        color: "#64748b",
+                        fontSize: "13px",
+                        lineHeight: 1.5,
+                    }}
+                >
+                    Comparative evaluation of classification performance and
+                    prediction error across the trained models.
+                </p>
+            </div>
+
+            <div
+                style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                        "repeat(auto-fit, minmax(min(100%, 420px), 1fr))",
+                    gap: "20px",
+                }}
+            >
+                <div style={chartPanelStyle}>
+                    <h3 style={chartTitleStyle}>Classification Performance</h3>
+                    <p style={chartDescriptionStyle}>
+                        Higher values indicate stronger performance.
+                    </p>
+                    <div style={{ width: "100%", height: "350px" }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                                data={classificationData}
+                                margin={{ top: 10, right: 20, left: 5, bottom: 10 }}
+                                barCategoryGap="25%"
+                            >
+                                <CartesianGrid
+                                    stroke="#e2e8f0"
+                                    strokeDasharray="3 3"
+                                    vertical={false}
+                                />
+                                <XAxis
+                                    dataKey="metric"
+                                    tick={{ fill: "#334155", fontSize: 12 }}
+                                    axisLine={{ stroke: "#94a3b8" }}
+                                    tickLine={false}
+                                />
+                                <YAxis
+                                    domain={[0, 1]}
+                                    ticks={[0, 0.2, 0.4, 0.6, 0.8, 1]}
+                                    tickFormatter={(value) => value.toFixed(1)}
+                                    tick={{ fill: "#475569", fontSize: 11 }}
+                                    axisLine={{ stroke: "#94a3b8" }}
+                                    tickLine={false}
+                                    width={42}
+                                    label={{
+                                        value: "Score",
+                                        angle: -90,
+                                        position: "insideLeft",
+                                        fill: "#475569",
+                                        fontSize: 12,
+                                    }}
+                                />
+                                <Tooltip
+                                    formatter={tooltipFormatter}
+                                    contentStyle={{
+                                        background: "#ffffff",
+                                        border: "1px solid #cbd5e1",
+                                        borderRadius: "6px",
+                                        fontSize: "12px",
+                                    }}
+                                />
+                                <Legend
+                                    verticalAlign="top"
+                                    align="right"
+                                    wrapperStyle={{
+                                        paddingBottom: "16px",
+                                        fontSize: "12px",
+                                    }}
+                                />
+                                {renderBars()}
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                <div style={chartPanelStyle}>
+                    <h3 style={chartTitleStyle}>Prediction Error</h3>
+                    <p style={chartDescriptionStyle}>
+                        Lower RMSE and MAE values indicate stronger performance.
+                    </p>
+                    <div style={{ width: "100%", height: "350px" }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                                data={errorData}
+                                margin={{ top: 10, right: 20, left: 5, bottom: 10 }}
+                                barCategoryGap="25%"
+                            >
+                                <CartesianGrid
+                                    stroke="#e2e8f0"
+                                    strokeDasharray="3 3"
+                                    vertical={false}
+                                />
+                                <XAxis
+                                    dataKey="metric"
+                                    tick={{ fill: "#334155", fontSize: 12 }}
+                                    axisLine={{ stroke: "#94a3b8" }}
+                                    tickLine={false}
+                                />
+                                <YAxis
+                                    domain={[0, "auto"]}
+                                    tickFormatter={(value) =>
+                                        Number(value).toFixed(2)
+                                    }
+                                    tick={{ fill: "#475569", fontSize: 11 }}
+                                    axisLine={{ stroke: "#94a3b8" }}
+                                    tickLine={false}
+                                    width={50}
+                                    label={{
+                                        value: "Error",
+                                        angle: -90,
+                                        position: "insideLeft",
+                                        fill: "#475569",
+                                        fontSize: 12,
+                                    }}
+                                />
+                                <Tooltip
+                                    formatter={tooltipFormatter}
+                                    contentStyle={{
+                                        background: "#ffffff",
+                                        border: "1px solid #cbd5e1",
+                                        borderRadius: "6px",
+                                        fontSize: "12px",
+                                    }}
+                                />
+                                <Legend
+                                    verticalAlign="top"
+                                    align="right"
+                                    wrapperStyle={{
+                                        paddingBottom: "16px",
+                                        fontSize: "12px",
+                                    }}
+                                />
+                                {renderBars()}
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+
+            <p
+                style={{
+                    margin: "16px 0 0",
+                    color: "#64748b",
+                    fontSize: "12px",
+                    lineHeight: 1.5,
+                }}
+            >
+          
+            </p>
+        </section>
+    );
+}
 
 // ============================================================
 // PELT Card Component - UPDATED
@@ -495,49 +1105,83 @@ function SwarmTraining() {
             {/* ============================================================
                 PELT FEATURES - 4 COLUMN GRID
             ============================================================ */}
-            <h2
-                style={{
-                    marginTop: 28,
-                    marginBottom: 16,
-                    fontSize: "17px",
-                    color: "#2563eb",
-                }}
+            <section
+                aria-labelledby="pelt-features-title"
+                style={{ marginTop: "28px" }}
             >
-                Generated PELT Features
-            </h2>
+                <div style={{ marginBottom: "16px" }}>
+                    <span
+                        style={{
+                            display: "block",
+                            marginBottom: "5px",
+                            color: "#64748b",
+                            fontSize: "10px",
+                            fontWeight: 700,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                        }}
+                    >
+                        Behavioural indicators
+                    </span>
+                    <h2
+                        id="pelt-features-title"
+                        style={{
+                            margin: "0 0 6px",
+                            color: "#0f172a",
+                            fontSize: "17px",
+                            fontWeight: 650,
+                        }}
+                    >
+                        Generated PELT Features
+                    </h2>
+                </div>
 
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(4, 1fr)",
-                    gap: "14px",
-                }}
-            >
-                <PeltFeatureCard
-                    icon="📍"
-                    title="Breakpoint"
-                    color="#ef4444"
-                    description="Identifies sudden behavioural changes in the hive using the PELT change-point detection algorithm."
-                />
-                <PeltFeatureCard
-                    icon="⏱"
-                    title="Days Since Breakpoint"
-                    color="#3b82f6"
-                    description="Measures the elapsed time since the most recent behavioural change was detected."
-                />
-                <PeltFeatureCard
-                    icon="📊"
-                    title="Breakpoint Density"
-                    color="#22c55e"
-                    description="Counts the number of detected behavioural changes within the previous 24-hour observation window."
-                />
-                <PeltFeatureCard
-                    icon="📈"
-                    title="Segment Duration"
-                    color="#f59e0b"
-                    description="Represents the duration of stable hive behaviour between two consecutive change points."
-                />
-            </div>
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                            "repeat(auto-fit, minmax(min(100%, 230px), 1fr))",
+                        gap: "14px",
+                    }}
+                >
+                    <PeltFeatureCard
+                        index="P1"
+                        icon={GitBranch}
+                        title="Breakpoint"
+                        points={[
+                            "0: no change detected",
+                            "1: behavioural change detected",
+                        ]}
+                    />
+                    <PeltFeatureCard
+                        index="P2"
+                        icon={Timer}
+                        title="Days Since Breakpoint"
+                        points={[
+                            "Time since the latest change",
+                            "Lower value: more recent change",
+                        ]}
+                    />
+                    <PeltFeatureCard
+                        index="P3"
+                        icon={BarChart3}
+                        title="Breakpoint Density"
+                        points={[
+                            "Changes within the last 24 hours",
+                            "Higher value: frequent changes",
+                        ]}
+                    />
+                    <PeltFeatureCard
+                        index="P4"
+                        icon={Clock3}
+                        title="Segment Duration"
+                        points={[
+                            "Length of the current state",
+                            "Longer duration: greater stability",
+                        ]}
+                    />
+                </div>
+            </section>
 
             <HybridFramework />
 
@@ -572,80 +1216,205 @@ function SwarmTraining() {
             {/* ============================================================
                 BEST MODEL CARD
             ============================================================ */}
-            <div
+            <section
+                aria-labelledby="selected-model-title"
                 style={{
                     marginTop: "28px",
-                    background: "#ecfdf5",
-                    padding: "20px 24px",
-                    borderRadius: "15px",
-                    textAlign: "center",
-                    borderLeft: "8px solid #16a34a",
+                    overflow: "hidden",
+                    background: "#ffffff",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: "12px",
+                    boxShadow: "0 3px 10px rgba(15, 23, 42, 0.05)",
                 }}
             >
-                <h3 style={{ margin: 0, fontSize: "15px" }}>🏆 Selected Best Model</h3>
-                <h1
-                    style={{
-                        fontSize: "30px",
-                        color: "#16a34a",
-                        marginTop: "6px",
-                    }}
-                >
-                    {data.best_model.Model}
-                </h1>
-                <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
-                    This model achieved the highest overall performance based on the
-                    evaluation metrics.
-                </p>
                 <div
                     style={{
                         display: "flex",
-                        justifyContent: "center",
-                        gap: "28px",
-                        marginTop: "14px",
-                        flexWrap: "wrap",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "18px",
+                        padding: "18px 20px",
+                        borderBottom: "1px solid #e2e8f0",
                     }}
                 >
-                    <div>
-                        <span style={{ color: "#64748b", fontSize: "12px" }}>Precision</span>
-                        <br />
-                        <strong style={{ color: "#22c55e", fontSize: "17px" }}>
-                            {toDecimal(data.best_model.Precision)}
-                        </strong>
-                    </div>
-                    <div>
-                        <span style={{ color: "#64748b", fontSize: "12px" }}>Recall</span>
-                        <br />
-                        <strong style={{ color: "#22c55e", fontSize: "17px" }}>
-                            {toDecimal(data.best_model.Recall)}
-                        </strong>
-                    </div>
-                    <div>
-                        <span style={{ color: "#64748b", fontSize: "12px" }}>F1-Score</span>
-                        <br />
-                        <strong style={{ color: "#22c55e", fontSize: "17px" }}>
-                            {toDecimal(data.best_model["F1-Score"])}
-                        </strong>
-                    </div>
-                    {data.best_model.RMSE && (
-                        <div>
-                            <span style={{ color: "#64748b", fontSize: "12px" }}>RMSE ↓</span>
-                            <br />
-                            <strong style={{ color: "#22c55e", fontSize: "17px" }}>
-                                {data.best_model.RMSE.toFixed(4)}
-                            </strong>
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "12px",
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: "40px",
+                                height: "40px",
+                                flexShrink: 0,
+                                color: "#1e3a5f",
+                                background: "#f1f5f9",
+                                border: "1px solid #cbd5e1",
+                                borderRadius: "8px",
+                            }}
+                        >
+                            <Trophy size={20} strokeWidth={1.8} />
                         </div>
-                    )}
-                    {data.best_model.MAE && (
+
                         <div>
-                            <span style={{ color: "#64748b", fontSize: "12px" }}>MAE ↓</span>
-                            <br />
-                            <strong style={{ color: "#22c55e", fontSize: "17px" }}>
-                                {data.best_model.MAE.toFixed(4)}
-                            </strong>
+                            <span
+                                style={{
+                                    display: "block",
+                                    marginBottom: "3px",
+                                    color: "#64748b",
+                                    fontSize: "10px",
+                                    fontWeight: 700,
+                                    letterSpacing: "0.08em",
+                                    textTransform: "uppercase",
+                                }}
+                            >
+                                Model selection result
+                            </span>
+                            <h2
+                                id="selected-model-title"
+                                style={{
+                                    margin: 0,
+                                    color: "#0f172a",
+                                    fontSize: "17px",
+                                    fontWeight: 650,
+                                }}
+                            >
+                                Selected Best Model
+                            </h2>
                         </div>
-                    )}
+                    </div>
+
+                    <span
+                        style={{
+                            padding: "7px 12px",
+                            color: "#1e3a5f",
+                            background: "#eff6ff",
+                            border: "1px solid #bfdbfe",
+                            borderRadius: "6px",
+                            fontSize: "14px",
+                            fontWeight: 700,
+                        }}
+                    >
+                        {data.best_model.Model}
+                    </span>
                 </div>
-            </div>
+
+                <div style={{ padding: "20px" }}>
+                    <p
+                        style={{
+                            margin: "0 0 18px",
+                            color: "#475569",
+                            fontSize: "13px",
+                            lineHeight: 1.55,
+                        }}
+                    >
+                        This model achieved the highest overall performance
+                        based on the evaluation metrics.
+                    </p>
+
+                    <div
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns:
+                                "repeat(auto-fit, minmax(140px, 1fr))",
+                            overflow: "hidden",
+                            background: "#cbd5e1",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "8px",
+                            gap: "1px",
+                        }}
+                    >
+                        {[
+                            {
+                                label: "Precision",
+                                value: data.best_model.Precision,
+                                note: "Higher is better",
+                            },
+                            {
+                                label: "Recall",
+                                value: data.best_model.Recall,
+                                note: "Higher is better",
+                            },
+                            {
+                                label: "F1-Score",
+                                value: data.best_model["F1-Score"],
+                                note: "Higher is better",
+                            },
+                            {
+                                label: "RMSE",
+                                value:
+                                    data.best_model.RMSE ??
+                                    data.best_model.rmse,
+                                note: "Lower is better",
+                            },
+                            {
+                                label: "MAE",
+                                value:
+                                    data.best_model.MAE ??
+                                    data.best_model.mae,
+                                note: "Lower is better",
+                            },
+                        ].map((metricItem) => {
+                            const numericValue = Number(metricItem.value);
+                            const formattedValue = Number.isFinite(numericValue)
+                                ? numericValue.toFixed(4)
+                                : "—";
+
+                            return (
+                                <div
+                                    key={metricItem.label}
+                                    style={{
+                                        minHeight: "102px",
+                                        padding: "15px",
+                                        background: "#f8fafc",
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            display: "block",
+                                            marginBottom: "8px",
+                                            color: "#64748b",
+                                            fontSize: "11px",
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        {metricItem.label}
+                                    </span>
+
+                                    <strong
+                                        style={{
+                                            display: "block",
+                                            color: "#0f172a",
+                                            fontSize: "21px",
+                                            fontWeight: 700,
+                                            fontVariantNumeric: "tabular-nums",
+                                            lineHeight: 1.1,
+                                        }}
+                                    >
+                                        {formattedValue}
+                                    </strong>
+
+                                    <span
+                                        style={{
+                                            display: "block",
+                                            marginTop: "7px",
+                                            color: "#94a3b8",
+                                            fontSize: "10px",
+                                        }}
+                                    >
+                                        {metricItem.note}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </section>
 
             {/* ============================================================
                 MODEL COMPARISON TABLE
@@ -724,26 +1493,7 @@ function SwarmTraining() {
                 PERFORMANCE COMPARISON CHART
             ============================================================ */}
             <div style={{ marginTop: "28px" }}>
-                <h2 style={{ marginBottom: "14px", fontSize: "17px" }}>
-                    📈 Performance Comparison Chart
-                </h2>
-                <img
-                    src="/api/swarming/model-training/chart"
-                    alt="Comparison Chart"
-                    style={{
-                        width: "100%",
-                        borderRadius: "15px",
-                        background: "#ffffff",
-                        border: "1px solid #dbe4f0",
-                        padding: "10px",
-                        boxShadow: "0 8px 24px rgba(15,23,42,.08)",
-                    }}
-                    onError={(e) => {
-                        e.target.style.display = "none";
-                        e.target.parentElement.innerHTML =
-                            '<p style="color:#64748b;padding:30px;text-align:center;font-size:14px;">⚠️ Chart not available. Please run the model training first.</p>';
-                    }}
-                />
+                <PerformanceComparisonChart comparison={data.comparison} />
             </div>
 
             {/* ============================================================

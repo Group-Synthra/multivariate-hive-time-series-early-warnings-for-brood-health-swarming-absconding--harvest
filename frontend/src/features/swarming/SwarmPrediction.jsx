@@ -1633,6 +1633,7 @@ function SwarmingRiskTimeline({ history, currentRisk, riskLevel }) {
 
 function ForecastValidationTable({ rows }) {
   const [displayLimit, setDisplayLimit] = useState(5);
+  const [sortOrder, setSortOrder] = useState("desc");
 
   const groupedRows = useMemo(() => {
     const groups = new Map();
@@ -1651,13 +1652,14 @@ function ForecastValidationTable({ rows }) {
     }
 
     return [...groups.values()]
-      .sort(
-        (a, b) =>
-          new Date(b.forecastMadeAt).getTime() -
-          new Date(a.forecastMadeAt).getTime()
-      )
+      .sort((a, b) => {
+        const aTime = new Date(a.forecastMadeAt).getTime();
+        const bTime = new Date(b.forecastMadeAt).getTime();
+
+        return sortOrder === "asc" ? aTime - bTime : bTime - aTime;
+      })
       .slice(0, displayLimit);
-  }, [rows, displayLimit]);
+  }, [rows, displayLimit, sortOrder]);
 
   if (groupedRows.length === 0) return null;
 
@@ -1758,29 +1760,56 @@ function ForecastValidationTable({ rows }) {
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <label
-            htmlFor="validation-record-limit"
-            style={{ color: "#475569", fontSize: "0.72rem", fontWeight: 600 }}
-          >
-            Show
-          </label>
-          <select
-            id="validation-record-limit"
-            value={displayLimit}
-            onChange={(event) => setDisplayLimit(Number(event.target.value))}
-            style={{
-              minWidth: "105px", padding: "7px 10px",
-              border: "1px solid #cbd5e1", borderRadius: "7px",
-              background: "#ffffff", color: "#334155",
-              fontSize: "0.72rem", fontWeight: 600, cursor: "pointer",
-              outline: "none",
-            }}
-          >
-            <option value={5}>Latest 5</option>
-            <option value={10}>Latest 10</option>
-            <option value={20}>Latest 20</option>
-          </select>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <label
+              htmlFor="validation-sort-order"
+              style={{ color: "#475569", fontSize: "0.72rem", fontWeight: 600 }}
+            >
+              Order
+            </label>
+            <select
+              id="validation-sort-order"
+              value={sortOrder}
+              onChange={(event) => setSortOrder(event.target.value)}
+              style={{
+                minWidth: "125px", padding: "7px 10px",
+                border: "1px solid #cbd5e1", borderRadius: "7px",
+                background: "#ffffff", color: "#334155",
+                fontSize: "0.72rem", fontWeight: 600, cursor: "pointer",
+                outline: "none",
+              }}
+            >
+              <option value="desc">Latest first</option>
+              <option value="asc">Oldest first</option>
+            </select>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <label
+              htmlFor="validation-record-limit"
+              style={{ color: "#475569", fontSize: "0.72rem", fontWeight: 600 }}
+            >
+              Show
+            </label>
+            <select
+              id="validation-record-limit"
+              value={displayLimit}
+              onChange={(event) => setDisplayLimit(Number(event.target.value))}
+              style={{
+                minWidth: "105px", padding: "7px 10px",
+                border: "1px solid #cbd5e1", borderRadius: "7px",
+                background: "#ffffff", color: "#334155",
+                fontSize: "0.72rem", fontWeight: 600, cursor: "pointer",
+                outline: "none",
+              }}
+            >
+              <option value={5}>5 records</option>
+              <option value={10}>10 records</option>
+              <option value={20}>20 records</option>
+              <option value={100}>100 records</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -2209,10 +2238,56 @@ const SwarmPrediction = () => {
       {lastUpdated && (
         <div style={{ marginBottom: "16px" }}>
           <CountdownBar secondsLeft={countdown} total={REFRESH_INTERVAL / 1000} />
-          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "4px" }}>
-            Last updated: {lastUpdated.toLocaleTimeString()} · Data from: {dataTimestamp
-              ? formatTimestamp(dataTimestamp)
-              : "—"}
+          <div style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "8px",
+            marginTop: "8px",
+          }}>
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 10px",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "7px",
+              fontSize: "0.72rem",
+              color: "var(--text-secondary)",
+            }}>
+              <span style={{ fontWeight: 700 }}>Last updated:</span>
+              <span>{lastUpdated.toLocaleTimeString()}</span>
+            </div>
+
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 10px",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "7px",
+              fontSize: "0.72rem",
+              color: "var(--text-secondary)",
+            }}>
+              <span style={{ fontWeight: 700 }}>Data from:</span>
+              <span>{dataTimestamp ? formatTimestamp(dataTimestamp) : "—"}</span>
+            </div>
+
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 10px",
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
+              borderRadius: "7px",
+              fontSize: "0.72rem",
+              color: "#1d4ed8",
+            }}>
+              <span style={{ fontWeight: 700 }}>Refresh interval:</span>
+              <span>Every 10 minutes</span>
+            </div>
           </div>
         </div>
       )}
