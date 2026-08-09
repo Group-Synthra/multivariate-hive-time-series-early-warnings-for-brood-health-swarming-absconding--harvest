@@ -632,9 +632,8 @@ export function BroodIoTTab() {
           </h3>
 
           <p>
-            Current health, exact +6-hour
-            forecast, forecast stability and
-            deterioration trend.
+            Current brood condition, predicted health in six hours,
+            future stability and expected rate of change.
           </p>
         </div>
 
@@ -710,7 +709,7 @@ export function BroodIoTTab() {
 
           <p>
             {databaseReady
-              ? `Source: ${health.database.schema}.${health.database.table} · Latest stored reading: ${timestampValue(
+              ? `Source: ${health.database.schema}.${health.database.table} · Latest reading: ${timestampValue(
                 health.database
                   .latest_recorded_at,
               )}`
@@ -744,8 +743,8 @@ export function BroodIoTTab() {
       {/* ================================================================ */}
 
       <Panel
-        title="Live hive selection"
-        subtitle="Select a hive and monitor its latest forecast."
+        title="Live Hive Selection"
+        subtitle="Select a hive to view its latest readings and six-hour brood-health forecast."
         action={(
           <div className="brood-device-actions">
             {/* Hive selector */}
@@ -836,7 +835,7 @@ export function BroodIoTTab() {
           </span>
 
           <span>
-            Rolling model anchor:{' '}
+            Forecast based on readings up to:{' '}
             {timestampValue(
               forecast.forecast_anchor_timestamp
               || prediction?.latest_timestamp,
@@ -844,14 +843,14 @@ export function BroodIoTTab() {
           </span>
 
           <span>
-            Forecast target:{' '}
+            Predicted score time:{' '}
             {timestampValue(
               forecast.exact_forecast_timestamp,
             )}
           </span>
 
           <span>
-            Observed interval:{' '}
+            Sensor reading interval:{' '}
             {numberValue(
               prediction?.reading_interval_minutes,
               0,
@@ -860,7 +859,7 @@ export function BroodIoTTab() {
           </span>
 
           <span>
-            Raw readings:{' '}
+            Recent sensor readings:{' '}
             {numberValue(
               prediction?.raw_rows,
               0,
@@ -868,7 +867,7 @@ export function BroodIoTTab() {
           </span>
 
           <span>
-            Hourly windows:{' '}
+            Prepared hourly records:{' '}
             {numberValue(
               prediction?.hourly_rows,
               0,
@@ -914,8 +913,8 @@ export function BroodIoTTab() {
               </h3>
 
               <p>
-                Health level and combined
-                deterioration alerts.
+                Overall warning based on current health, six-hour forecast,
+                future stability and predicted trend.
               </p>
             </div>
           </div>
@@ -936,13 +935,12 @@ export function BroodIoTTab() {
           <div className="brood-section-heading compact brood-admin-heading">
             <div>
               <h3>
-                Current & Future Health Indicators
+                Current and Predicted Brood Health
               </h3>
 
               <p>
-                Current score, exact +6-hour
-                score, Forecast BHSI and
-                Forecast RoD.
+                Current health score, six-hour predicted score,
+                predicted stability and expected rate of change.
               </p>
             </div>
           </div>
@@ -959,9 +957,7 @@ export function BroodIoTTab() {
             <HealthScoreGauge
               score={forecast.exact_score}
               level={forecast.exact_level}
-              label={`Exact Brood Health Score at +${
-                forecast.horizon_hours || 6
-              } h`}
+              label={`Predicted Brood Health Score in ${forecast.horizon_hours || 6} Hours`}
               badge={timestampValue(
                 forecast.exact_forecast_timestamp,
               )}
@@ -979,9 +975,9 @@ export function BroodIoTTab() {
               level={
                 forecastIndicators.stability_level
               }
-              label="Forecast BHSI"
+              label="Predicted Stability (BHSI)"
               badge="Next 6 h"
-              detail="Predicted six-hour health-path stability."
+              detail="Expected stability of the predicted brood-health path over the next six hours."
             />
 
             <RoDMeter
@@ -992,9 +988,9 @@ export function BroodIoTTab() {
               label={
                 forecastIndicators.trend_label
               }
-              title="Forecast RoD"
+              title="Predicted Rate of Change (RoD)"
               badge="Next 6 h"
-              detail="Expected score-change rate over the next six hours."
+              detail="Expected speed and direction of Brood Health Score change over the next six hours."
             />
           </div>
 
@@ -1005,35 +1001,35 @@ export function BroodIoTTab() {
           <div className="brood-section-heading compact brood-admin-heading">
             <div>
               <h3>
-                Forecast Snapshot
+                Six-Hour Forecast Summary
               </h3>
 
               <p>
-                Key forecast changes, safety
-                minimum and data readiness.
+                Main changes expected during the next six hours,
+                including the lowest predicted score and data readiness.
               </p>
             </div>
           </div>
 
           <div className="stats-grid stats-grid-six">
             <StatCard
-              label="Exact score change"
+              label="6-hour score change"
               value={signedNumber(
                 forecast.exact_change_points,
                 2,
               )}
               unit="points"
-              note="+6 h minus current"
+              note="Predicted 6-hour score minus current score"
             />
 
             <StatCard
-              label="Exact forecast drop"
+              label="Predicted score drop"
               value={numberValue(
                 forecast.exact_drop_points,
                 2,
               )}
               unit="points"
-              note="Expected decline"
+              note="Decrease from the current score"
             />
 
             <StatCard
@@ -1044,7 +1040,7 @@ export function BroodIoTTab() {
               unit="/100"
               note={`${healthLevelFromScore(
                 forecast.safety_minimum_score,
-              )} · lowest predicted 1–6 h point`}
+              )} · lowest score expected during the next 6 h`}
             />
 
             <StatCard
@@ -1103,7 +1099,7 @@ export function BroodIoTTab() {
               />
 
               <StatCard
-                label="Forecast BHSI"
+                label="Predicted Stability (BHSI)"
                 value={formatBhsi(
                   forecastIndicators.bhsi,
                 )}
@@ -1158,7 +1154,7 @@ export function BroodIoTTab() {
                   forecastIndicators
                     .window_end_timestamp,
                 )}
-                note="Exact +6-hour target"
+                note="6-hour target"
               />
             </div>
           </Panel>
@@ -1263,7 +1259,7 @@ export function BroodIoTTab() {
 
           <Panel
             title="Six-Hour Health Forecast"
-            subtitle="Current score and predicted health path through the exact +6-hour target."
+            subtitle="Current score and predicted health path through the 6-hour target."
           >
             <ForecastTrajectoryChart
               data={

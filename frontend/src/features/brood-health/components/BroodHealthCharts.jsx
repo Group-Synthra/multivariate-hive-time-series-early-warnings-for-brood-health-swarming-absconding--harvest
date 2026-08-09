@@ -8,6 +8,7 @@ import {
   Cell,
   ComposedChart,
   Legend,
+  LabelList,
   Line,
   LineChart,
   ReferenceLine,
@@ -36,16 +37,34 @@ function ChartShell({ data, children, height = 320, message = 'Chart data are no
 }
 
 export function TargetBalanceChart({ data }) {
+  const chartData = (data || []).map((row) => ({
+    ...row,
+    percentage: Number(row.percentage || 0),
+  }));
+
   return (
-    <ChartShell data={data}>
+    <ChartShell data={chartData}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 12, right: 16, left: 10, bottom: 8 }}>
+        <BarChart data={chartData} margin={{ top: 28, right: 16, left: 10, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="label" />
           <YAxis tickFormatter={(value) => Number(value).toLocaleString()} />
-          <Tooltip formatter={(value) => Number(value).toLocaleString()} />
+          <Tooltip
+            formatter={(value, name, item) => [
+              `${Number(value).toLocaleString()} records (${Number(item?.payload?.percentage || 0).toFixed(2)}%)`,
+              name,
+            ]}
+          />
           <Bar dataKey="count" name="Records" radius={[7, 7, 0, 0]}>
-            {data?.map((row) => <Cell key={row.label} fill={STATUS_COLORS[row.label] || '#2563eb'} />)}
+            <LabelList
+              dataKey="percentage"
+              position="top"
+              formatter={(value) => `${Number(value).toFixed(1)}%`}
+              fill="#334155"
+              fontSize={11}
+              fontWeight={800}
+            />
+            {chartData.map((row) => <Cell key={row.label} fill={STATUS_COLORS[row.label] || '#2563eb'} />)}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -76,19 +95,27 @@ export function SensorDistributionChart({ data, sensor }) {
 }
 
 export function TemporalHealthyRateChart({ data, xKey, labelFormatter }) {
+  const chartData = (data || []).map((row) => ({
+    ...row,
+    healthy_rate: Number(row.healthy_rate || 0),
+    unhealthy_rate: 100 - Number(row.healthy_rate || 0),
+  }));
+
   return (
-    <ChartShell data={data}>
+    <ChartShell data={chartData}>
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 12, right: 20, left: 6, bottom: 10 }}>
+        <LineChart data={chartData} margin={{ top: 18, right: 20, left: 6, bottom: 10 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey={xKey} tickFormatter={labelFormatter} minTickGap={18} />
-          <YAxis yAxisId="rate" domain={[0, 100]} unit="%" />
-          <YAxis yAxisId="count" orientation="right" />
-          <Tooltip labelFormatter={labelFormatter} />
+          <YAxis domain={[0, 100]} unit="%" />
+          <Tooltip
+            labelFormatter={labelFormatter}
+            formatter={(value, name) => [`${Number(value).toFixed(2)}%`, name]}
+          />
           <Legend />
-          <Bar yAxisId="count" dataKey="unhealthy_count" name="Unhealthy records" fill="#fecaca" opacity={0.72} />
-          <Line yAxisId="rate" type="monotone" dataKey="healthy_rate" name="Healthy rate (%)" stroke="#0f766e" strokeWidth={3} dot={false} />
-        </ComposedChart>
+          <Line type="monotone" dataKey="healthy_rate" name="Healthy records" stroke="#0f766e" strokeWidth={3} dot={false} />
+          <Line type="monotone" dataKey="unhealthy_rate" name="Unhealthy records" stroke="#dc2626" strokeWidth={2.5} dot={false} />
+        </LineChart>
       </ResponsiveContainer>
     </ChartShell>
   );
@@ -104,7 +131,16 @@ export function HiveHealthyRateChart({ data }) {
           <XAxis type="number" domain={[0, 100]} unit="%" />
           <YAxis type="category" dataKey="hive_id" width={78} interval={0} />
           <Tooltip formatter={(value) => `${Number(value).toFixed(2)}%`} />
-          <Bar dataKey="healthy_rate" name="Healthy rate" fill="#2563eb" radius={[0, 5, 5, 0]} />
+          <Bar dataKey="healthy_rate" name="Healthy rate" fill="#2563eb" radius={[0, 5, 5, 0]}>
+            <LabelList
+              dataKey="healthy_rate"
+              position="right"
+              formatter={(value) => `${Number(value).toFixed(1)}%`}
+              fill="#334155"
+              fontSize={10}
+              fontWeight={750}
+            />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </ChartShell>
@@ -112,17 +148,54 @@ export function HiveHealthyRateChart({ data }) {
 }
 
 export function SensorEffectChart({ data }) {
-  const chartData = (data || []).map((row) => ({ ...row, effect: Math.abs(Number(row.cohens_d || 0)) }));
+  const chartData = (data || []).map((row) => {
+    const healthy = Number(row.healthy_mean || 0);
+    const unhealthy = Number(row.unhealthy_mean || 0);
+    const percentDifference = Math.abs(unhealthy) > 1e-9
+      ? ((healthy - unhealthy) / Math.abs(unhealthy)) * 100
+      : 0;
+    return {
+      ...row,
+      effect: Math.abs(Number(row.cohens_d || 0)),
+      percentDifference,
+    };
+  });
+
   return (
     <ChartShell data={chartData}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} margin={{ top: 10, right: 12, left: 5, bottom: 15 }}>
+        <ComposedChart data={chartData} margin={{ top: 24, right: 20, left: 5, bottom: 15 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="label" />
-          <YAxis />
-          <Tooltip formatter={(v, name, item) => [Number(v).toFixed(3), `${name} (${item.payload.mean_difference >= 0 ? 'higher when healthy' : 'lower when healthy'})`]} />
-          <Bar dataKey="effect" name="Absolute Cohen's d" fill="#7c3aed" radius={[6, 6, 0, 0]} />
-        </BarChart>
+          <YAxis yAxisId="effect" />
+          <YAxis yAxisId="percent" orientation="right" unit="%" />
+          <Tooltip
+            formatter={(value, name) => [
+              name === 'Healthy vs unhealthy mean difference'
+                ? `${Number(value).toFixed(1)}%`
+                : Number(value).toFixed(3),
+              name,
+            ]}
+          />
+          <Legend />
+          <Bar yAxisId="effect" dataKey="effect" name="Absolute Cohen's d" fill="#7c3aed" radius={[6, 6, 0, 0]} />
+          <Line
+            yAxisId="percent"
+            type="monotone"
+            dataKey="percentDifference"
+            name="Healthy vs unhealthy mean difference"
+            stroke="#0f766e"
+            strokeWidth={2.5}
+          >
+            <LabelList
+              dataKey="percentDifference"
+              position="top"
+              formatter={(v) => `${Number(v).toFixed(1)}%`}
+              fontSize={9}
+              fill="#0f766e"
+            />
+          </Line>
+        </ComposedChart>
       </ResponsiveContainer>
     </ChartShell>
   );
@@ -139,6 +212,14 @@ export function ConditionLevelChart({ data }) {
           <YAxis unit="%" />
           <Tooltip formatter={(v) => `${Number(v).toFixed(2)}%`} />
           <Bar dataKey="percentage" name="Records" radius={[6, 6, 0, 0]}>
+            <LabelList
+              dataKey="percentage"
+              position="top"
+              formatter={(value) => `${Number(value).toFixed(1)}%`}
+              fill="#334155"
+              fontSize={11}
+              fontWeight={800}
+            />
             {data?.map((row) => <Cell key={row.level} fill={colors[row.level] || '#64748b'} />)}
           </Bar>
         </BarChart>
@@ -148,18 +229,38 @@ export function ConditionLevelChart({ data }) {
 }
 
 export function PrecursorChart({ data, sensor }) {
-  const filtered = (data || []).filter((row) => row.sensor === sensor);
+  const filtered = (data || [])
+    .filter((row) => row.sensor === sensor)
+    .map((row) => ({
+      ...row,
+      change_percentage: Math.abs(Number(row.baseline_mean || 0)) > 1e-9
+        ? Number(row.delta_from_baseline || 0) / Math.abs(Number(row.baseline_mean)) * 100
+        : 0,
+    }));
   const meta = SENSOR_META[sensor] || { label: sensor, unit: '' };
   return (
     <ChartShell data={filtered}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={filtered} margin={{ top: 10, right: 15, left: 10, bottom: 25 }}>
+        <BarChart data={filtered} margin={{ top: 24, right: 15, left: 10, bottom: 25 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="window" angle={-12} textAnchor="end" height={55} />
           <YAxis unit={meta.unit} />
-          <Tooltip formatter={(v) => [`${Number(v).toFixed(3)} ${meta.unit}`, 'Change from baseline']} />
+          <Tooltip
+            formatter={(v, name, item) => [
+              `${Number(v).toFixed(3)} ${meta.unit} (${Number(item?.payload?.change_percentage || 0).toFixed(2)}%)`,
+              'Change from baseline',
+            ]}
+          />
           <ReferenceLine y={0} stroke="#475569" />
-          <Bar dataKey="delta_from_baseline" name="Change from 48–96 h baseline" fill="#d97706" radius={[5, 5, 0, 0]} />
+          <Bar dataKey="delta_from_baseline" name="Change from earlier baseline" fill="#d97706" radius={[5, 5, 0, 0]}>
+            <LabelList
+              dataKey="change_percentage"
+              position="top"
+              formatter={(v) => `${Number(v).toFixed(1)}%`}
+              fontSize={9}
+              fill="#334155"
+            />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </ChartShell>
@@ -207,9 +308,15 @@ export function ModelComparisonChart({ data }) {
           <YAxis domain={[0, 100]} unit="%" />
           <Tooltip formatter={(value) => `${Number(value).toFixed(2)}%`} />
           <Legend />
-          <Bar dataKey="exactAccuracy" name="Exact +6 h level accuracy" fill="#2563eb" />
-          <Bar dataKey="transitionAccuracy" name="Transition accuracy" fill="#d97706" />
-          <Bar dataKey="deteriorationRecall" name="Deterioration recall" fill="#0f766e" />
+          <Bar dataKey="exactAccuracy" name="Accuracy ↑" fill="#2563eb">
+            <LabelList dataKey="exactAccuracy" position="top" formatter={(v) => `${Number(v).toFixed(1)}%`} fontSize={9} fill="#334155" />
+          </Bar>
+          <Bar dataKey="transitionAccuracy" name="Transition Accuracy ↑" fill="#d97706">
+            <LabelList dataKey="transitionAccuracy" position="top" formatter={(v) => `${Number(v).toFixed(1)}%`} fontSize={9} fill="#334155" />
+          </Bar>
+          <Bar dataKey="deteriorationRecall" name="Deterioration Recall ↑" fill="#0f766e">
+            <LabelList dataKey="deteriorationRecall" position="top" formatter={(v) => `${Number(v).toFixed(1)}%`} fontSize={9} fill="#334155" />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </ChartShell>
@@ -227,19 +334,33 @@ export function ModelErrorComparisonChart({ data }) {
       transitionMae: Number(row.test?.transition?.mae || 0),
       groupCvMae: Number(row.test?.cv_mae_mean || 0),
     }));
+
   return (
     <ChartShell data={chartData} height={380} message="Train the models to display score errors.">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} margin={{ top: 10, right: 15, left: 3, bottom: 78 }}>
+        <BarChart data={chartData} margin={{ top: 30, right: 15, left: 3, bottom: 78 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="model" angle={-24} textAnchor="end" interval={0} height={92} />
-          <YAxis unit=" pts" />
-          <Tooltip formatter={(value) => `${Number(value).toFixed(3)} points`} />
+          <YAxis tickFormatter={(value) => `${Number(value).toFixed(0)}%`} />
+          <Tooltip
+            formatter={(value, name) => [
+              `${Number(value).toFixed(2)} points (${Number(value).toFixed(2)}% of the 100-point scale)`,
+              name,
+            ]}
+          />
           <Legend />
-          <Bar dataKey="exactMae" name="Exact +6 h MAE" fill="#2563eb" />
-          <Bar dataKey="exactRmse" name="Exact +6 h RMSE" fill="#7c3aed" />
-          <Bar dataKey="transitionMae" name="Transition MAE" fill="#dc2626" />
-          <Bar dataKey="groupCvMae" name="Group-CV MAE" fill="#0f766e" />
+          <Bar dataKey="exactMae" name="MAE ↓" fill="#2563eb">
+            <LabelList dataKey="exactMae" position="top" formatter={(v) => `${Number(v).toFixed(2)}%`} fontSize={9} fill="#334155" />
+          </Bar>
+          <Bar dataKey="exactRmse" name="RMSE ↓" fill="#7c3aed">
+            <LabelList dataKey="exactRmse" position="top" formatter={(v) => `${Number(v).toFixed(2)}%`} fontSize={9} fill="#334155" />
+          </Bar>
+          <Bar dataKey="transitionMae" name="Transition MAE ↓" fill="#dc2626">
+            <LabelList dataKey="transitionMae" position="top" formatter={(v) => `${Number(v).toFixed(2)}%`} fontSize={9} fill="#334155" />
+          </Bar>
+          <Bar dataKey="groupCvMae" name="Cross-validation MAE ↓" fill="#0f766e">
+            <LabelList dataKey="groupCvMae" position="top" formatter={(v) => `${Number(v).toFixed(2)}%`} fontSize={9} fill="#334155" />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </ChartShell>
@@ -256,17 +377,17 @@ export function PersistenceComparisonChart({ model, persistence }) {
   const persistenceDeterioration = persistence?.deterioration || {};
   const data = [
     {
-      name: 'Exact level accuracy',
+      name: 'Accuracy ↑',
       model: Number(exact.health_level_accuracy || 0) * 100,
       persistence: Number(persistenceExact.health_level_accuracy || 0) * 100,
     },
     {
-      name: 'Transition accuracy',
+      name: 'Transition Accuracy ↑',
       model: Number(transition.health_level_accuracy || 0) * 100,
       persistence: Number(persistenceTransition.health_level_accuracy || 0) * 100,
     },
     {
-      name: 'Deterioration recall',
+      name: 'Deterioration Recall ↑',
       model: Number(deterioration.recall || 0) * 100,
       persistence: Number(persistenceDeterioration.recall || 0) * 100,
     },
@@ -280,8 +401,12 @@ export function PersistenceComparisonChart({ model, persistence }) {
           <YAxis type="category" dataKey="name" width={130} />
           <Tooltip formatter={(value) => `${Number(value).toFixed(2)}%`} />
           <Legend />
-          <Bar dataKey="model" name="Selected model" fill="#2563eb" />
-          <Bar dataKey="persistence" name="Repeat current score" fill="#94a3b8" />
+          <Bar dataKey="model" name="Selected model" fill="#2563eb">
+            <LabelList dataKey="model" position="right" formatter={(v) => `${Number(v).toFixed(2)}%`} fontSize={10} fill="#334155" />
+          </Bar>
+          <Bar dataKey="persistence" name="Repeat current score" fill="#94a3b8">
+            <LabelList dataKey="persistence" position="right" formatter={(v) => `${Number(v).toFixed(2)}%`} fontSize={10} fill="#334155" />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </ChartShell>
@@ -298,7 +423,10 @@ export function ActualPredictedScoreChart({ data }) {
           <XAxis type="number" dataKey="actual" name="Actual" domain={[1, 100]} unit="/100" />
           <YAxis type="number" dataKey="predicted" name="Predicted" domain={[1, 100]} unit="/100" />
           <ZAxis range={[20, 20]} />
-          <Tooltip cursor={{ strokeDasharray: '3 3' }} formatter={(v) => Number(v).toFixed(2)} />
+          <Tooltip
+            cursor={{ strokeDasharray: '3 3' }}
+            formatter={(v, name) => [`${Number(v).toFixed(2)} / 100`, name]}
+          />
           <ReferenceLine segment={[{ x: 1, y: 1 }, { x: 100, y: 100 }]} stroke="#64748b" strokeDasharray="4 4" />
           <Scatter name="Test predictions" data={data} fill="#2563eb" fillOpacity={0.48} />
         </ScatterChart>
@@ -335,7 +463,9 @@ export function FeatureImportanceChart({ data }) {
           <XAxis type="number" unit="%" />
           <YAxis type="category" dataKey="feature" width={145} interval={0} />
           <Tooltip formatter={(v) => `${Number(v).toFixed(2)}%`} />
-          <Bar dataKey="importance_percentage" name="Relative importance" fill="#7c3aed" radius={[0, 5, 5, 0]} />
+          <Bar dataKey="importance_percentage" name="Relative importance" fill="#7c3aed" radius={[0, 5, 5, 0]}>
+            <LabelList dataKey="importance_percentage" position="right" formatter={(v) => `${Number(v).toFixed(1)}%`} fontSize={10} fill="#334155" />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </ChartShell>
@@ -760,14 +890,24 @@ export function HorizonErrorChart({ data }) {
   return (
     <ChartShell data={data} height={320} message="Per-horizon metrics are unavailable.">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 12, right: 20, left: 5, bottom: 8 }}>
+        <LineChart data={data} margin={{ top: 26, right: 28, left: 5, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="horizon_hours" tickFormatter={(value) => `+${value} h`} />
-          <YAxis unit=" pts" />
-          <Tooltip labelFormatter={(value) => `Forecast horizon: +${value} hours`} formatter={(value) => `${Number(value).toFixed(3)} points`} />
+          <YAxis />
+          <Tooltip
+            labelFormatter={(value) => `Forecast horizon: +${value} hours`}
+            formatter={(value, name) => [
+              `${Number(value).toFixed(2)} score points`,
+              name,
+            ]}
+          />
           <Legend />
-          <Line type="monotone" dataKey="mae" name="MAE" stroke="#2563eb" strokeWidth={3} />
-          <Line type="monotone" dataKey="rmse" name="RMSE" stroke="#dc2626" strokeWidth={2.5} />
+          <Line type="monotone" dataKey="mae" name="MAE ↓" stroke="#2563eb" strokeWidth={3}>
+            <LabelList dataKey="mae" position="top" formatter={(v) => Number(v).toFixed(2)} fontSize={9} fill="#2563eb" />
+          </Line>
+          <Line type="monotone" dataKey="rmse" name="RMSE ↓" stroke="#dc2626" strokeWidth={2.5}>
+            <LabelList dataKey="rmse" position="bottom" formatter={(v) => Number(v).toFixed(2)} fontSize={9} fill="#dc2626" />
+          </Line>
         </LineChart>
       </ResponsiveContainer>
     </ChartShell>
