@@ -273,14 +273,28 @@ export default function LiveIoTHuiPredictionTab() {
 ]);
 
         if (predictionResult.status === "fulfilled") {
-          setPrediction(predictionResult.value);
-        } else {
-          setPrediction(null);
-          setError(
-            predictionResult.reason?.message ??
-              "Unable to load live HUI data.",
-          );
-        }
+  setPrediction(predictionResult.value);
+} else {
+  setPrediction(null);
+  setError(
+    predictionResult.reason?.message ??
+      "Unable to load live HUI data.",
+  );
+}
+
+if (sensorResult.status === "fulfilled") {
+  setSensors(sensorResult.value);
+}
+
+if (monitorResult.status === "fulfilled") {
+  setMonitor(monitorResult.value);
+} else {
+  setMonitor(null);
+}
+
+if (historyResult.status === "fulfilled") {
+  setHistory(historyResult.value?.history ?? []);
+}
 
         if (sensorResult.status === "fulfilled") {
           setSensors(sensorResult.value);
