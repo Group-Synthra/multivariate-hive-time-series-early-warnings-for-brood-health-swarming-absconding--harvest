@@ -60,11 +60,8 @@ function formatNumber(value, digits = 3) {
 
 function formatPercent(value, digits = 0) {
   const parsed = Number(value);
-  return Number.isFinite(parsed)
-    ? `${(parsed * 100).toFixed(digits)}%`
-    : "—";
+  return Number.isFinite(parsed) ? `${(parsed * 100).toFixed(digits)}%` : "—";
 }
-
 
 function validationPrevalence(benchmark) {
   const candidates = [
@@ -76,30 +73,18 @@ function validationPrevalence(benchmark) {
 
   for (const item of candidates) {
     const positive = asNumber(
-      item.positive_rows ??
-        item.positive ??
-        item.positives ??
-        item.n_positive,
+      item.positive_rows ?? item.positive ?? item.positives ?? item.n_positive,
     );
     const negative = asNumber(
-      item.negative_rows ??
-        item.negative ??
-        item.negatives ??
-        item.n_negative,
+      item.negative_rows ?? item.negative ?? item.negatives ?? item.n_negative,
     );
 
-    if (
-      positive !== null &&
-      negative !== null &&
-      positive + negative > 0
-    ) {
+    if (positive !== null && negative !== null && positive + negative > 0) {
       return positive / (positive + negative);
     }
 
     const prevalence = asNumber(
-      item.target_prevalence ??
-        item.prevalence ??
-        item.positive_rate,
+      item.target_prevalence ?? item.prevalence ?? item.positive_rate,
     );
     if (prevalence !== null) {
       return prevalence;
@@ -113,8 +98,7 @@ function resolveRegressionHorizon(huiDashboard, horizon) {
   const key = String(horizon);
   const summary =
     huiDashboard?.future_hui_regression?.summary?.horizons?.[key] ?? {};
-  const gate =
-    huiDashboard?.future_hui_regression?.gate?.horizons?.[key] ?? {};
+  const gate = huiDashboard?.future_hui_regression?.gate?.horizons?.[key] ?? {};
   const validation = summary?.validation ?? {};
   const test = summary?.test ?? {};
 
@@ -123,14 +107,12 @@ function resolveRegressionHorizon(huiDashboard, horizon) {
       gate.selected_model ?? summary.selected_model ?? "Unavailable",
     validationMae:
       gate.selected_validation_mae ?? validation.mae ?? summary.validation_mae,
-    testMae:
-      gate.selected_test_mae ?? test.mae ?? summary.test_mae,
+    testMae: gate.selected_test_mae ?? test.mae ?? summary.test_mae,
     improvement:
       gate.validation_mae_improvement_fraction ??
       summary.validation_mae_improvement_fraction,
     ratio:
-      gate.test_to_validation_mae_ratio ??
-      summary.test_to_validation_mae_ratio,
+      gate.test_to_validation_mae_ratio ?? summary.test_to_validation_mae_ratio,
     classAgreement:
       test.class_agreement_fraction ??
       test.class_agreement ??
@@ -151,10 +133,7 @@ function modelLabel(value) {
 
   return String(value ?? "")
     .split("_")
-    .map(
-      (part) =>
-        part.charAt(0).toUpperCase() + part.slice(1),
-    )
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }
 
@@ -175,16 +154,12 @@ function friendlyFeature(value) {
     weight_mean_6h_kg: "6-hour mean hive weight",
     weight_mean_24h_kg: "24-hour mean hive weight",
     weight_delta_72h_kg: "72-hour weight change",
-    weight_relative_to_max_168h:
-      "Weight relative to 168-hour maximum",
+    weight_relative_to_max_168h: "Weight relative to 168-hour maximum",
     weight_std_24h_kg: "24-hour weight variability",
-    environmental_variability_72h:
-      "72-hour environmental variability",
-    temperature_c_range_24h:
-      "24-hour temperature range",
+    environmental_variability_72h: "72-hour environmental variability",
+    temperature_c_range_24h: "24-hour temperature range",
     weight_mean_168h_kg: "168-hour mean hive weight",
-    weight_trend_72h_kg_per_hour:
-      "72-hour weight trend",
+    weight_trend_72h_kg_per_hour: "72-hour weight trend",
   };
 
   if (labels[value]) {
@@ -195,7 +170,6 @@ function friendlyFeature(value) {
     .replaceAll("_", " ")
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
-
 
 function ContextMetricCard({
   icon: Icon,
@@ -223,13 +197,7 @@ function ContextMetricCard({
   );
 }
 
-function SummaryCard({
-  icon: Icon,
-  label,
-  value,
-  note,
-  tone = "blue",
-}) {
+function SummaryCard({ icon: Icon, label, value, note, tone = "blue" }) {
   return (
     <article className={`final-model-summary-card is-${tone}`}>
       <span className="final-model-summary-icon">
@@ -268,13 +236,9 @@ function TrainingStageCard({
   tone = "blue",
 }) {
   return (
-    <article
-      className={`training-stage-card is-${tone}`}
-    >
+    <article className={`training-stage-card is-${tone}`}>
       <div className="training-stage-card-top">
-        <span className="training-stage-number">
-          {number}
-        </span>
+        <span className="training-stage-number">{number}</span>
 
         <span className="training-stage-icon">
           <Icon size={24} />
@@ -289,13 +253,8 @@ function TrainingStageCard({
 
       <div className="training-stage-steps">
         {items.map((item, index) => (
-          <div
-            className="training-stage-step"
-            key={`${number}-${index}`}
-          >
-            <span>
-              {index + 1}
-            </span>
+          <div className="training-stage-step" key={`${number}-${index}`}>
+            <span>{index + 1}</span>
 
             <div>
               <strong>{item.title}</strong>
@@ -330,8 +289,8 @@ function HorizonCard({ horizon, data }) {
         <TrendingDown size={16} />
         <span>
           Validation MAE improved{" "}
-          <strong>{formatPercent(data?.improvement, 1)}</strong>{" "}
-          over persistence
+          <strong>{formatPercent(data?.improvement, 1)}</strong> over
+          persistence
         </span>
       </div>
 
@@ -362,11 +321,7 @@ function HorizonCard({ horizon, data }) {
   );
 }
 
-function CandidateTooltip({
-  active,
-  payload,
-  metric,
-}) {
+function CandidateTooltip({ active, payload, metric }) {
   if (!active || !payload?.length) {
     return null;
   }
@@ -377,12 +332,10 @@ function CandidateTooltip({
   return (
     <div className="final-model-tooltip">
       <strong>
-        {modelLabel(row.model)} ·{" "}
-        {featureSetLabel(row.feature_set)}
+        {modelLabel(row.model)} · {featureSetLabel(row.feature_set)}
       </strong>
       <span>
-        {config.label}:{" "}
-        {formatNumber(row[config.key], config.digits)}
+        {config.label}: {formatNumber(row[config.key], config.digits)}
       </span>
       <span>{row.feature_count} features</span>
       {row.selected ? <b>Selected model</b> : null}
@@ -413,31 +366,14 @@ function CandidateTable({ rows }) {
               <td>
                 {modelLabel(row.model)}
                 {row.selected ? (
-                  <span className="final-model-selected-tag">
-                    Selected
-                  </span>
+                  <span className="final-model-selected-tag">Selected</span>
                 ) : null}
               </td>
               <td>{featureSetLabel(row.feature_set)}</td>
               <td>{row.feature_count}</td>
-              <td>
-                {formatNumber(
-                  row.validation_pr_auc,
-                  3,
-                )}
-              </td>
-              <td>
-                {formatNumber(
-                  row.validation_recall,
-                  3,
-                )}
-              </td>
-              <td>
-                {formatNumber(
-                  row.validation_f1,
-                  3,
-                )}
-              </td>
+              <td>{formatNumber(row.validation_pr_auc, 3)}</td>
+              <td>{formatNumber(row.validation_recall, 3)}</td>
+              <td>{formatNumber(row.validation_f1, 3)}</td>
             </tr>
           ))}
         </tbody>
@@ -445,11 +381,7 @@ function CandidateTable({ rows }) {
     </div>
   );
 }
-function PipelineStep({
-  number,
-  title,
-  text,
-}) {
+function PipelineStep({ number, title, text }) {
   return (
     <div className="training-ui-step">
       <span>{number}</span>
@@ -462,11 +394,7 @@ function PipelineStep({
   );
 }
 
-function ForecastModelChip({
-  horizon,
-  model,
-  mae,
-}) {
+function ForecastModelChip({ horizon, model, mae }) {
   return (
     <div className="training-ui-forecast-chip">
       <div>
@@ -475,10 +403,43 @@ function ForecastModelChip({
       </div>
 
       <small>
-        Validation MAE{" "}
-        <b>{formatNumber(mae, 2)}</b>
+        Validation MAE <b>{formatNumber(mae, 2)}</b>
       </small>
     </div>
+  );
+}
+
+function MetricDirection({ direction = "up", children }) {
+  const Icon = direction === "down" ? TrendingDown : TrendingUp;
+
+  return (
+    <span className={`stage-compare-direction is-${direction}`}>
+      <Icon size={14} />
+      {children}
+    </span>
+  );
+}
+
+function EvaluationMetricCard({ label, value, note, direction = "up" }) {
+  const Icon = direction === "down" ? TrendingDown : TrendingUp;
+
+  return (
+    <article className="stage-eval-metric">
+      <div className="stage-eval-metric-top">
+        <span>{label}</span>
+
+        <span
+          className={`stage-eval-arrow is-${direction}`}
+          title={direction === "down" ? "Lower is better" : "Higher is better"}
+        >
+          <Icon size={16} />
+        </span>
+      </div>
+
+      <strong>{value}</strong>
+
+      <small>{note}</small>
+    </article>
   );
 }
 
@@ -526,19 +487,11 @@ export default function FinalModelEvaluationDashboard() {
 
     return benchmark.comparison
       .filter((row) => row.status === "ok")
-      .filter(
-        (row) =>
-          modelFilter === "all" ||
-          row.model === modelFilter,
-      )
+      .filter((row) => modelFilter === "all" || row.model === modelFilter)
       .sort(
         (left, right) =>
-          Number(
-            right[metricConfig.key] ?? -1,
-          ) -
-          Number(
-            left[metricConfig.key] ?? -1,
-          ),
+          Number(right[metricConfig.key] ?? -1) -
+          Number(left[metricConfig.key] ?? -1),
       );
   }, [benchmark, metric, modelFilter]);
 
@@ -553,11 +506,7 @@ export default function FinalModelEvaluationDashboard() {
     }
 
     return Array.from(
-      new Set(
-        benchmark.comparison
-          .map((row) => row.model)
-          .filter(Boolean),
-      ),
+      new Set(benchmark.comparison.map((row) => row.model).filter(Boolean)),
     );
   }, [benchmark]);
 
@@ -582,57 +531,38 @@ export default function FinalModelEvaluationDashboard() {
   const summary = benchmark.summary ?? {};
   const validation = summary.validation ?? {};
   const selectedCandidate =
-    benchmark.comparison.find(
-      (row) => row.selected,
-    ) ?? benchmark.comparison[0];
+    benchmark.comparison.find((row) => row.selected) ?? benchmark.comparison[0];
 
-  const validationEvents =
-    benchmark.validation_events ?? [];
+  const validationEvents = benchmark.validation_events ?? [];
   const testEvents = benchmark.test_events ?? [];
 
-  const validationDetected =
-    validationEvents.filter(
-      (row) => row.detected,
-    ).length;
-  const testDetected =
-    testEvents.filter((row) => row.detected).length;
+  const validationDetected = validationEvents.filter(
+    (row) => row.detected,
+  ).length;
+  const testDetected = testEvents.filter((row) => row.detected).length;
 
-  const regressionGate =
-    huiDashboard.future_hui_regression?.gate ?? {};
+  const regressionGate = huiDashboard.future_hui_regression?.gate ?? {};
 
   const horizonData = Object.fromEntries(
     [24, 48, 72].map((horizon) => [
       horizon,
-      resolveRegressionHorizon(
-        huiDashboard,
-        horizon,
-      ),
+      resolveRegressionHorizon(huiDashboard, horizon),
     ]),
   );
 
   const baseline = validationPrevalence(benchmark);
   const selectedPrAuc =
-    asNumber(
-      validation.pr_auc ??
-        selectedCandidate?.validation_pr_auc,
-    ) ?? 0;
-  const prAucMultiplier =
-    baseline > 0 ? selectedPrAuc / baseline : null;
+    asNumber(validation.pr_auc ?? selectedCandidate?.validation_pr_auc) ?? 0;
+  const prAucMultiplier = baseline > 0 ? selectedPrAuc / baseline : null;
 
   const fullFeatureCount = Math.max(
-    ...benchmark.comparison.map(
-      (row) => Number(row.feature_count) || 0,
-    ),
+    ...benchmark.comparison.map((row) => Number(row.feature_count) || 0),
     Number(
-      summary.selected_feature_count ??
-        selectedCandidate?.feature_count ??
-        53,
+      summary.selected_feature_count ?? selectedCandidate?.feature_count ?? 53,
     ),
   );
   const selectedFeatureCount = Number(
-    summary.selected_feature_count ??
-      selectedCandidate?.feature_count ??
-      53,
+    summary.selected_feature_count ?? selectedCandidate?.feature_count ?? 53,
   );
   const omittedFeatureCount = Math.max(
     0,
@@ -644,8 +574,7 @@ export default function FinalModelEvaluationDashboard() {
       (row) =>
         row.status === "ok" &&
         !row.selected &&
-        row.feature_set ===
-          selectedCandidate?.feature_set,
+        row.feature_set === selectedCandidate?.feature_set,
     )
     .sort(
       (left, right) =>
@@ -660,30 +589,21 @@ export default function FinalModelEvaluationDashboard() {
   );
 
   const competitorFalseAlerts = Number(
-    nearestCompetitor?.validation_false_alert_episodes ??
-      0,
+    nearestCompetitor?.validation_false_alert_episodes ?? 0,
   );
 
-  const chartRows = visibleCandidates.map(
-    (row) => ({
-      ...row,
-      chartLabel: `${modelLabel(row.model)} · ${featureSetLabel(
-        row.feature_set,
-      )}`,
-      metricValue: Number(
-        row[METRICS[metric].key] ?? 0,
-      ),
-    }),
-  );
+  const chartRows = visibleCandidates.map((row) => ({
+    ...row,
+    chartLabel: `${modelLabel(row.model)} · ${featureSetLabel(
+      row.feature_set,
+    )}`,
+    metricValue: Number(row[METRICS[metric].key] ?? 0),
+  }));
 
-  const featureImportance =
-    benchmark.feature_importance ?? [];
+  const featureImportance = benchmark.feature_importance ?? [];
 
   const maxFeatureImportance = Math.max(
-    ...featureImportance.map(
-      (row) =>
-        Number(row.absolute_importance) || 0,
-    ),
+    ...featureImportance.map((row) => Number(row.absolute_importance) || 0),
     1,
   );
 
@@ -704,9 +624,8 @@ export default function FinalModelEvaluationDashboard() {
           </span>
           <h2>Harvest Prediction Model Evaluation</h2>
           <p>
-            Four classifiers and Four feature sets were
-            compared, followed by 24, 48 and 72 hour
-            HUI forecast validation.
+            Four classifiers and Four feature sets were compared, followed by
+            24, 48 and 72 hour HUI forecast validation.
           </p>
         </div>
 
@@ -716,734 +635,1087 @@ export default function FinalModelEvaluationDashboard() {
         </span>
       </header>
 
-     {/* =========================================================
-    MODEL TRAINING PIPELINE
-========================================================= */}
-
-<section className="training-ui-overview">
-
-  {/* HEADER */}
-  <div className="training-ui-overview-header">
-    <div>
-      <span className="final-model-eyebrow">
-        MODEL DEVELOPMENT PIPELINE
-      </span>
-
-      <h2>
-        How the Harvest Prediction System Is Trained
-      </h2>
-
-      <p>
-        Two connected machine-learning stages transform
-        historical hive behaviour into current and future
-        Harvest Urgency Index predictions.
-      </p>
-    </div>
-
-    <div className="training-ui-stage-count">
-      <Layers3 size={18} />
-      <strong>2</strong>
-      <span>Training stages</span>
-    </div>
-  </div>
-
-
-  {/* DATA SOURCE */}
-  <div className="training-ui-source-card">
-    <span className="training-ui-source-icon">
-      <Database size={22} />
-    </span>
-
-    <div>
-      <small>TRAINING DATA</small>
-
-      <strong>
-        Historical Sensor Time Series + Reviewed Harvest Events
-      </strong>
-
-      <p>
-        Past hive weight, temperature, CO₂ and temporal
-        behaviour are aligned with reviewed harvest events.
-      </p>
-    </div>
-
-    <div className="training-ui-source-tags">
-      <span>Sensor history</span>
-      <span>Reviewed events</span>
-      <span>Time-series features</span>
-    </div>
-  </div>
-
-
-  {/* CONNECTOR */}
-  <div className="training-ui-down-flow">
-    <span>↓</span>
-  </div>
-
-
-  {/* MAIN PIPELINE GRID */}
-  <div className="training-ui-stage-grid">
-
-    {/* =====================================================
-        STAGE 1
-    ====================================================== */}
-    <article className="training-ui-stage-card stage-one">
-
-      <div className="training-ui-stage-top">
-        <div className="training-ui-stage-id">
-          <span>01</span>
-
+      <section className="training-ui-overview">
+        {/* HEADER */}
+        <div className="training-ui-overview-header">
           <div>
-            <small>CLASSIFICATION</small>
-            <strong>Current HUI Model</strong>
+            <span className="final-model-eyebrow">
+              MODEL DEVELOPMENT PIPELINE
+            </span>
+
+            <h2>How the Harvest Prediction System Is Trained</h2>
+
+            <p>
+              Two connected Machine Learning stages transform historical hive
+              behaviour into current and future Harvest Urgency Index
+              predictions.
+            </p>
+          </div>
+
+          <div className="training-ui-stage-count">
+            <Layers3 size={18} />
+            <strong>2</strong>
+            <span>Training stages</span>
           </div>
         </div>
 
-        <span className="training-ui-stage-main-icon">
-          <BrainCircuit size={27} />
-        </span>
-      </div>
+       
 
-
-      <div className="training-ui-stage-question">
-        <Target size={18} />
-
-        <div>
-          <small>MODEL QUESTION</small>
-
-          <strong>
-            Will a reviewed harvest event occur
-            within the next 72 hours?
-          </strong>
-        </div>
-      </div>
-
-
-      <div className="training-ui-stage-steps">
-        <PipelineStep
-          number="1"
-          title="Create 72h target"
-          text="Each hourly record becomes harvest-event or normal."
-        />
-
-        <PipelineStep
-          number="2"
-          title="Build time-series features"
-          text="Recent changes, trends and rolling sensor behaviour."
-        />
-
-        <PipelineStep
-          number="3"
-          title="Train 16 candidates"
-          text="4 classifiers × 4 feature sets."
-        />
-
-        <PipelineStep
-          number="4"
-          title="Validate candidates"
-          text="Compare PR-AUC, event detection and false alerts."
-        />
-      </div>
-
-
-      <div className="training-ui-model-winner">
-        <div>
-          <small>SELECTED CLASSIFIER</small>
-
-          <strong>
-            {modelLabel(
-              summary.selected_model,
-            )}
-          </strong>
-
-          <span>
-            No Humidity · {selectedFeatureCount} features
-          </span>
+        {/* CONNECTOR */}
+        <div className="training-ui-down-flow">
+          <span>↓</span>
         </div>
 
-        <span className="training-ui-winner-badge">
-          <Trophy size={18} />
-          Selected
-        </span>
-      </div>
+        {/* MAIN PIPELINE GRID */}
+        <div className="training-ui-stage-grid">
+          <article className="training-ui-stage-card stage-one">
+            <div className="training-ui-stage-top">
+              <div className="training-ui-stage-id">
+                <span>01</span>
 
+                <div>
+                  <small>CLASSIFICATION</small>
+                  <strong>Current HUI Model</strong>
+                </div>
+              </div>
 
-      <div className="training-ui-stage-output">
-        <span>STAGE 1 OUTPUT</span>
+              <span className="training-ui-stage-main-icon">
+                <BrainCircuit size={27} />
+              </span>
+            </div>
 
-        <strong>
-          Raw harvest-event classifier score
-        </strong>
-      </div>
-    </article>
+            <div className="training-ui-stage-question">
+              <Target size={18} />
 
+              <div>
+                <small>MODEL QUESTION</small>
 
-    {/* =====================================================
+                <strong>
+                  Will a reviewed harvest event occur within the next 72 hours?
+                </strong>
+              </div>
+            </div>
+
+            <div className="training-ui-stage-steps">
+              <PipelineStep
+                number="1"
+                title="Create 72h target"
+                text="Each hourly record becomes harvest-event or normal."
+              />
+
+              <PipelineStep
+                number="2"
+                title="Build time-series features"
+                text="Recent changes, trends and rolling sensor behaviour."
+              />
+
+              <PipelineStep
+                number="3"
+                title="Train 16 candidates"
+                text="4 classifiers × 4 feature sets."
+              />
+
+              <PipelineStep
+                number="4"
+                title="Validate candidates"
+                text="Compare PR-AUC, event detection and false alerts."
+              />
+            </div>
+
+            <div className="training-ui-model-winner">
+              <div>
+                <small>SELECTED CLASSIFIER</small>
+
+                <strong>{modelLabel(summary.selected_model)}</strong>
+
+                <span>No Humidity · {selectedFeatureCount} features</span>
+              </div>
+
+              <span className="training-ui-winner-badge">
+                <Trophy size={18} />
+                Selected
+              </span>
+            </div>
+
+            <div className="training-ui-stage-output">
+              <span>STAGE 1 OUTPUT</span>
+
+              <strong>Raw harvest-event classifier score</strong>
+            </div>
+          </article>
+
+          {/* =====================================================
         CENTRAL HUI HUB
     ====================================================== */}
-    <div className="training-ui-hui-bridge">
+          <div className="training-ui-hui-bridge">
+            <div className="training-ui-bridge-line top" />
 
-      <div className="training-ui-bridge-line top" />
+            <div className="training-ui-hui-node">
+              <span className="training-ui-hui-icon">
+                <Gauge size={24} />
+              </span>
 
-      <div className="training-ui-hui-node">
-        <span className="training-ui-hui-icon">
-          <Gauge size={24} />
-        </span>
+              <small>SCORE TRANSFORMATION</small>
 
-        <small>
-          SCORE TRANSFORMATION
-        </small>
+              <strong>HUI</strong>
 
-        <strong>
-          HUI
-        </strong>
+              <b>0–100</b>
 
-        <b>0–100</b>
+              <p>
+                XGBoost score
+                <span>↓</span>
+                Platt calibration
+                <span>↓</span>
+                HUI mapping
+              </p>
+            </div>
 
-        <p>
-          XGBoost score
-          <span>↓</span>
-          Platt calibration
-          <span>↓</span>
-          HUI mapping
-        </p>
-      </div>
+            <div className="training-ui-bridge-line bottom" />
 
-      <div className="training-ui-bridge-line bottom" />
+            <span className="training-ui-hui-caption">
+              Stage 1 output becomes the input for future-HUI forecasting
+            </span>
+          </div>
 
-      <span className="training-ui-hui-caption">
-        Stage 1 output becomes the input
-        for future-HUI forecasting
-      </span>
-    </div>
-
-
-    {/* =====================================================
+          {/* =====================================================
         STAGE 2
     ====================================================== */}
-    <article className="training-ui-stage-card stage-two">
+          <article className="training-ui-stage-card stage-two">
+            <div className="training-ui-stage-top">
+              <div className="training-ui-stage-id">
+                <span>02</span>
 
-      <div className="training-ui-stage-top">
-        <div className="training-ui-stage-id">
-          <span>02</span>
+                <div>
+                  <small>REGRESSION</small>
+                  <strong>Future HUI Models</strong>
+                </div>
+              </div>
 
-          <div>
-            <small>REGRESSION</small>
-            <strong>Future HUI Models</strong>
-          </div>
-        </div>
-
-        <span className="training-ui-stage-main-icon">
-          <TrendingUp size={27} />
-        </span>
-      </div>
-
-
-      <div className="training-ui-stage-question">
-        <Clock3 size={18} />
-
-        <div>
-          <small>MODEL QUESTION</small>
-
-          <strong>
-            What will the Harvest Urgency Index
-            be after 24, 48 and 72 hours?
-          </strong>
-        </div>
-      </div>
-
-
-      <div className="training-ui-stage-steps">
-        <PipelineStep
-          number="1"
-          title="Create future targets"
-          text="Generate HUI targets at +24h, +48h and +72h."
-        />
-
-        <PipelineStep
-          number="2"
-          title="Train separately"
-          text="Each horizon becomes an independent regression task."
-        />
-      </div>
-
-
-      <div className="training-ui-forecast-models">
-        <ForecastModelChip
-          horizon={24}
-          model={
-            horizonData[24]
-              ?.selectedModel
-          }
-          mae={
-            horizonData[24]
-              ?.validationMae
-          }
-        />
-
-        <ForecastModelChip
-          horizon={48}
-          model={
-            horizonData[48]
-              ?.selectedModel
-          }
-          mae={
-            horizonData[48]
-              ?.validationMae
-          }
-        />
-
-        <ForecastModelChip
-          horizon={72}
-          model={
-            horizonData[72]
-              ?.selectedModel
-          }
-          mae={
-            horizonData[72]
-              ?.validationMae
-          }
-        />
-      </div>
-
-
-      <div className="training-ui-stage-output">
-        <span>STAGE 2 OUTPUT</span>
-
-        <strong>
-          +24h · +48h · +72h HUI forecasts
-        </strong>
-      </div>
-    </article>
-  </div>
-
-
-  {/* FINAL OUTPUT */}
-  <div className="training-ui-final-result">
-
-    <span className="training-ui-final-icon">
-      <Sparkles size={23} />
-    </span>
-
-    <div>
-      <small>
-        FINAL DECISION-SUPPORT OUTPUT
-      </small>
-
-      <strong>
-        Current HUI + 72-hour Harvest Urgency Outlook
-      </strong>
-    </div>
-
-    <span className="training-ui-complete">
-      <CheckCircle2 size={17} />
-      Pipeline complete
-    </span>
-  </div>
-
-</section>
-
-      <article className="final-model-selected-card">
-        <div className="final-model-selected-title">
-          <span className="final-model-selected-icon">
-            <BrainCircuit size={28} />
-          </span>
-          <div>
-            <small>SELECTED CLASSIFIER</small>
-            <h3>{modelLabel(summary.selected_model)}</h3>
-            <p>{selectedFeatureCount}-feature environmental model</p>
-            <span>Humidity derived features excluded</span>
-          </div>
-        </div>
-
-        <div className="model-context-grid">
-          <ContextMetricCard
-            icon={Layers3}
-            label="Features used"
-            value={selectedFeatureCount}
-            context={
-              omittedFeatureCount > 0
-                ? `${omittedFeatureCount} fewer than the ${fullFeatureCount}-feature Full set`
-                : `${fullFeatureCount}-feature configuration`
-            }
-          />
-
-          <ContextMetricCard
-            icon={Gauge}
-            label="Validation PR-AUC"
-            value={formatNumber(selectedPrAuc, 3)}
-            context={
-              prAucMultiplier !== null
-                ? `≈${formatNumber(prAucMultiplier, 1)}× the validation rare-event baseline (${formatNumber(baseline, 4)})`
-                : `Above the validation rare-event baseline (${formatNumber(baseline, 4)})`
-            }
-            tone="green"
-          />
-
-          <ContextMetricCard
-            icon={TrendingUp}
-            label="Validation ROC-AUC"
-            value={formatNumber(validation.roc_auc, 3)}
-            context="0.50 represents random ranking"
-            tone="violet"
-          />
-
-          <ContextMetricCard
-            icon={Target}
-            label="Validation event detection"
-            value={
-              validationEvents.length
-                ? formatPercent(
-                    validationDetected / validationEvents.length,
-                    0,
-                  )
-                : "—"
-            }
-            context={
-              validationEvents.length
-                ? `Detected ${validationDetected} of ${validationEvents.length} reviewed validation events`
-                : "Event-level benchmark result"
-            }
-            tone="green"
-          />
-        </div>
-
-        <div className="final-model-selected-reason">
-          <p>
-            Selected from the strongest validation PR-AUC tier using
-            event detection and false-alert burden as additional
-            decision criteria.
-            {nearestCompetitor &&
-            competitorFalseAlerts > selectedFalseAlerts
-              ? ` Within the same feature set, XGBoost also produced fewer validation false-alert episodes than ${modelLabel(
-                  nearestCompetitor.model,
-                )} (${selectedFalseAlerts} vs ${competitorFalseAlerts}).`
-              : ""}
-          </p>
-        </div>
-      </article>
-
-      <div className="final-model-summary-grid">
-        <SummaryCard
-          icon={Layers3}
-          label="Configurations evaluated"
-          value={`${benchmark.successful_candidate_count ?? 16}/16`}
-          note="4 classifiers × 4 feature sets completed"
-          tone="violet"
-        />
-        <SummaryCard
-          icon={Target}
-          label="Validation events"
-          value={`${validationDetected}/${validationEvents.length}`}
-          note="Both reviewed validation events detected"
-          tone="green"
-        />
-        <SummaryCard
-          icon={Trophy}
-          label="Held-out benchmark event"
-          value={testEvents.length ? `${testDetected}/${testEvents.length}` : "—"}
-          note={
-            testEvents[0]?.lead_hours != null
-              ? `Detected ${formatNumber(testEvents[0].lead_hours, 0)}h before the event`
-              : "Final test case preserved"
-          }
-          tone="green"
-        />
-        <SummaryCard
-          icon={Clock3}
-          label="Future-HUI horizons"
-          value={`${regressionGate.improved_horizon_count ?? 3}/3`}
-          note="24h, 48h and 72h passed the research gate"
-          tone="green"
-        />
-      </div>
-
-      <div className="final-model-hero-grid">
-        <article className="final-model-strength-card">
-          <span className="final-model-eyebrow">
-            EVALUATION STRENGTHS
-          </span>
-          <h3>Methodological safeguards</h3>
-
-          <div className="final-model-strength-list">
-            <StrengthItem
-              icon={Database}
-              title="Chronological evaluation"
-              text="Later observations were reserved for validation and final testing."
-            />
-            <StrengthItem
-              icon={Layers3}
-              title="Feature-set ablation"
-              text="Core, weight-only, no-humidity and full feature sets were compared."
-            />
-            <StrengthItem
-              icon={ShieldCheck}
-              title="Session-aware training"
-              text="Closely timed harvest events were balanced as shared temporal sessions."
-            />
-            <StrengthItem
-              icon={CheckCircle2}
-              title="Held-out test preserved"
-              text="The final benchmark case was not used for model selection."
-            />
-          </div>
-        </article>
-
-        <article className="final-model-benchmark-card">
-          <span className="final-model-eyebrow">
-            BENCHMARK INTERPRETATION
-          </span>
-          <h3>What the classifier result means</h3>
-
-          <div className="final-model-benchmark-list">
-            <div>
-              <CheckCircle2 size={18} />
-              <span>
-                PR-AUC is interpreted against validation prevalence
-                because probable harvest events are rare.
+              <span className="training-ui-stage-main-icon">
+                <TrendingUp size={27} />
               </span>
             </div>
-            <div>
-              <CheckCircle2 size={18} />
-              <span>
-                ROC-AUC {formatNumber(validation.roc_auc, 3)} is above
-                the 0.50 random-ranking reference.
-              </span>
-            </div>
-            <div>
-              <CheckCircle2 size={18} />
-              <span>
-                Event detection means each reviewed event was identified
-                at least once within its warning window.
-              </span>
-            </div>
-          </div>
-        </article>
-      </div>
 
-      <article className="final-model-candidate-panel">
-        <div className="final-model-panel-heading">
+            <div className="training-ui-stage-question">
+              <Clock3 size={18} />
+
+              <div>
+                <small>MODEL QUESTION</small>
+
+                <strong>
+                  What will the Harvest Urgency Index be after 24, 48 and 72
+                  hours?
+                </strong>
+              </div>
+            </div>
+
+            <div className="training-ui-stage-steps">
+              <PipelineStep
+                number="1"
+                title="Create future targets"
+                text="Generate HUI targets at +24h, +48h and +72h."
+              />
+
+              <PipelineStep
+                number="2"
+                title="Train separately"
+                text="Each horizon becomes an independent regression task."
+              />
+            </div>
+
+            <div className="training-ui-forecast-models">
+              <ForecastModelChip
+                horizon={24}
+                model={horizonData[24]?.selectedModel}
+                mae={horizonData[24]?.validationMae}
+              />
+
+              <ForecastModelChip
+                horizon={48}
+                model={horizonData[48]?.selectedModel}
+                mae={horizonData[48]?.validationMae}
+              />
+
+              <ForecastModelChip
+                horizon={72}
+                model={horizonData[72]?.selectedModel}
+                mae={horizonData[72]?.validationMae}
+              />
+            </div>
+
+            <div className="training-ui-stage-output">
+              <span>STAGE 2 OUTPUT</span>
+
+              <strong>+24h · +48h · +72h HUI forecasts</strong>
+            </div>
+          </article>
+        </div>
+
+        {/* FINAL OUTPUT */}
+        <div className="training-ui-final-result">
+          <span className="training-ui-final-icon">
+            <Sparkles size={23} />
+          </span>
+
           <div>
-            <span className="final-model-eyebrow">
-              INTERACTIVE MODEL COMPARISON
-            </span>
-            <h3>Top-performing classifier candidates</h3>
-            <p>
-              Compare candidate models using the selected
-              validation metric.
-            </p>
+            <small>FINAL DECISION-SUPPORT OUTPUT</small>
+
+            <strong>Current HUI + 72-hour Harvest Urgency Outlook</strong>
           </div>
 
-          <div className="final-model-controls">
-            <div className="final-model-segmented">
-              {Object.entries(METRICS).map(
-                ([key, config]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className={
-                      metric === key
-                        ? "is-active"
-                        : ""
-                    }
-                    onClick={() => setMetric(key)}
-                  >
-                    {config.label}
-                  </button>
-                ),
-              )}
-            </div>
-
-            <select
-              value={modelFilter}
-              onChange={(event) =>
-                setModelFilter(event.target.value)
-              }
-              aria-label="Filter models"
-            >
-              <option value="all">All models</option>
-              {modelOptions.map((option) => (
-                <option
-                  key={option}
-                  value={option}
-                >
-                  {modelLabel(option)}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={showCount}
-              onChange={(event) =>
-                setShowCount(
-                  Number(event.target.value),
-                )
-              }
-              aria-label="Number of candidates"
-            >
-              <option value={4}>Top 4</option>
-              <option value={6}>Top 6</option>
-              <option value={8}>Top 8</option>
-              <option value={16}>All 16</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="final-model-candidate-chart">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartRows}
-              margin={{
-                top: 12,
-                right: 16,
-                left: 0,
-                bottom: 76,
-              }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="chartLabel"
-                interval={0}
-                angle={-26}
-                textAnchor="end"
-                height={100}
-                tick={{ fontSize: 10 }}
-              />
-              <YAxis
-                domain={[0, "auto"]}
-                tick={{ fontSize: 10 }}
-              />
-              <Tooltip
-                content={
-                  <CandidateTooltip
-                    metric={metric}
-                  />
-                }
-              />
-              <Bar
-                dataKey="metricValue"
-                radius={[6, 6, 0, 0]}
-              >
-                {chartRows.map((row) => (
-                  <Cell
-                    key={`${row.model}-${row.feature_set}`}
-                    fill={
-                      row.selected
-                        ? "#2563eb"
-                        : "#93c5fd"
-                    }
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="final-model-chart-caption">
-          Selected model is highlighted in dark blue.
-        </div>
-      </article>
-
-      <section className="final-model-future-section">
-        <div className="final-model-section-heading">
-          <div>
-            <span className="final-model-eyebrow">
-              FUTURE HUI FORECAST PERFORMANCE
-            </span>
-            <h3>
-              All three forecast horizons passed the
-              predefined research gate
-            </h3>
-            <p>
-              Each MAE is shown with its improvement over
-              persistence so the forecast error has context.
-            </p>
-          </div>
-
-          <span className="final-model-pass-badge">
+          <span className="training-ui-complete">
             <CheckCircle2 size={17} />
-            3 / 3 horizons passed
+            Pipeline complete
           </span>
         </div>
+      </section>
 
-        <div className="final-model-horizon-grid">
-          {[24, 48, 72].map((horizon) => (
-            <HorizonCard
-              key={horizon}
-              horizon={horizon}
-              data={horizonData[horizon]}
-            />
-          ))}
+      {/* =========================================================
+    STAGE-BY-STAGE MODEL COMPARISON
+========================================================= */}
+
+      <section className="eval-flow-shell">
+        {/* =====================================================
+      MAIN HEADING
+  ====================================================== */}
+        <div className="eval-flow-heading">
+          <div>
+            <span className="final-model-eyebrow">
+              MODEL COMPARISON & EVALUATION
+            </span>
+
+            <h2>Model Selection Evidence Across Both Training Stages</h2>
+
+            <p>
+              Each stage uses evaluation metrics suited to its own prediction
+              task. The selected output from Stage 1 is transformed into HUI
+              before Stage 2 begins.
+            </p>
+          </div>
+
+          <div className="eval-flow-legend">
+            <MetricDirection direction="up">Higher is better</MetricDirection>
+
+            <MetricDirection direction="down">Lower is better</MetricDirection>
+          </div>
         </div>
+
+        {/* =====================================================
+      STAGE 1 - BLUE SECTION
+  ====================================================== */}
+        <section className="eval-stage-section eval-stage-one">
+          <div className="eval-stage-banner">
+            <div className="eval-stage-banner-number">01</div>
+
+            <div className="eval-stage-banner-copy">
+              <span>CLASSIFICATION STAGE</span>
+
+              <h3>Select the Model for Current Harvest Urgency</h3>
+
+              <p>
+                4 classifiers × 4 feature sets were evaluated using the
+                validation data.
+              </p>
+            </div>
+
+            <span className="eval-stage-type-badge">
+              <BrainCircuit size={17} />
+              Classification
+            </span>
+          </div>
+
+          {/* KEY METRICS */}
+          <div className="eval-stage-metric-grid">
+            <article className="eval-stage-metric-card is-blue">
+              <div>
+                <span>PR-AUC</span>
+                <TrendingUp size={18} />
+              </div>
+
+              <strong>{formatNumber(selectedPrAuc, 3)}</strong>
+
+              <small>
+                {prAucMultiplier !== null
+                  ? `≈${formatNumber(prAucMultiplier, 1)}× rare-event baseline`
+                  : "Rare-event ranking performance"}
+              </small>
+
+              <b>Higher is better ↑</b>
+            </article>
+
+            <article className="eval-stage-metric-card is-indigo">
+              <div>
+                <span>ROC-AUC</span>
+                <TrendingUp size={18} />
+              </div>
+
+              <strong>{formatNumber(validation.roc_auc, 3)}</strong>
+
+              <small>0.50 represents random ranking</small>
+
+              <b>Higher is better ↑</b>
+            </article>
+
+            <article className="eval-stage-metric-card is-green">
+              <div>
+                <span>Event Detection</span>
+                <TrendingUp size={18} />
+              </div>
+
+              <strong>
+                {validationEvents.length
+                  ? `${validationDetected}/${validationEvents.length}`
+                  : "—"}
+              </strong>
+
+              <small>Reviewed validation events detected</small>
+
+              <b>Higher is better ↑</b>
+            </article>
+
+            <article className="eval-stage-metric-card is-orange">
+              <div>
+                <span>False Alerts</span>
+                <TrendingDown size={18} />
+              </div>
+
+              <strong>{formatNumber(selectedFalseAlerts, 0)}</strong>
+
+              <small>Validation false-alert episodes</small>
+
+              <b>Lower is better ↓</b>
+            </article>
+          </div>
+
+          {/* METRIC MEANING */}
+          <div className="eval-metric-explainer">
+            <div>
+              <TrendingUp size={16} />
+              <span>
+                <strong>PR-AUC ↑</strong>
+                Stronger rare-event precision–recall performance
+              </span>
+            </div>
+
+            <div>
+              <TrendingUp size={16} />
+              <span>
+                <strong>Recall ↑</strong>
+                More positive rows detected
+              </span>
+            </div>
+
+            <div>
+              <TrendingUp size={16} />
+              <span>
+                <strong>F1 ↑</strong>
+                Better precision–recall balance
+              </span>
+            </div>
+
+            <div>
+              <TrendingDown size={16} />
+              <span>
+                <strong>False Alerts ↓</strong>
+                Lower alert burden
+              </span>
+            </div>
+          </div>
+
+          {/* TABLE */}
+          <div className="eval-table-panel">
+            <div className="eval-table-heading">
+              <div>
+                <span>16 CANDIDATES</span>
+                <h4>Classifier Comparison</h4>
+              </div>
+
+              <span className="eval-table-selected-note">
+                <Trophy size={15} />
+                Selected row highlighted
+              </span>
+            </div>
+
+            <div className="stage-comparison-table-wrap">
+              <table className="stage-comparison-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Classifier</th>
+                    <th>Feature Set</th>
+                    <th>Features</th>
+
+                    <th>
+                      <span className="stage-table-metric">
+                        PR-AUC
+                        <TrendingUp size={14} />
+                      </span>
+                    </th>
+
+                    <th>
+                      <span className="stage-table-metric">
+                        Recall
+                        <TrendingUp size={14} />
+                      </span>
+                    </th>
+
+                    <th>
+                      <span className="stage-table-metric">
+                        F1
+                        <TrendingUp size={14} />
+                      </span>
+                    </th>
+
+                    <th>
+                      <span className="stage-table-metric is-down">
+                        False Alerts
+                        <TrendingDown size={14} />
+                      </span>
+                    </th>
+
+                    <th>Selection</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {allCandidates.map((row, index) => (
+                    <tr
+                      key={`${row.model}-${row.feature_set}`}
+                      className={row.selected ? "is-selected" : ""}
+                    >
+                      <td>
+                        <span className="stage-rank">{index + 1}</span>
+                      </td>
+
+                      <td>
+                        <strong>{modelLabel(row.model)}</strong>
+                      </td>
+
+                      <td>
+                        <span className="stage-feature-pill">
+                          {featureSetLabel(row.feature_set)}
+                        </span>
+                      </td>
+
+                      <td>{row.feature_count}</td>
+
+                      <td>
+                        <strong>
+                          {formatNumber(row.validation_pr_auc, 3)}
+                        </strong>
+                      </td>
+
+                      <td>{formatNumber(row.validation_recall, 3)}</td>
+
+                      <td>{formatNumber(row.validation_f1, 3)}</td>
+
+                      <td>
+                        {formatNumber(row.validation_false_alert_episodes, 0)}
+                      </td>
+
+                      <td>
+                        {row.selected ? (
+                          <span className="stage-selected-pill">
+                            <CheckCircle2 size={14} />
+                            Selected
+                          </span>
+                        ) : (
+                          <span className="stage-not-selected">Compared</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* INTERACTIVE CHART */}
+          <div className="eval-chart-panel">
+            <div className="final-model-panel-heading">
+              <div>
+                <span className="final-model-eyebrow">VISUAL COMPARISON</span>
+
+                <h3>Compare Classifier Performance</h3>
+
+                <p>Switch between PR-AUC, F1 and Recall.</p>
+              </div>
+
+              <div className="final-model-controls">
+                <div className="final-model-segmented">
+                  {Object.entries(METRICS).map(([key, config]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={metric === key ? "is-active" : ""}
+                      onClick={() => setMetric(key)}
+                    >
+                      {config.label}
+                    </button>
+                  ))}
+                </div>
+
+                <select
+                  value={modelFilter}
+                  onChange={(event) => setModelFilter(event.target.value)}
+                >
+                  <option value="all">All models</option>
+
+                  {modelOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {modelLabel(option)}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={showCount}
+                  onChange={(event) => setShowCount(Number(event.target.value))}
+                >
+                  <option value={4}>Top 4</option>
+                  <option value={6}>Top 6</option>
+                  <option value={8}>Top 8</option>
+                  <option value={16}>All 16</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="final-model-candidate-chart">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={chartRows}
+                  margin={{
+                    top: 12,
+                    right: 16,
+                    left: 0,
+                    bottom: 76,
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+
+                  <XAxis
+                    dataKey="chartLabel"
+                    interval={0}
+                    angle={-26}
+                    textAnchor="end"
+                    height={100}
+                    tick={{ fontSize: 10 }}
+                  />
+
+                  <YAxis domain={[0, "auto"]} tick={{ fontSize: 10 }} />
+
+                  <Tooltip content={<CandidateTooltip metric={metric} />} />
+
+                  <Bar dataKey="metricValue" radius={[6, 6, 0, 0]}>
+                    {chartRows.map((row) => (
+                      <Cell
+                        key={`${row.model}-${row.feature_set}`}
+                        fill={row.selected ? "#1d4ed8" : "#93c5fd"}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* STAGE 1 OUTPUT */}
+          <div className="eval-stage-output is-stage-one">
+            <span className="eval-output-icon">
+              <Trophy size={24} />
+            </span>
+
+            <div className="eval-output-main">
+              <small>STAGE 1 SELECTED OUTPUT</small>
+
+              <strong>
+                {modelLabel(summary.selected_model)}
+                {" · "}
+                No Humidity
+                {" · "}
+                {selectedFeatureCount} Features
+              </strong>
+
+              <p>
+                This selected classifier produces the raw harvest-event score
+                used by the next transformation step.
+              </p>
+            </div>
+
+            <div className="eval-output-next">
+              <span>Goes next to</span>
+              <strong>Score Transformation</strong>
+              <b>↓</b>
+            </div>
+          </div>
+        </section>
+
+        {/* =====================================================
+      HUI TRANSFORMATION BRIDGE
+  ====================================================== */}
+
+        <section className="eval-hui-transfer">
+          <div className="eval-transfer-line" />
+
+          <div className="eval-transfer-card">
+            <span className="eval-transfer-badge">BRIDGE BETWEEN STAGES</span>
+
+            <div className="eval-transfer-flow">
+              <div>
+                <small>STAGE 1 OUTPUT</small>
+                <strong>XGBoost Score</strong>
+              </div>
+
+              <span>→</span>
+
+              <div>
+                <small>CALIBRATION</small>
+                <strong>Platt Scaling</strong>
+              </div>
+
+              <span>→</span>
+
+              <div>
+                <small>MAPPING</small>
+                <strong>HUI 0–100</strong>
+              </div>
+            </div>
+
+            <p>
+              The classifier score is adjusted using Platt calibration and then
+              mapped to the relative 0–100 Harvest Urgency Index.
+            </p>
+
+            <div className="eval-transfer-next">
+              <span>Current HUI becomes an input to Stage 2</span>
+              <TrendingDown size={20} />
+            </div>
+          </div>
+
+          <div className="eval-transfer-line" />
+        </section>
+
+        {/* =====================================================
+      STAGE 2 - GREEN SECTION
+  ====================================================== */}
+
+        <section className="eval-stage-section eval-stage-two">
+          <div className="eval-stage-banner">
+            <div className="eval-stage-banner-number">02</div>
+
+            <div className="eval-stage-banner-copy">
+              <span>REGRESSION STAGE</span>
+
+              <h3>Select Models for Future HUI Forecasting</h3>
+
+              <p>
+                Separate regression models are trained and evaluated for +24h,
+                +48h and +72h.
+              </p>
+            </div>
+
+            <span className="eval-stage-type-badge">
+              <TrendingUp size={17} />
+              Regression
+            </span>
+          </div>
+
+          {/* METRIC GUIDE */}
+          <div className="eval-metric-explainer is-green">
+            <div>
+              <TrendingDown size={16} />
+              <span>
+                <strong>MAE ↓</strong>
+                Smaller forecast error
+              </span>
+            </div>
+
+            <div>
+              <TrendingUp size={16} />
+              <span>
+                <strong>Improvement ↑</strong>
+                Better than persistence
+              </span>
+            </div>
+
+            <div>
+              <TrendingUp size={16} />
+              <span>
+                <strong>R² ↑</strong>
+                More future variation explained
+              </span>
+            </div>
+
+            <div>
+              <TrendingUp size={16} />
+              <span>
+                <strong>Class Agreement ↑</strong>
+                More matching readiness classes
+              </span>
+            </div>
+          </div>
+
+          {/* TABLE */}
+          <div className="eval-table-panel is-stage-two">
+            <div className="eval-table-heading">
+              <div>
+                <span>THREE FORECAST HORIZONS</span>
+
+                <h4>Future-HUI Model Evaluation</h4>
+              </div>
+
+              <span className="eval-table-pass-note">
+                <CheckCircle2 size={15} />
+                {regressionGate.improved_horizon_count ?? 3}
+                /3 passed
+              </span>
+            </div>
+
+            <div className="stage-comparison-table-wrap">
+              <table className="stage-comparison-table stage-two-table">
+                <thead>
+                  <tr>
+                    <th>Horizon</th>
+
+                    <th>Selected Model</th>
+
+                    <th>
+                      <span className="stage-table-metric is-down">
+                        Validation MAE
+                        <TrendingDown size={14} />
+                      </span>
+                    </th>
+
+                    <th>
+                      <span className="stage-table-metric is-down">
+                        Test MAE
+                        <TrendingDown size={14} />
+                      </span>
+                    </th>
+
+                    <th>
+                      <span className="stage-table-metric">
+                        Improvement
+                        <TrendingUp size={14} />
+                      </span>
+                    </th>
+
+                    <th>
+                      <span className="stage-table-metric">
+                        Test R²
+                        <TrendingUp size={14} />
+                      </span>
+                    </th>
+
+                    <th>
+                      <span className="stage-table-metric">
+                        Class Agreement
+                        <TrendingUp size={14} />
+                      </span>
+                    </th>
+
+                    <th>Gate</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {[24, 48, 72].map((horizon) => {
+                    const data = horizonData[horizon];
+
+                    return (
+                      <tr key={horizon}>
+                        <td>
+                          <span className="eval-horizon-badge">
+                            +{horizon}h
+                          </span>
+                        </td>
+
+                        <td>
+                          <strong>{modelLabel(data?.selectedModel)}</strong>
+                        </td>
+
+                        <td>
+                          <span className="eval-value-lower">
+                            <TrendingDown size={14} />
+                            {formatNumber(data?.validationMae, 2)}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span className="eval-value-lower">
+                            <TrendingDown size={14} />
+                            {formatNumber(data?.testMae, 2)}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span className="eval-value-higher">
+                            <TrendingUp size={14} />
+                            {formatPercent(data?.improvement, 1)}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span className="eval-value-higher">
+                            <TrendingUp size={14} />
+                            {formatNumber(data?.testR2, 2)}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span className="eval-value-higher">
+                            <TrendingUp size={14} />
+                            {formatPercent(data?.classAgreement, 1)}
+                          </span>
+                        </td>
+
+                        <td>
+                          <span
+                            className={`stage-gate-pill ${
+                              data?.passed ? "is-passed" : "is-review"
+                            }`}
+                          >
+                            {data?.passed ? (
+                              <>
+                                <CheckCircle2 size={14} />
+                                Passed
+                              </>
+                            ) : (
+                              "Review"
+                            )}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* THREE SELECTED OUTPUT CARDS */}
+          <div className="eval-horizon-cards">
+            {[24, 48, 72].map((horizon) => {
+              const data = horizonData[horizon];
+
+              return (
+                <article
+                  className={`eval-horizon-card horizon-${horizon}`}
+                  key={horizon}
+                >
+                  <div className="eval-horizon-card-top">
+                    <span>+{horizon} HOURS</span>
+
+                    <CheckCircle2 size={18} />
+                  </div>
+
+                  <strong>{modelLabel(data?.selectedModel)}</strong>
+
+                  <div className="eval-horizon-primary">
+                    <small>Test MAE</small>
+
+                    <b>{formatNumber(data?.testMae, 2)}</b>
+
+                    <span>HUI points</span>
+                  </div>
+
+                  <div className="eval-horizon-improvement">
+                    <TrendingUp size={15} />
+
+                    <span>
+                      <strong>{formatPercent(data?.improvement, 1)}</strong>{" "}
+                      improvement over persistence
+                    </span>
+                  </div>
+
+                  <div className="eval-horizon-secondary">
+                    <span>
+                      R²
+                      <strong>{formatNumber(data?.testR2, 2)}</strong>
+                    </span>
+
+                    <span>
+                      Class match
+                      <strong>{formatPercent(data?.classAgreement, 1)}</strong>
+                    </span>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          {/* STAGE 2 OUTPUT */}
+          <div className="eval-stage-output is-stage-two">
+            <span className="eval-output-icon">
+              <Clock3 size={24} />
+            </span>
+
+            <div className="eval-output-main">
+              <small>STAGE 2 SELECTED OUTPUTS</small>
+
+              <strong>
+                +24h LightGBM
+                {" · "}
+                +48h XGBoost
+                {" · "}
+                +72h LightGBM
+              </strong>
+
+              <p>
+                These three selected regression models produce the future HUI
+                trajectory used by the decision-support dashboard.
+              </p>
+            </div>
+
+            <div className="eval-output-next">
+              <span>Goes next to</span>
+              <strong>Final Decision Support</strong>
+              <b>↓</b>
+            </div>
+          </div>
+        </section>
+
+        {/* =====================================================
+      FINAL OUTPUT
+  ====================================================== */}
+
+        <section className="eval-final-output">
+          <div className="eval-final-output-heading">
+            <span className="eval-final-main-icon">
+              <Sparkles size={27} />
+            </span>
+
+            <div>
+              <span>FINAL MODEL OUTPUT</span>
+
+              <h3>Harvest Decision-Support Prediction Package</h3>
+
+              <p>
+                Stage 1 provides current harvest urgency. Stage 2 provides the
+                expected future trajectory.
+              </p>
+            </div>
+
+            <span className="eval-final-complete">
+              <CheckCircle2 size={16} />
+              Complete
+            </span>
+          </div>
+
+          <div className="eval-final-grid">
+            <div>
+              <span>
+                <Gauge size={20} />
+              </span>
+
+              <small>CURRENT</small>
+
+              <strong>HUI 0–100</strong>
+
+              <p>Current relative harvest urgency</p>
+            </div>
+
+            <div>
+              <span>
+                <Clock3 size={20} />
+              </span>
+
+              <small>+24 HOURS</small>
+
+              <strong>LightGBM</strong>
+
+              <p>Short-term future HUI</p>
+            </div>
+
+            <div>
+              <span>
+                <Clock3 size={20} />
+              </span>
+
+              <small>+48 HOURS</small>
+
+              <strong>XGBoost</strong>
+
+              <p>Medium-term future HUI</p>
+            </div>
+
+            <div>
+              <span>
+                <Clock3 size={20} />
+              </span>
+
+              <small>+72 HOURS</small>
+
+              <strong>LightGBM</strong>
+
+              <p>Extended future HUI</p>
+            </div>
+          </div>
+
+          <div className="eval-final-flow">
+            <span>Current HUI</span>
+
+            <b>+</b>
+
+            <span>+24h HUI</span>
+
+            <b>+</b>
+
+            <span>+48h HUI</span>
+
+            <b>+</b>
+
+            <span>+72h HUI</span>
+
+            <strong>→</strong>
+
+            <span className="is-final">Harvest Decision Support</span>
+          </div>
+        </section>
       </section>
 
       <div className="final-model-feature-grid">
         <article className="final-model-feature-panel">
           <div className="final-model-panel-heading">
             <div>
-              <span className="final-model-eyebrow">
-                MODEL INTERPRETATION
-              </span>
-              <h3>
-                Most Influential Selected Model Features
-              </h3>
+              <span className="final-model-eyebrow">MODEL INTERPRETATION</span>
+              <h3>Most Influential Selected Model Features</h3>
               <p>
-                Feature importance highlights the sensor
-                patterns used by the selected classifier.
+                Feature importance highlights the sensor patterns used by the
+                selected classifier.
               </p>
             </div>
           </div>
 
           <div className="final-model-feature-list">
-            {featureImportance
-              .slice(0, 8)
-              .map((row, index) => (
-                <div
-                  className="final-model-feature-row"
-                  key={row.feature}
-                >
-                  <span>{index + 1}</span>
-                  <div>
-                    <strong>
-                      {friendlyFeature(row.feature)}
-                    </strong>
-                    <small>{row.feature}</small>
-                    <div className="final-model-feature-track">
-                      <i
-                        style={{
-                          width: `${Math.max(
-                            5,
-                            (Number(
-                              row.absolute_importance,
-                            ) /
-                              maxFeatureImportance) *
-                              100,
-                          )}%`,
-                        }}
-                      />
-                    </div>
+            {featureImportance.slice(0, 8).map((row, index) => (
+              <div className="final-model-feature-row" key={row.feature}>
+                <span>{index + 1}</span>
+                <div>
+                  <strong>{friendlyFeature(row.feature)}</strong>
+                  <small>{row.feature}</small>
+                  <div className="final-model-feature-track">
+                    <i
+                      style={{
+                        width: `${Math.max(
+                          5,
+                          (Number(row.absolute_importance) /
+                            maxFeatureImportance) *
+                            100,
+                        )}%`,
+                      }}
+                    />
                   </div>
-                  <b>
-                    {formatNumber(
-                      row.importance,
-                      4,
-                    )}
-                  </b>
                 </div>
-              ))}
+                <b>{formatNumber(row.importance, 4)}</b>
+              </div>
+            ))}
           </div>
         </article>
 
         <article className="final-model-pipeline-panel">
-          <span className="final-model-eyebrow">
-            FINAL EVALUATION SUMMARY
-          </span>
-          <h3>
-            Research decision-support pipeline established
-          </h3>
+          <span className="final-model-eyebrow">FINAL EVALUATION SUMMARY</span>
+          <h3>Research decision-support pipeline established</h3>
 
           <div className="final-model-pipeline-flow">
             <span>
@@ -1483,34 +1755,29 @@ export default function FinalModelEvaluationDashboard() {
         <div className="final-model-details-content">
           <div className="final-model-note-grid">
             <div>
-              <strong>
-                Benchmark and temporal policy are separate
-              </strong>
+              <strong>Benchmark and temporal policy are separate</strong>
               <p>
-                The benchmark threshold detected the held-out
-                event. The stricter smoothed temporal alert
-                policy is evaluated separately and is not used
-                to describe classifier ranking performance.
+                The benchmark threshold detected the held-out event. The
+                stricter smoothed temporal alert policy is evaluated separately
+                and is not used to describe classifier ranking performance.
               </p>
             </div>
 
             <div>
               <strong>HUI transformation</strong>
               <p>
-                Platt scaling is used as a research-stage score
-                transformation before mapping to the relative
-                0–100 HUI. The HUI is not presented as a
-                literal biological probability.
+                Platt scaling is used as a research-stage score transformation
+                before mapping to the relative 0–100 HUI. The HUI is not
+                presented as a literal biological probability.
               </p>
             </div>
 
             <div>
               <strong>Research scope</strong>
               <p>
-                These results support the final
-                decision-support research prototype.
-                Independent biological and operational
-                validation remains a later deployment stage.
+                These results support the final decision-support research
+                prototype. Independent biological and operational validation
+                remains a later deployment stage.
               </p>
             </div>
           </div>
