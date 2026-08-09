@@ -539,7 +539,7 @@
 
 .iot-chart-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1.25fr) minmax(280px, 0.98fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.72rem;
 }
 
@@ -3808,4 +3808,70 @@
   text-align: center;
   color: var(--text-secondary) !important;
   font-size: 0.75rem;
+}
+
+/* =========================================================
+   LIVE DETAILS LAYOUT
+   Latest IoT Readings on the left
+   Key Contributing Factors + Recommended Action on the right
+   ========================================================= */
+
+.iot-live-details-grid {
+  display: grid;
+  grid-template-columns: minmax(380px, 0.85fr) minmax(0, 1.45fr);
+  gap: 0.72rem;
+  align-items: stretch;
+}
+
+.iot-live-right-stack {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 0.72rem;
+}
+
+.iot-live-details-grid .iot-readings-card {
+  grid-column: auto !important;
+  height: 100%;
+}
+
+.iot-live-details-grid .iot-reading-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.iot-live-right-stack .iot-factor-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.iot-live-right-stack .iot-factor-card {
+  min-height: 110px;
+}
+
+.iot-live-right-stack .iot-action-content {
+  grid-template-columns: minmax(0, 1fr) 165px;
+}
+
+@media (max-width: 1100px) {
+  .iot-live-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .iot-live-right-stack .iot-factor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .iot-live-right-stack .iot-factor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .iot-live-right-stack .iot-action-content {
+    grid-template-columns: 1fr;
+  }
+
+  .iot-live-right-stack .iot-shield-illustration {
+    display: none;
+  }
 }

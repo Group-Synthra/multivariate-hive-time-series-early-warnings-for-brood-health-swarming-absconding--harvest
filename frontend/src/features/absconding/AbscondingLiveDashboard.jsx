@@ -258,6 +258,7 @@ function makeChartRows(timeline, hours) {
       getNum(row.risk_percentage, getNum(row.risk_probability) * 100),
     ),
     currentRisk: getOptionalNum(row.current_state_percentage),
+    stress: getNum(row.environmental_stress_score) * 100,
     arm: getNum(row.arm) * 100,
     currentArm: getNum(row.current_state_arm) * 100,
     temp: getNum(row.temperature_c),
@@ -433,12 +434,13 @@ export default function AbscondingLiveDashboard({
 }) {
   const [riskRange, setRiskRange] = useState(6);
   const [sensorRange, setSensorRange] = useState(6);
+  const [stressRange, setStressRange] = useState(24);
   const [riskScaleMode, setRiskScaleMode] = useState('zoomed');
   const [showInsights, setShowInsights] = useState(false);
   const riskRows = useMemo(() => makeChartRows(iotLiveData?.timeline || [], riskRange), [iotLiveData?.timeline, riskRange]);
   const sensorRows = useMemo(() => makeChartRows(iotLiveData?.timeline || [], sensorRange), [iotLiveData?.timeline, sensorRange]);
   const zoomedRiskDomain = useMemo(() => adaptiveRiskDomain(riskRows), [riskRows]);
-  
+  const stressRows = useMemo(() => makeChartRows(iotLiveData?.timeline || [], stressRange),[iotLiveData?.timeline, stressRange]);
 
   if (iotLiveError && !iotLiveData) {
     return <EmptyLiveState error={iotLiveError} onRetry={refetchIotLive} loading={iotLiveLoading} />;
@@ -802,6 +804,82 @@ const environmentalStressPercent =
           <RangeButtons active={riskRange} onChange={setRiskRange} />
         </section>
 
+        <section className="iot-card iot-stress-chart-card">
+  <div className="iot-card-title-row">
+    <h3>Environmental Stress Score Timeline</h3>
+    <span className="iot-info-dot">
+      <Info size={14} />
+    </span>
+  </div>
+
+  <div className="iot-chart-box">
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart
+        data={stressRows}
+        margin={{ top: 18, right: 14, left: -18, bottom: 0 }}
+      >
+        <defs>
+          <linearGradient
+            id="environmentalStressGradient"
+            x1="0"
+            y1="0"
+            x2="0"
+            y2="1"
+          >
+            <stop
+              offset="5%"
+              stopColor="var(--accent-gold)"
+              stopOpacity={0.4}
+            />
+            <stop
+              offset="95%"
+              stopColor="var(--accent-gold)"
+              stopOpacity={0.04}
+            />
+          </linearGradient>
+        </defs>
+
+        <CartesianGrid
+          strokeDasharray="3 3"
+          stroke="rgba(255,255,255,0.07)"
+        />
+
+        <XAxis
+          dataKey="time"
+          stroke="var(--text-secondary)"
+          tick={{ fontSize: 11 }}
+        />
+
+        <YAxis
+          domain={[0, 100]}
+          stroke="var(--text-secondary)"
+          tick={{ fontSize: 11 }}
+          tickFormatter={(value) => `${value}%`}
+        />
+
+        <Tooltip content={<DashboardTooltip />} />
+
+        <Area
+          type="monotone"
+          dataKey="stress"
+          name="Environmental Stress"
+          unit="%"
+          stroke="var(--accent-gold)"
+          fill="url(#environmentalStressGradient)"
+          strokeWidth={2.5}
+          dot={{ r: 2.5 }}
+          activeDot={{ r: 5 }}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  </div>
+
+  <RangeButtons
+    active={stressRange}
+    onChange={setStressRange}
+  />
+</section>
+
         <section className="iot-card iot-sensor-chart-card">
           <div className="iot-card-title-row"><h3>Sensor Trend (Live)</h3><span className="iot-info-dot"><Info size={14} /></span></div>
           <div className="iot-chart-box">
@@ -823,24 +901,6 @@ const environmentalStressPercent =
           <RangeButtons active={sensorRange} onChange={setSensorRange} options={RANGE_OPTIONS.slice(0, 4)} />
         </section>
 
-        <section className="iot-card iot-readings-card">
-          <div className="iot-card-title-row"><h3>Latest IoT Readings</h3><span className="iot-info-dot"><Info size={14} /></span></div>
-          <div className="iot-reading-list">
-            <div className="iot-reading-row"><span className="iot-reading-icon temp">♨</span><div><strong>Temperature</strong></div><b className="temp-value">{fmt(latest.temperature_c, 1, ' °C')}</b><em className={sensorStatuses.temperature.className}>Status<br />{sensorStatuses.temperature.label}</em></div>
-            <div className="iot-reading-row"><span className="iot-reading-icon humidity">◖</span><div><strong>Humidity</strong></div><b className="humidity-value">{fmt(latest.humidity_pct, 1, ' %')}</b><em className={sensorStatuses.humidity.className}>Status<br />{sensorStatuses.humidity.label}</em></div>
-            <div className="iot-reading-row"><span className="iot-reading-icon co2">☁</span><div><strong>CO₂ Level</strong></div><b className="co2-value">{fmt(latest.co2_ppm, 0, ' ppm')}</b><em className={sensorStatuses.co2.className}>Status<br />{sensorStatuses.co2.label}</em></div>
-            <div className="iot-reading-row"><span className="iot-reading-icon weight">▣</span><div><strong>Weight</strong></div><b className="weight-value">{fmt(latest.weight_kg, 2, ' kg')}</b><em className={sensorStatuses.weight.className}>Status<br />{sensorStatuses.weight.label}</em></div>
-            {latest.external_temperature_c !== null && latest.external_temperature_c !== undefined && (
-              <div className="iot-reading-row"><span className="iot-reading-icon temp">↗</span><div><strong>External Temperature</strong></div><b className="temp-value">{fmt(latest.external_temperature_c, 1, ' °C')}</b><em className="neutral">Context<br />Outside</em></div>
-            )}
-            {latest.external_humidity_pct !== null && latest.external_humidity_pct !== undefined && (
-              <div className="iot-reading-row"><span className="iot-reading-icon humidity">↗</span><div><strong>External Humidity</strong></div><b className="humidity-value">{fmt(latest.external_humidity_pct, 1, ' %')}</b><em className="neutral">Context<br />Outside</em></div>
-            )}
-            {latest.battery_voltage !== null && latest.battery_voltage !== undefined && (
-              <div className="iot-reading-row"><span className="iot-reading-icon weight">⚡</span><div><strong>Battery Voltage</strong></div><b className="weight-value">{fmt(latest.battery_voltage, 2, ' V')}</b><em className={getNum(latest.battery_voltage) < 3.4 ? 'warn' : 'good'}>Device<br />{getNum(latest.battery_voltage) < 3.4 ? 'Low' : 'Normal'}</em></div>
-            )}
-          </div>
-        </section>
       </div>
 
       {showInsights && (
@@ -863,34 +923,55 @@ const environmentalStressPercent =
         </section>
       )}
 
-      <div className="iot-bottom-grid">
-        <section className="iot-card iot-factors-card">
-          <div className="iot-card-title-row"><h3>Key Contributing Factors</h3><span className="iot-info-dot"><Info size={14} /></span></div>
-          <div className="iot-factor-grid">
-            {factorCards.map((factor) => (
-              <div className={`iot-factor-card ${factor.className}`} key={factor.key}>
-                <span>{factor.icon}</span>
-                <h4>{factor.title}</h4>
-                <b>{factor.impact}</b>
-                <p>{factor.text}</p>
-              </div>
-            ))}
+      <div className="iot-live-details-grid">
+        <section className="iot-card iot-readings-card">
+          <div className="iot-card-title-row"><h3>Latest IoT Readings</h3><span className="iot-info-dot"><Info size={14} /></span></div>
+          <div className="iot-reading-list">
+            <div className="iot-reading-row"><span className="iot-reading-icon temp">♨</span><div><strong>Temperature</strong></div><b className="temp-value">{fmt(latest.temperature_c, 1, ' °C')}</b><em className={sensorStatuses.temperature.className}>Status<br />{sensorStatuses.temperature.label}</em></div>
+            <div className="iot-reading-row"><span className="iot-reading-icon humidity">◖</span><div><strong>Humidity</strong></div><b className="humidity-value">{fmt(latest.humidity_pct, 1, ' %')}</b><em className={sensorStatuses.humidity.className}>Status<br />{sensorStatuses.humidity.label}</em></div>
+            <div className="iot-reading-row"><span className="iot-reading-icon co2">☁</span><div><strong>CO₂ Level</strong></div><b className="co2-value">{fmt(latest.co2_ppm, 0, ' ppm')}</b><em className={sensorStatuses.co2.className}>Status<br />{sensorStatuses.co2.label}</em></div>
+            <div className="iot-reading-row"><span className="iot-reading-icon weight">▣</span><div><strong>Weight</strong></div><b className="weight-value">{fmt(latest.weight_kg, 2, ' kg')}</b><em className={sensorStatuses.weight.className}>Status<br />{sensorStatuses.weight.label}</em></div>
+            {latest.external_temperature_c !== null && latest.external_temperature_c !== undefined && (
+              <div className="iot-reading-row"><span className="iot-reading-icon temp">↗</span><div><strong>External Temperature</strong></div><b className="temp-value">{fmt(latest.external_temperature_c, 1, ' °C')}</b><em className="neutral">Context<br />Outside</em></div>
+            )}
+            {latest.external_humidity_pct !== null && latest.external_humidity_pct !== undefined && (
+              <div className="iot-reading-row"><span className="iot-reading-icon humidity">↗</span><div><strong>External Humidity</strong></div><b className="humidity-value">{fmt(latest.external_humidity_pct, 1, ' %')}</b><em className="neutral">Context<br />Outside</em></div>
+            )}
+            {latest.battery_voltage !== null && latest.battery_voltage !== undefined && (
+              <div className="iot-reading-row"><span className="iot-reading-icon weight">⚡</span><div><strong>Battery Voltage</strong></div><b className="weight-value">{fmt(latest.battery_voltage, 2, ' V')}</b><em className={getNum(latest.battery_voltage) < 3.4 ? 'warn' : 'good'}>Device<br />{getNum(latest.battery_voltage) < 3.4 ? 'Low' : 'Normal'}</em></div>
+            )}
           </div>
         </section>
 
-        <section className="iot-card iot-actions-card">
-          <div className="iot-card-title-row"><h3>Recommended Action</h3><span className="iot-info-dot"><Info size={14} /></span></div>
-          <div className="iot-action-content">
-            <div className="iot-action-list">
-              {actions.map((item) => (
-                <div key={item}><CheckCircle size={18} /> <span>{item}</span></div>
+        <div className="iot-live-right-stack">
+          <section className="iot-card iot-factors-card">
+            <div className="iot-card-title-row"><h3>Key Contributing Factors</h3><span className="iot-info-dot"><Info size={14} /></span></div>
+            <div className="iot-factor-grid">
+              {factorCards.map((factor) => (
+                <div className={`iot-factor-card ${factor.className}`} key={factor.key}>
+                  <span>{factor.icon}</span>
+                  <h4>{factor.title}</h4>
+                  <b>{factor.impact}</b>
+                  <p>{factor.text}</p>
+                </div>
               ))}
             </div>
-            <div className="iot-shield-illustration">
-              <ShieldCheck size={128} />
+          </section>
+  
+          <section className="iot-card iot-actions-card">
+            <div className="iot-card-title-row"><h3>Recommended Action</h3><span className="iot-info-dot"><Info size={14} /></span></div>
+            <div className="iot-action-content">
+              <div className="iot-action-list">
+                {actions.map((item) => (
+                  <div key={item}><CheckCircle size={18} /> <span>{item}</span></div>
+                ))}
+              </div>
+              <div className="iot-shield-illustration">
+                <ShieldCheck size={128} />
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
 
       <div className="iot-footer-note">
