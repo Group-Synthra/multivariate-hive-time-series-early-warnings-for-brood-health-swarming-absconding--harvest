@@ -340,7 +340,7 @@ export default function SwarmExploratory() {
         <SummaryCard label="Records" value={formatInteger(summary.total_records)} note="Sensor observations analysed" icon={Database} />
         <SummaryCard label="Hives" value={formatInteger(summary.total_hives)} note="Independent hive identifiers" icon={BarChart3} />
         <SummaryCard label="Observation period" value={`${formatInteger(summary.time_days)} days`} note="Calendar coverage of the dataset" icon={FileText} />
-        <SummaryCard label="72-hour positive rate" value={`${formatNumber(summary.swarm_rate, 3)}%`} note={`${formatInteger(prevalence?.count?.positive)} positive records`} icon={Scale} />
+        <SummaryCard label="72-hour positive rate" value={`${formatNumber(summary.swarm_rate, 3)}%`}  icon={Scale} />
       </div>
 
       <Section
