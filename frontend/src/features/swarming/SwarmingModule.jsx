@@ -115,7 +115,7 @@ export default function SwarmingModule() {
         <video
           src="/videos/swarming.mp4"
           autoPlay
-          muted
+          unmuted
           loop
           playsInline
           preload="auto"
