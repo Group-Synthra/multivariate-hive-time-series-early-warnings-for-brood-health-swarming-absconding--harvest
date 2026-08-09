@@ -259,11 +259,11 @@ export default function LiveIoTHuiPredictionTab() {
 
       try {
        const [
-   predictionResult,
-  sensorResult,
-  monitorResult,
-  historyResult,
-] = await Promise.allSettled([
+      predictionResult,
+      sensorResult,
+      monitorResult,
+      historyResult,
+   ] = await Promise.allSettled([
   force
     ? refreshLiveHuiPrediction(selectedHive)
     : loadLiveHuiPrediction({ hiveId: selectedHive }),
