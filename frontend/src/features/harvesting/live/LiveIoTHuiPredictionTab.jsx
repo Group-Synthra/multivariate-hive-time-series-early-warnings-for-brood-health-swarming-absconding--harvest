@@ -539,152 +539,121 @@ export default function LiveIoTHuiPredictionTab() {
       ]
     : [];
   const historyRows = history ?? [];
- const evaluatedHistoryRows = useMemo(() => {
-  const ordered = historyRows
-    .map((row) => ({
-      row,
-      time: getHistoryTimestampMs(row),
-    }))
-    .filter((item) => item.time !== null)
-    .sort((a, b) => a.time - b.time);
+  const evaluatedHistoryRows = useMemo(() => {
+    const ordered = historyRows
+      .map((row) => ({
+        row,
+        time: getHistoryTimestampMs(row),
+      }))
+      .filter((item) => item.time !== null)
+      .sort((a, b) => a.time - b.time);
 
-  const latestAvailableTime =
-    ordered.length > 0
-      ? ordered[ordered.length - 1].time
-      : null;
+    const latestAvailableTime =
+      ordered.length > 0 ? ordered[ordered.length - 1].time : null;
 
-  function evaluateHorizon(origin, horizonHours) {
-    const expected = asNumber(
-      origin.row[
-        `predicted_hui_${horizonHours}h`
-      ],
-    );
+    function evaluateHorizon(origin, horizonHours) {
+      const expected = asNumber(origin.row[`predicted_hui_${horizonHours}h`]);
 
-    const targetTime =
-      origin.time +
-      horizonHours * HOUR_MS;
+      const targetTime = origin.time + horizonHours * HOUR_MS;
 
-    if (expected === null) {
-      return {
-        horizonHours,
-        targetTime,
-        expected: null,
-        actual: null,
-        gap: null,
-        absoluteError: null,
-        status: "No forecast",
-      };
-    }
-
-    if (
-      latestAvailableTime === null ||
-      latestAvailableTime < targetTime
-    ) {
-      return {
-        horizonHours,
-        targetTime,
-        expected,
-        actual: null,
-        gap: null,
-        absoluteError: null,
-        status: "Pending",
-      };
-    }
-
-    let closest = null;
-    let closestDifference =
-      Number.POSITIVE_INFINITY;
-
-    for (const candidate of ordered) {
-      const difference = Math.abs(
-        candidate.time - targetTime,
-      );
-
-      if (difference < closestDifference) {
-        closest = candidate;
-        closestDifference = difference;
+      if (expected === null) {
+        return {
+          horizonHours,
+          targetTime,
+          expected: null,
+          actual: null,
+          gap: null,
+          absoluteError: null,
+          status: "No forecast",
+        };
       }
-    }
 
-    if (
-      !closest ||
-      closestDifference >
-        FUTURE_MATCH_TOLERANCE_MS
-    ) {
+      if (latestAvailableTime === null || latestAvailableTime < targetTime) {
+        return {
+          horizonHours,
+          targetTime,
+          expected,
+          actual: null,
+          gap: null,
+          absoluteError: null,
+          status: "Pending",
+        };
+      }
+
+      let closest = null;
+      let closestDifference = Number.POSITIVE_INFINITY;
+
+      for (const candidate of ordered) {
+        const difference = Math.abs(candidate.time - targetTime);
+
+        if (difference < closestDifference) {
+          closest = candidate;
+          closestDifference = difference;
+        }
+      }
+
+      if (!closest || closestDifference > FUTURE_MATCH_TOLERANCE_MS) {
+        return {
+          horizonHours,
+          targetTime,
+          expected,
+          actual: null,
+          gap: null,
+          absoluteError: null,
+          status: "Actual unavailable",
+        };
+      }
+
+      const actual = asNumber(closest.row?.current_hui);
+
+      if (actual === null) {
+        return {
+          horizonHours,
+          targetTime,
+          expected,
+          actual: null,
+          gap: null,
+          absoluteError: null,
+          status: "Actual unavailable",
+        };
+      }
+
+      const gap = actual - expected;
+
+      const absoluteError = Math.abs(gap);
+
       return {
         horizonHours,
         targetTime,
         expected,
-        actual: null,
-        gap: null,
-        absoluteError: null,
-        status: "Actual unavailable",
+        actual,
+        gap,
+        absoluteError,
+        actualTime: closest.time,
+        status: "Evaluated",
       };
     }
 
-    const actual = asNumber(
-      closest.row?.current_hui,
-    );
-
-    if (actual === null) {
-      return {
-        horizonHours,
-        targetTime,
-        expected,
-        actual: null,
-        gap: null,
-        absoluteError: null,
-        status: "Actual unavailable",
-      };
-    }
-
-    const gap =
-      actual - expected;
-
-    const absoluteError =
-      Math.abs(gap);
-
-    return {
-      horizonHours,
-      targetTime,
-      expected,
-      actual,
-      gap,
-      absoluteError,
-      actualTime: closest.time,
-      status: "Evaluated",
-    };
-  }
-
-  return [...ordered]
-    .reverse()
-    .map((origin) => ({
+    return [...ordered].reverse().map((origin) => ({
       row: origin.row,
       predictionTime: origin.time,
 
-      horizon24:
-        evaluateHorizon(origin, 24),
+      horizon24: evaluateHorizon(origin, 24),
 
-      horizon48:
-        evaluateHorizon(origin, 48),
+      horizon48: evaluateHorizon(origin, 48),
 
-      horizon72:
-        evaluateHorizon(origin, 72),
+      horizon72: evaluateHorizon(origin, 72),
     }));
-}, [historyRows]);
+  }, [historyRows]);
   const evaluationByPredictionTime = useMemo(() => {
-  const map = new Map();
+    const map = new Map();
 
-  evaluatedHistoryRows.forEach((item) => {
-    map.set(
-      item.predictionTime,
-      item,
-    );
-  });
+    evaluatedHistoryRows.forEach((item) => {
+      map.set(item.predictionTime, item);
+    });
 
-  return map;
-}, [evaluatedHistoryRows]);
-
+    return map;
+  }, [evaluatedHistoryRows]);
 
   const downloadForecastEvaluationCsv = useCallback(() => {
     if (evaluatedHistoryRows.length === 0) {

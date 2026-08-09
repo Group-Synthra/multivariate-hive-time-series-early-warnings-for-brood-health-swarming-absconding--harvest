@@ -256,6 +256,63 @@ function StrengthItem({ icon: Icon, title, text }) {
   );
 }
 
+function TrainingStageCard({
+  number,
+  eyebrow,
+  title,
+  description,
+  icon: Icon,
+  items,
+  resultLabel,
+  result,
+  tone = "blue",
+}) {
+  return (
+    <article
+      className={`training-stage-card is-${tone}`}
+    >
+      <div className="training-stage-card-top">
+        <span className="training-stage-number">
+          {number}
+        </span>
+
+        <span className="training-stage-icon">
+          <Icon size={24} />
+        </span>
+      </div>
+
+      <div className="training-stage-card-heading">
+        <span>{eyebrow}</span>
+        <h3>{title}</h3>
+        <p>{description}</p>
+      </div>
+
+      <div className="training-stage-steps">
+        {items.map((item, index) => (
+          <div
+            className="training-stage-step"
+            key={`${number}-${index}`}
+          >
+            <span>
+              {index + 1}
+            </span>
+
+            <div>
+              <strong>{item.title}</strong>
+              <small>{item.text}</small>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="training-stage-result">
+        <small>{resultLabel}</small>
+        <strong>{result}</strong>
+      </div>
+    </article>
+  );
+}
+
 function HorizonCard({ horizon, data }) {
   return (
     <article className="final-model-horizon-card">
@@ -385,6 +442,42 @@ function CandidateTable({ rows }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+function PipelineStep({
+  number,
+  title,
+  text,
+}) {
+  return (
+    <div className="training-ui-step">
+      <span>{number}</span>
+
+      <div>
+        <strong>{title}</strong>
+        <small>{text}</small>
+      </div>
+    </div>
+  );
+}
+
+function ForecastModelChip({
+  horizon,
+  model,
+  mae,
+}) {
+  return (
+    <div className="training-ui-forecast-chip">
+      <div>
+        <span>+{horizon}h</span>
+        <strong>{modelLabel(model)}</strong>
+      </div>
+
+      <small>
+        Validation MAE{" "}
+        <b>{formatNumber(mae, 2)}</b>
+      </small>
     </div>
   );
 }
@@ -611,7 +704,7 @@ export default function FinalModelEvaluationDashboard() {
           </span>
           <h2>Harvest Prediction Model Evaluation</h2>
           <p>
-            Four classifiers and four feature sets were
+            Four classifiers and Four feature sets were
             compared, followed by 24, 48 and 72 hour
             HUI forecast validation.
           </p>
@@ -622,6 +715,333 @@ export default function FinalModelEvaluationDashboard() {
           Evaluation pipeline complete
         </span>
       </header>
+
+     {/* =========================================================
+    MODEL TRAINING PIPELINE
+========================================================= */}
+
+<section className="training-ui-overview">
+
+  {/* HEADER */}
+  <div className="training-ui-overview-header">
+    <div>
+      <span className="final-model-eyebrow">
+        MODEL DEVELOPMENT PIPELINE
+      </span>
+
+      <h2>
+        How the Harvest Prediction System Is Trained
+      </h2>
+
+      <p>
+        Two connected machine-learning stages transform
+        historical hive behaviour into current and future
+        Harvest Urgency Index predictions.
+      </p>
+    </div>
+
+    <div className="training-ui-stage-count">
+      <Layers3 size={18} />
+      <strong>2</strong>
+      <span>Training stages</span>
+    </div>
+  </div>
+
+
+  {/* DATA SOURCE */}
+  <div className="training-ui-source-card">
+    <span className="training-ui-source-icon">
+      <Database size={22} />
+    </span>
+
+    <div>
+      <small>TRAINING DATA</small>
+
+      <strong>
+        Historical Sensor Time Series + Reviewed Harvest Events
+      </strong>
+
+      <p>
+        Past hive weight, temperature, CO₂ and temporal
+        behaviour are aligned with reviewed harvest events.
+      </p>
+    </div>
+
+    <div className="training-ui-source-tags">
+      <span>Sensor history</span>
+      <span>Reviewed events</span>
+      <span>Time-series features</span>
+    </div>
+  </div>
+
+
+  {/* CONNECTOR */}
+  <div className="training-ui-down-flow">
+    <span>↓</span>
+  </div>
+
+
+  {/* MAIN PIPELINE GRID */}
+  <div className="training-ui-stage-grid">
+
+    {/* =====================================================
+        STAGE 1
+    ====================================================== */}
+    <article className="training-ui-stage-card stage-one">
+
+      <div className="training-ui-stage-top">
+        <div className="training-ui-stage-id">
+          <span>01</span>
+
+          <div>
+            <small>CLASSIFICATION</small>
+            <strong>Current HUI Model</strong>
+          </div>
+        </div>
+
+        <span className="training-ui-stage-main-icon">
+          <BrainCircuit size={27} />
+        </span>
+      </div>
+
+
+      <div className="training-ui-stage-question">
+        <Target size={18} />
+
+        <div>
+          <small>MODEL QUESTION</small>
+
+          <strong>
+            Will a reviewed harvest event occur
+            within the next 72 hours?
+          </strong>
+        </div>
+      </div>
+
+
+      <div className="training-ui-stage-steps">
+        <PipelineStep
+          number="1"
+          title="Create 72h target"
+          text="Each hourly record becomes harvest-event or normal."
+        />
+
+        <PipelineStep
+          number="2"
+          title="Build time-series features"
+          text="Recent changes, trends and rolling sensor behaviour."
+        />
+
+        <PipelineStep
+          number="3"
+          title="Train 16 candidates"
+          text="4 classifiers × 4 feature sets."
+        />
+
+        <PipelineStep
+          number="4"
+          title="Validate candidates"
+          text="Compare PR-AUC, event detection and false alerts."
+        />
+      </div>
+
+
+      <div className="training-ui-model-winner">
+        <div>
+          <small>SELECTED CLASSIFIER</small>
+
+          <strong>
+            {modelLabel(
+              summary.selected_model,
+            )}
+          </strong>
+
+          <span>
+            No Humidity · {selectedFeatureCount} features
+          </span>
+        </div>
+
+        <span className="training-ui-winner-badge">
+          <Trophy size={18} />
+          Selected
+        </span>
+      </div>
+
+
+      <div className="training-ui-stage-output">
+        <span>STAGE 1 OUTPUT</span>
+
+        <strong>
+          Raw harvest-event classifier score
+        </strong>
+      </div>
+    </article>
+
+
+    {/* =====================================================
+        CENTRAL HUI HUB
+    ====================================================== */}
+    <div className="training-ui-hui-bridge">
+
+      <div className="training-ui-bridge-line top" />
+
+      <div className="training-ui-hui-node">
+        <span className="training-ui-hui-icon">
+          <Gauge size={24} />
+        </span>
+
+        <small>
+          SCORE TRANSFORMATION
+        </small>
+
+        <strong>
+          HUI
+        </strong>
+
+        <b>0–100</b>
+
+        <p>
+          XGBoost score
+          <span>↓</span>
+          Platt calibration
+          <span>↓</span>
+          HUI mapping
+        </p>
+      </div>
+
+      <div className="training-ui-bridge-line bottom" />
+
+      <span className="training-ui-hui-caption">
+        Stage 1 output becomes the input
+        for future-HUI forecasting
+      </span>
+    </div>
+
+
+    {/* =====================================================
+        STAGE 2
+    ====================================================== */}
+    <article className="training-ui-stage-card stage-two">
+
+      <div className="training-ui-stage-top">
+        <div className="training-ui-stage-id">
+          <span>02</span>
+
+          <div>
+            <small>REGRESSION</small>
+            <strong>Future HUI Models</strong>
+          </div>
+        </div>
+
+        <span className="training-ui-stage-main-icon">
+          <TrendingUp size={27} />
+        </span>
+      </div>
+
+
+      <div className="training-ui-stage-question">
+        <Clock3 size={18} />
+
+        <div>
+          <small>MODEL QUESTION</small>
+
+          <strong>
+            What will the Harvest Urgency Index
+            be after 24, 48 and 72 hours?
+          </strong>
+        </div>
+      </div>
+
+
+      <div className="training-ui-stage-steps">
+        <PipelineStep
+          number="1"
+          title="Create future targets"
+          text="Generate HUI targets at +24h, +48h and +72h."
+        />
+
+        <PipelineStep
+          number="2"
+          title="Train separately"
+          text="Each horizon becomes an independent regression task."
+        />
+      </div>
+
+
+      <div className="training-ui-forecast-models">
+        <ForecastModelChip
+          horizon={24}
+          model={
+            horizonData[24]
+              ?.selectedModel
+          }
+          mae={
+            horizonData[24]
+              ?.validationMae
+          }
+        />
+
+        <ForecastModelChip
+          horizon={48}
+          model={
+            horizonData[48]
+              ?.selectedModel
+          }
+          mae={
+            horizonData[48]
+              ?.validationMae
+          }
+        />
+
+        <ForecastModelChip
+          horizon={72}
+          model={
+            horizonData[72]
+              ?.selectedModel
+          }
+          mae={
+            horizonData[72]
+              ?.validationMae
+          }
+        />
+      </div>
+
+
+      <div className="training-ui-stage-output">
+        <span>STAGE 2 OUTPUT</span>
+
+        <strong>
+          +24h · +48h · +72h HUI forecasts
+        </strong>
+      </div>
+    </article>
+  </div>
+
+
+  {/* FINAL OUTPUT */}
+  <div className="training-ui-final-result">
+
+    <span className="training-ui-final-icon">
+      <Sparkles size={23} />
+    </span>
+
+    <div>
+      <small>
+        FINAL DECISION-SUPPORT OUTPUT
+      </small>
+
+      <strong>
+        Current HUI + 72-hour Harvest Urgency Outlook
+      </strong>
+    </div>
+
+    <span className="training-ui-complete">
+      <CheckCircle2 size={17} />
+      Pipeline complete
+    </span>
+  </div>
+
+</section>
 
       <article className="final-model-selected-card">
         <div className="final-model-selected-title">

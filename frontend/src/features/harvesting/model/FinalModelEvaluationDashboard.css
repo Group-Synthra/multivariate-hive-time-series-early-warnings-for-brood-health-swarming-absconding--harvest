@@ -888,3 +888,1254 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   TWO-STAGE MODEL TRAINING OVERVIEW
+========================================================= */
+
+.training-overview {
+  margin: 22px 0 26px;
+  padding: 26px;
+  border: 1px solid #dfe7ef;
+  border-radius: 22px;
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #f8fafc 100%
+    );
+  box-shadow:
+    0 12px 34px rgba(15, 23, 42, 0.05);
+}
+
+
+/* =========================================================
+   HEADING
+========================================================= */
+
+.training-overview-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.training-overview-heading h2 {
+  margin: 5px 0 6px;
+  color: #0f172a;
+  font-size: 1.45rem;
+  line-height: 1.3;
+}
+
+.training-overview-heading p {
+  max-width: 760px;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.96rem;
+  line-height: 1.65;
+}
+
+.training-overview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+
+/* =========================================================
+   SOURCE DATA
+========================================================= */
+
+.training-source {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 17px 19px;
+  border: 1px solid #e2e8f0;
+  border-radius: 15px;
+  background: #ffffff;
+}
+
+.training-source-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.training-source > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.training-source small {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.training-source strong {
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.training-source span {
+  color: #64748b;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+
+/* =========================================================
+   FLOW ARROW
+========================================================= */
+
+.training-flow-arrow {
+  min-height: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.training-flow-arrow > span {
+  color: #3b82f6;
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.training-flow-arrow small {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   STAGE CARD
+========================================================= */
+
+.training-stage-card {
+  position: relative;
+  padding: 24px;
+  border-radius: 19px;
+  border: 1px solid #dbeafe;
+  background: #ffffff;
+}
+
+.training-stage-card.is-blue {
+  border-color: #bfdbfe;
+  background:
+    linear-gradient(
+      145deg,
+      #eff6ff 0%,
+      #ffffff 42%
+    );
+}
+
+.training-stage-card.is-green {
+  border-color: #bbf7d0;
+  background:
+    linear-gradient(
+      145deg,
+      #f0fdf4 0%,
+      #ffffff 42%
+    );
+}
+
+.training-stage-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.training-stage-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.training-stage-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+}
+
+.training-stage-card.is-blue
+.training-stage-icon {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.training-stage-card.is-green
+.training-stage-icon {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+
+/* =========================================================
+   STAGE HEADING
+========================================================= */
+
+.training-stage-card-heading {
+  margin-top: 15px;
+}
+
+.training-stage-card-heading > span {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.11em;
+}
+
+.training-stage-card-heading h3 {
+  margin: 5px 0 6px;
+  color: #0f172a;
+  font-size: 1.3rem;
+}
+
+.training-stage-card-heading p {
+  max-width: 800px;
+  margin: 0;
+  color: #475569;
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+
+
+/* =========================================================
+   TRAINING STEPS
+========================================================= */
+
+.training-stage-steps {
+  display: grid;
+  grid-template-columns:
+    repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.training-stage-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 120px;
+  padding: 13px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.training-stage-step > span {
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.training-stage-step > div {
+  min-width: 0;
+}
+
+.training-stage-step strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #0f172a;
+  font-size: 0.83rem;
+  line-height: 1.35;
+}
+
+.training-stage-step small {
+  display: block;
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+
+/* =========================================================
+   STAGE RESULT
+========================================================= */
+
+.training-stage-result {
+  margin-top: 17px;
+  padding: 13px 15px;
+  border-radius: 11px;
+}
+
+.training-stage-card.is-blue
+.training-stage-result {
+  background: #dbeafe;
+}
+
+.training-stage-card.is-green
+.training-stage-result {
+  background: #dcfce7;
+}
+
+.training-stage-result small {
+  display: block;
+  margin-bottom: 3px;
+  color: #475569;
+  font-size: 0.69rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.training-stage-result strong {
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+
+/* =========================================================
+   BRIDGE BETWEEN THE TWO TRAINING STAGES
+========================================================= */
+
+.training-stage-bridge {
+  display: grid;
+  grid-template-columns:
+    1fr minmax(300px, 620px) 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 0;
+}
+
+.training-stage-bridge-line {
+  height: 1px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      #cbd5e1,
+      transparent
+    );
+}
+
+.training-stage-bridge-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 13px;
+  background: #ffffff;
+}
+
+.training-stage-bridge-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.training-stage-bridge-content > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.training-stage-bridge-content small {
+  color: #92400e;
+  font-size: 0.67rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.training-stage-bridge-content strong {
+  color: #0f172a;
+  font-size: 0.94rem;
+}
+
+.training-stage-bridge-content span {
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+
+/* =========================================================
+   FINAL OUTPUT
+========================================================= */
+
+.training-final-output {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 18px;
+  padding: 17px 19px;
+  border: 1px solid #a7f3d0;
+  border-radius: 15px;
+  background:
+    linear-gradient(
+      135deg,
+      #ecfdf5,
+      #ffffff
+    );
+}
+
+.training-final-output-icon {
+  width: 45px;
+  height: 45px;
+  flex: 0 0 45px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #d1fae5;
+  color: #047857;
+}
+
+.training-final-output > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.training-final-output small {
+  color: #047857;
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+}
+
+.training-final-output strong {
+  color: #064e3b;
+  font-size: 1rem;
+}
+
+.training-final-output span {
+  color: #475569;
+  font-size: 0.83rem;
+  line-height: 1.45;
+}
+
+.training-final-output > svg {
+  color: #16a34a;
+  flex: 0 0 auto;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1150px) {
+  .training-stage-steps {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .training-overview {
+    padding: 18px;
+  }
+
+  .training-overview-heading {
+    flex-direction: column;
+  }
+
+  .training-stage-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .training-stage-bridge {
+    grid-template-columns: 1fr;
+  }
+
+  .training-stage-bridge-line {
+    display: none;
+  }
+
+  .training-final-output {
+    align-items: flex-start;
+  }
+}
+
+/* =========================================================
+   MODEL TRAINING VISUAL PIPELINE
+========================================================= */
+
+.training-ui-overview {
+  margin: 24px 0 28px;
+  padding: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(59, 130, 246, 0.06),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(34, 197, 94, 0.06),
+      transparent 34%
+    ),
+    #ffffff;
+  box-shadow:
+    0 16px 45px rgba(15, 23, 42, 0.06);
+}
+
+
+/* =========================================================
+   OVERVIEW HEADER
+========================================================= */
+
+.training-ui-overview-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.training-ui-overview-header h2 {
+  margin: 5px 0 6px;
+  color: #0f172a;
+  font-size: 1.45rem;
+  letter-spacing: -0.025em;
+}
+
+.training-ui-overview-header p {
+  max-width: 760px;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.training-ui-stage-count {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 2px 8px;
+  min-width: 145px;
+  padding: 11px 14px;
+  border: 1px solid #ddd6fe;
+  border-radius: 14px;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.training-ui-stage-count svg {
+  grid-row: 1 / 3;
+}
+
+.training-ui-stage-count strong {
+  color: #4c1d95;
+  font-size: 1.2rem;
+}
+
+.training-ui-stage-count span {
+  color: #7c3aed;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+
+/* =========================================================
+   DATA SOURCE
+========================================================= */
+
+.training-ui-source-card {
+  display: grid;
+  grid-template-columns:
+    48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 15px;
+  padding: 17px 19px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      135deg,
+      #f8fafc,
+      #ffffff
+    );
+}
+
+.training-ui-source-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.training-ui-source-card small {
+  display: block;
+  margin-bottom: 3px;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+}
+
+.training-ui-source-card strong {
+  color: #0f172a;
+  font-size: 0.96rem;
+}
+
+.training-ui-source-card p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.training-ui-source-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.training-ui-source-tags span {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   DOWN FLOW
+========================================================= */
+
+.training-ui-down-flow {
+  height: 52px;
+  display: grid;
+  place-items: center;
+}
+
+.training-ui-down-flow span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+
+/* =========================================================
+   MAIN 3-COLUMN PIPELINE
+========================================================= */
+
+.training-ui-stage-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    170px
+    minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+
+/* =========================================================
+   STAGE CARDS
+========================================================= */
+
+.training-ui-stage-card {
+  position: relative;
+  min-width: 0;
+  padding: 22px;
+  overflow: hidden;
+  border-radius: 19px;
+}
+
+.training-ui-stage-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.training-ui-stage-card.stage-one {
+  border: 1px solid #bfdbfe;
+  background:
+    linear-gradient(
+      145deg,
+      #eff6ff 0%,
+      #ffffff 42%
+    );
+}
+
+.training-ui-stage-card.stage-one::before {
+  border-top: 4px solid #3b82f6;
+}
+
+.training-ui-stage-card.stage-two {
+  border: 1px solid #bbf7d0;
+  background:
+    linear-gradient(
+      145deg,
+      #f0fdf4 0%,
+      #ffffff 42%
+    );
+}
+
+.training-ui-stage-card.stage-two::before {
+  border-top: 4px solid #22c55e;
+}
+
+
+/* =========================================================
+   STAGE HEADER
+========================================================= */
+
+.training-ui-stage-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.training-ui-stage-id {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.training-ui-stage-id > span {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.training-ui-stage-id small {
+  display: block;
+  margin-bottom: 3px;
+  color: #64748b;
+  font-size: 0.67rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+}
+
+.training-ui-stage-id strong {
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.training-ui-stage-main-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+}
+
+.stage-one
+.training-ui-stage-main-icon {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.stage-two
+.training-ui-stage-main-icon {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+
+/* =========================================================
+   QUESTION CARD
+========================================================= */
+
+.training-ui-stage-question {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 12px 13px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+}
+
+.stage-one
+.training-ui-stage-question > svg {
+  color: #2563eb;
+}
+
+.stage-two
+.training-ui-stage-question > svg {
+  color: #16a34a;
+}
+
+.training-ui-stage-question small {
+  display: block;
+  margin-bottom: 3px;
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.training-ui-stage-question strong {
+  color: #1e293b;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+
+/* =========================================================
+   MINI STEPS
+========================================================= */
+
+.training-ui-stage-steps {
+  display: grid;
+  gap: 8px;
+}
+
+.training-ui-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.training-ui-step > span {
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.training-ui-step strong {
+  display: block;
+  margin-bottom: 2px;
+  color: #0f172a;
+  font-size: 0.79rem;
+}
+
+.training-ui-step small {
+  display: block;
+  color: #64748b;
+  font-size: 0.73rem;
+  line-height: 1.42;
+}
+
+
+/* =========================================================
+   STAGE 1 WINNER
+========================================================= */
+
+.training-ui-model-winner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.training-ui-model-winner small {
+  display: block;
+  color: #64748b;
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.training-ui-model-winner strong {
+  display: block;
+  margin: 3px 0;
+  color: #1d4ed8;
+  font-size: 1.08rem;
+}
+
+.training-ui-model-winner span {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.training-ui-winner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  padding: 7px 9px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8 !important;
+  font-size: 0.7rem !important;
+  font-weight: 800;
+}
+
+
+/* =========================================================
+   FORECAST MODEL CHIPS
+========================================================= */
+
+.training-ui-forecast-models {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.training-ui-forecast-chip {
+  padding: 11px;
+  border: 1px solid #bbf7d0;
+  border-radius: 11px;
+  background: #ffffff;
+}
+
+.training-ui-forecast-chip > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.training-ui-forecast-chip span {
+  color: #15803d;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.training-ui-forecast-chip strong {
+  color: #0f172a;
+  font-size: 0.76rem;
+}
+
+.training-ui-forecast-chip small {
+  display: block;
+  margin-top: 7px;
+  color: #64748b;
+  font-size: 0.67rem;
+}
+
+.training-ui-forecast-chip small b {
+  color: #334155;
+}
+
+
+/* =========================================================
+   STAGE OUTPUT
+========================================================= */
+
+.training-ui-stage-output {
+  margin-top: 15px;
+  padding: 12px 13px;
+  border-radius: 11px;
+}
+
+.stage-one
+.training-ui-stage-output {
+  background: #dbeafe;
+}
+
+.stage-two
+.training-ui-stage-output {
+  background: #dcfce7;
+}
+
+.training-ui-stage-output span {
+  display: block;
+  margin-bottom: 3px;
+  color: #64748b;
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.training-ui-stage-output strong {
+  color: #0f172a;
+  font-size: 0.83rem;
+}
+
+
+/* =========================================================
+   CENTRAL HUI HUB
+========================================================= */
+
+.training-ui-hui-bridge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.training-ui-bridge-line {
+  width: 2px;
+  flex: 1;
+  min-height: 45px;
+  background:
+    linear-gradient(
+      #cbd5e1,
+      #f59e0b
+    );
+}
+
+.training-ui-bridge-line.bottom {
+  background:
+    linear-gradient(
+      #f59e0b,
+      #cbd5e1
+    );
+}
+
+.training-ui-hui-node {
+  width: 155px;
+  padding: 17px 13px;
+  border: 1px solid #fde68a;
+  border-radius: 20px;
+  background:
+    radial-gradient(
+      circle at top,
+      #fffbeb,
+      #ffffff
+    );
+  box-shadow:
+    0 10px 28px
+    rgba(245, 158, 11, 0.14);
+  text-align: center;
+}
+
+.training-ui-hui-icon {
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 8px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.training-ui-hui-node > small {
+  display: block;
+  color: #92400e;
+  font-size: 0.58rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.training-ui-hui-node > strong {
+  display: block;
+  margin-top: 7px;
+  color: #0f172a;
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.training-ui-hui-node > b {
+  display: block;
+  margin: 3px 0 10px;
+  color: #b45309;
+  font-size: 0.9rem;
+}
+
+.training-ui-hui-node p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.67rem;
+  line-height: 1.45;
+}
+
+.training-ui-hui-node p span {
+  display: block;
+  color: #d97706;
+  font-weight: 900;
+}
+
+.training-ui-hui-caption {
+  max-width: 150px;
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 0.65rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+
+/* =========================================================
+   FINAL RESULT
+========================================================= */
+
+.training-ui-final-result {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 17px 19px;
+  border: 1px solid #a7f3d0;
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      135deg,
+      #ecfdf5,
+      #ffffff
+    );
+}
+
+.training-ui-final-icon {
+  width: 47px;
+  height: 47px;
+  flex: 0 0 47px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #d1fae5;
+  color: #047857;
+}
+
+.training-ui-final-result > div {
+  flex: 1;
+}
+
+.training-ui-final-result small {
+  display: block;
+  color: #047857;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.training-ui-final-result strong {
+  display: block;
+  margin: 4px 0;
+  color: #064e3b;
+  font-size: 1rem;
+}
+
+.training-ui-final-result p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.training-ui-complete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 0.73rem;
+  font-weight: 800;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1100px) {
+  .training-ui-stage-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .training-ui-hui-bridge {
+    min-height: 210px;
+  }
+
+  .training-ui-bridge-line {
+    min-height: 30px;
+  }
+}
+
+@media (max-width: 760px) {
+  .training-ui-overview {
+    padding: 18px;
+  }
+
+  .training-ui-overview-header {
+    flex-direction: column;
+  }
+
+  .training-ui-source-card {
+    grid-template-columns:
+      44px minmax(0, 1fr);
+  }
+
+  .training-ui-source-tags {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .training-ui-forecast-models {
+    grid-template-columns: 1fr;
+  }
+
+  .training-ui-final-result {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .training-ui-complete {
+    margin-left: 61px;
+  }
+}
