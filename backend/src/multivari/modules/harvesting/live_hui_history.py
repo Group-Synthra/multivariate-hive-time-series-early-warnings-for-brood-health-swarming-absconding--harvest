@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import csv
 import threading
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from datetime import UTC, datetime
 
 _WRITE_LOCK = threading.Lock()
 
