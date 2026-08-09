@@ -146,6 +146,23 @@ export async function loadLiveHuiStatus() {
   return requestApi("/api/harvesting/live-hui/status");
 }
 
+export async function loadLiveHuiHistory(
+  hiveId = "",
+  limit = 100,
+) {
+  const query = new URLSearchParams();
+
+  if (hiveId) {
+    query.set("hive_id", hiveId);
+  }
+
+  query.set("limit", String(limit));
+
+  return requestApi(
+    `/api/harvesting/live-hui/history?${query.toString()}`,
+  );
+}
+
 export async function loadLiveSensorSnapshot(hiveId = "") {
   const suffix = hiveId
     ? `?hive_id=${encodeURIComponent(hiveId)}`

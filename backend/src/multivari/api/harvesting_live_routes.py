@@ -6,6 +6,7 @@ from multivari.iot.postgres_repository import (
     LiveSensorConfigurationError,
     LiveSensorDatabaseError,
 )
+from multivari.modules.harvesting.live_hui_history import read_live_hui_history
 from multivari.modules.harvesting.live_hui_inference import (
     InsufficientLiveHistoryError,
     LiveHuiArtifactError,
@@ -83,5 +84,42 @@ def create_harvesting_live_blueprint(monitor: LiveHuiMonitor) -> Blueprint:
     @api.get("/live-hui/status")
     def live_hui_status():
         return jsonify(monitor.status_payload())
+
+
+    @api.get("/live-hui/history")
+    def live_hui_history():
+        hive_id = request.args.get(
+            "hive_id",
+            default=None,
+            type=str,
+        )
+        limit = request.args.get(
+            "limit",
+            default=50,
+            type=int,
+        )
+
+        limit = max(1, min(limit or 50, 500))
+
+        history_path = (
+            monitor.backend_root
+            / "data"
+            / "live"
+            / "harvest_hui_predictions.csv"
+        )
+
+        rows = read_live_hui_history(
+            history_path,
+            hive_id=hive_id.strip() if hive_id else None,
+            limit=limit,
+        )
+
+        return jsonify(
+            {
+                "status": "ok",
+                "count": len(rows),
+                "history": rows,
+            }
+        )
 
     return api
