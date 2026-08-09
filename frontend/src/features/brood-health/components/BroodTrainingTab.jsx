@@ -2,14 +2,12 @@ import {
   AlertTriangle,
   BrainCircuit,
   CheckCircle2,
-  Crosshair,
-  Gauge,
+  Activity,
   ShieldCheck,
   Target,
-  TrendingDown,
+  Trophy,
 } from 'lucide-react';
 import { Panel } from '../../../components/common/Panel';
-import { StatCard } from '../../../components/common/StatCard';
 import { useBroodTraining } from '../hooks/useBroodHealthData';
 import { asPercent, numberValue } from '../utils/broodHealth';
 import {
@@ -20,8 +18,15 @@ import {
   ModelErrorComparisonChart,
   PersistenceComparisonChart,
 } from './BroodHealthCharts';
-import { ConfusionMatrix } from './BroodMatrices';
+import { HealthLevelClassificationChart } from './HealthLevelClassificationChart';
 import { BroodReportGallery } from './BroodReportGallery';
+import { BroodFormulaReference } from './BroodFormulaReference';
+
+function errorPoints(value, digits = 2) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '—';
+  return `${numberValue(numeric, digits)} points`;
+}
 
 function ModelComparisonTable({ models, bestModel }) {
   return (
@@ -29,11 +34,16 @@ function ModelComparisonTable({ models, bestModel }) {
       <table className="brood-model-table">
         <thead>
           <tr>
-            <th>Model</th><th>Exact +6 h MAE ↓</th><th>MSE ↓</th><th>RMSE ↓</th><th>R² ↑</th>
-            <th>Level accuracy ↑</th><th>Transition accuracy ↑</th>
-            <th>Deterioration recall ↑</th><th>Critical recall ↑</th>
-            <th>Forecast BHSI accuracy ↑</th><th>Forecast trend accuracy ↑</th>
-            <th>Group-CV MAE ↓</th>
+            <th>Model</th>
+            <th>MAE ↓</th>
+            <th>RMSE ↓</th>
+            <th>R² ↑</th>
+            <th>Accuracy ↑</th>
+            <th>Transition Accuracy ↑</th>
+            <th>Deterioration Recall ↑</th>
+            <th>Critical Recall ↑</th>
+            <th>BHSI Accuracy ↑</th>
+            <th>RoD Trend Accuracy ↑</th>
           </tr>
         </thead>
         <tbody>
@@ -43,23 +53,27 @@ function ModelComparisonTable({ models, bestModel }) {
             const deterioration = row.test?.deterioration || {};
             const selected = row.model === bestModel;
             return (
-              <tr key={row.model} className={`${row.status !== 'ok' ? 'failed-row' : ''} ${selected ? 'selected-row' : ''}`}>
-                <td><strong>{row.model}</strong>{selected && <span className="brood-selected-badge">Selected</span>}</td>
+              <tr
+                key={row.model}
+                className={`${row.status !== 'ok' ? 'failed-row' : ''} ${selected ? 'selected-row' : ''}`}
+              >
+                <td>
+                  <strong>{row.model}</strong>
+                  {selected && <span className="brood-selected-badge">Selected</span>}
+                </td>
                 {row.status !== 'ok' ? (
-                  <td colSpan={11}>{row.error || 'Model failed'}</td>
+                  <td colSpan={9}>{row.error || 'Model failed'}</td>
                 ) : (
                   <>
-                    <td>{numberValue(exact.mae, 3)}</td>
-                    <td>{numberValue(exact.mse, 3)}</td>
-                    <td>{numberValue(exact.rmse, 3)}</td>
-                    <td>{numberValue(exact.r2, 4)}</td>
+                    <td>{errorPoints(exact.mae)}</td>
+                    <td>{errorPoints(exact.rmse)}</td>
+                    <td>{asPercent(exact.r2)}</td>
                     <td>{asPercent(exact.health_level_accuracy)}</td>
                     <td><strong>{asPercent(transition.health_level_accuracy)}</strong></td>
                     <td>{asPercent(deterioration.recall)}</td>
                     <td>{asPercent(exact.critical_recall)}</td>
                     <td>{asPercent(row.test?.forecast_indicators?.forecast_bhsi_level_accuracy)}</td>
                     <td>{asPercent(row.test?.forecast_indicators?.forecast_trend_accuracy)}</td>
-                    <td>{numberValue(row.test?.cv_mae_mean, 3)}</td>
                   </>
                 )}
               </tr>
@@ -68,6 +82,88 @@ function ModelComparisonTable({ models, bestModel }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+function SelectedModelSummary({ modelName, exact, transition, deterioration, forecastIndicators }) {
+  const groups = [
+    {
+      title: 'Score Prediction',
+      icon: Target,
+      metrics: [
+        ['MAE ↓', errorPoints(exact.mae)],
+        ['RMSE ↓', errorPoints(exact.rmse)],
+        ['R² ↑', asPercent(exact.r2)],
+      ],
+    },
+    {
+      title: 'Health Classification',
+      icon: ShieldCheck,
+      metrics: [
+        ['Accuracy ↑', asPercent(exact.health_level_accuracy)],
+        ['Transition Accuracy ↑', asPercent(transition.health_level_accuracy)],
+        ['Deterioration Recall ↑', asPercent(deterioration.recall)],
+        ['Critical Recall ↑', asPercent(exact.critical_recall)],
+      ],
+    },
+    {
+      title: 'Future Indicators',
+      icon: Activity,
+      metrics: [
+        ['BHSI Accuracy ↑', asPercent(forecastIndicators.forecast_bhsi_level_accuracy)],
+        ['RoD Trend Accuracy ↑', asPercent(forecastIndicators.forecast_trend_accuracy)],
+      ],
+    },
+  ];
+
+  return (
+    <Panel
+      title="Selected Model Performance"
+      subtitle="Final test performance of the model selected during validation."
+    >
+      <div className="brood-best-model-spotlight">
+        <div className="brood-best-model-icon">
+          <Trophy size={28} />
+        </div>
+
+        <div className="brood-best-model-copy">
+          <span>Selected Best Model</span>
+          <strong>{modelName || '—'}</strong>
+          <small>Chosen after comparing all candidate models on validation performance.</small>
+        </div>
+
+        <div className="brood-best-model-status">
+          <CheckCircle2 size={17} />
+          Best Model
+        </div>
+      </div>
+
+      <div className="brood-selected-performance-groups">
+        {groups.map((group) => {
+          const Icon = group.icon;
+          return (
+            <section className="brood-performance-group" key={group.title}>
+              <div className="brood-performance-group-heading">
+                <span><Icon size={18} /></span>
+                <strong>{group.title}</strong>
+              </div>
+
+              <div className="brood-performance-metric-list">
+                {group.metrics.map(([label, value]) => (
+                  <div className="brood-performance-metric" key={label}>
+                    <span>{label}</span>
+                    <strong>{value}</strong>
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+
+      <div className="brood-metric-direction-note">
+      </div>
+    </Panel>
   );
 }
 
@@ -217,77 +313,80 @@ export function BroodTrainingTab() {
 
       {data?.trained && (
         <>
-          <SectionHeading title="Selected Model Summary" subtitle="Key performance indicators for the selected model." />
-          <div className="stats-grid stats-grid-six">
-            <StatCard label="Selected model" value={data.best_model} icon={BrainCircuit} note="Selected on validation hives only" />
-            <StatCard label="Exact +6 h MAE" value={numberValue(exact.mae, 2)} unit="points" icon={Gauge} note="Untouched test hives" />
-            <StatCard label="Exact +6 h RMSE" value={numberValue(exact.rmse, 2)} unit="points" icon={TrendingDown} />
-            <StatCard label="Transition accuracy" value={asPercent(transition.health_level_accuracy)} icon={Target} note="Difficult changing periods" />
-            <StatCard label="Deterioration recall" value={asPercent(deterioration.recall)} icon={Crosshair} />
-            <StatCard label="Critical recall" value={asPercent(exact.critical_recall)} icon={ShieldCheck} />
-          </div>
+          <SectionHeading
+            title="Selected Model Summary"
+          />
+          <SelectedModelSummary
+            modelName={data.best_model}
+            exact={exact}
+            transition={transition}
+            deterioration={deterioration}
+            forecastIndicators={forecastIndicators}
+          />
 
-          <Panel
-            title="Future-indicator validation on unseen hives"
-            subtitle="These metrics verify the derived six-hour stability and trend outputs, not only the final score."
-          >
-            <div className="stats-grid stats-grid-six">
-              <StatCard label="Forecast BHSI MAE" value={numberValue(forecastIndicators.forecast_bhsi_mae, 2)} unit="points" />
-              <StatCard label="Forecast BHSI RMSE" value={numberValue(forecastIndicators.forecast_bhsi_rmse, 2)} unit="points" />
-              <StatCard label="BHSI level accuracy" value={asPercent(forecastIndicators.forecast_bhsi_level_accuracy)} note="Low, Moderate or High" />
-              <StatCard label="Forecast RoD MAE" value={numberValue(forecastIndicators.forecast_rod_mae, 2)} unit="points/h" />
-              <StatCard label="Forecast RoD RMSE" value={numberValue(forecastIndicators.forecast_rod_rmse, 2)} unit="points/h" />
-              <StatCard label="Forecast trend accuracy" value={asPercent(forecastIndicators.forecast_trend_accuracy)} note="Declining, Stable or Improving classes" />
-            </div>
+          <Panel title="Complete Model Comparison" subtitle="Compare regression error, classification accuracy and recall across all candidate models.">
+            <ModelComparisonTable models={data.all_models} bestModel={data.best_model} />
           </Panel>
 
-          <Panel title="Forecast Outputs" subtitle="Outputs returned by the selected model.">
+          <Panel title="What the model predicts" subtitle="The three main future outputs shown to the beekeeper.">
             <div className="brood-info-list">
-              <span>Primary forecast <strong>Exact Brood Health Score at +6 hours</strong></span>
-              <span>Safety indicator <strong>Lowest predicted score within +1 to +6 hours</strong></span>
-              <span>Future indicators <strong>Forecast BHSI and Forecast RoD</strong></span>
+              <span>Six-hour health <strong>Expected Brood Health Score exactly 6 hours ahead</strong></span>
+              <span>Lowest expected point <strong>Lowest score predicted anywhere during the next 6 hours</strong></span>
+              <span>Future condition pattern <strong>Forecast BHSI shows stability; Forecast RoD shows speed and direction of change</strong></span>
             </div>
           </Panel>
 
-          <SectionHeading title="Model Comparison" subtitle="Candidate models compared on forecast error and health-transition performance." />
+          <SectionHeading title="Model Comparison" subtitle="Compare how accurately each model predicts the future score and changing health conditions." />
           <div className="two-column-grid">
-            <Panel title="Model-level performance" subtitle="Exact +6-hour level accuracy, transition accuracy and deterioration recall on complete unseen hives.">
+            <Panel title="Classification Performance" subtitle="Accuracy and recall metrics are shown as percentages. Higher values indicate better classification performance.">
               <ModelComparisonChart data={data.all_models} />
             </Panel>
-            <Panel title="Continuous-score errors" subtitle="Lower MAE and RMSE are better. Transition MAE focuses on changing conditions.">
+            <Panel title="Regression Error Comparison" subtitle="MAE and RMSE are score-point errors; percentage labels show the same error relative to the 100-point Brood Health Score scale.">
               <ModelErrorComparisonChart data={data.all_models} />
             </Panel>
           </div>
 
-          <Panel title="Complete model comparison" subtitle={data.metrics_note}>
-            <ModelComparisonTable models={data.all_models} bestModel={data.best_model} />
-          </Panel>
-
-          <SectionHeading title="Forecast Performance" subtitle="Selected-model behaviour across horizons and health levels." />
+          <SectionHeading title="Forecast Performance" subtitle="Detailed evaluation of the selected model across forecast horizons and health levels." />
           <div className="two-column-grid">
-            <Panel title="Selected model versus current-score persistence" subtitle="A useful early-warning model should outperform simply repeating the current score.">
+            <Panel title="Selected Model vs Persistence Baseline" subtitle="Compares the trained model with a baseline that assumes the current Brood Health Score will remain unchanged.">
               <PersistenceComparisonChart model={metrics} persistence={data.persistence_baseline} />
             </Panel>
-            <Panel title="Error by forecast horizon" subtitle="The same selected model predicts +1 through +6 hours directly.">
+            <Panel title="MAE and RMSE by Forecast Horizon" subtitle="Shows how score-prediction error changes from one hour ahead to six hours ahead.">
               <HorizonErrorChart data={metrics.per_horizon} />
             </Panel>
           </div>
 
           <div className="two-column-grid">
-            <Panel title="Actual versus predicted exact +6-hour score" subtitle="Sample from the untouched whole-hive test partition.">
+            <Panel title="Actual vs Predicted 6-Hour Score" subtitle="Points closer to the diagonal reference line indicate predictions closer to the actual score.">
               <ActualPredictedScoreChart data={data.prediction_sample} />
             </Panel>
-            <Panel title="Four-level confusion matrix" subtitle="Exact +6-hour Critical, Poor, Good and Excellent classifications.">
-              <ConfusionMatrix matrix={exact.confusion_matrix} labels={exact.level_labels} />
+            <Panel
+              title="Health-Level Prediction Results"
+              subtitle="For each actual health level, shows the percentage predicted as Critical, Poor, Good or Excellent."
+            >
+              <HealthLevelClassificationChart
+                matrix={exact.confusion_matrix}
+                labels={exact.level_labels}
+              />
             </Panel>
           </div>
 
-          <SectionHeading title="Score & Feature Configuration" subtitle="Current-score coefficients and model feature importance." />
+          <SectionHeading
+            title="Score & Indicator Calculation"
+            subtitle="Open the formula reference when you need to explain how the Brood Health Score, Forecast BHSI and Forecast RoD are produced."
+          />
+          <BroodFormulaReference
+            scoreDefinition={data.score_definition}
+            stabilityReference={data.forecast_stability_reference}
+            weightCalibration={data.weight_calibration}
+          />
+
+          <SectionHeading title="Score & Feature Configuration" subtitle="Current-score contributions and the inputs that influenced the selected forecasting model." />
           <div className="two-column-grid">
-            <Panel title="Current-score coefficients" subtitle={`${data.weight_calibration?.scope || 'training hives only'} · ${data.weight_calibration?.selection_metric || 'constrained sensitivity analysis'}`}>
+            <Panel title="Current-score contributions" subtitle="The four percentages used to combine the sensor sub-scores into the 1–100 Brood Health Score.">
               <ScoreWeights definition={data.score_definition} sensitivity={data.weight_sensitivity_top} />
             </Panel>
-            <Panel title="Feature Importance" subtitle="Most influential forecasting inputs.">
+            <Panel title="Most influential prediction inputs" subtitle="Shows which engineered inputs contributed most to the selected model.">
               <FeatureImportanceChart data={data.top_features} />
             </Panel>
           </div>
@@ -295,11 +394,36 @@ export function BroodTrainingTab() {
           <SectionHeading title="Training Setup" subtitle="Dataset split and optional technical checks." />
           <div className="two-column-grid">
             <Panel title="Training / Validation / Test Split" subtitle="Row and hive counts used for model development and final evaluation.">
-              <div className="brood-split-grid">
-                <div><span>Train</span><strong>{numberValue(split.train_rows, 0)}</strong><small>{numberValue(split.train_hives, 0)} hives</small></div>
-                <div><span>Validation</span><strong>{numberValue(split.validation_rows, 0)}</strong><small>{numberValue(split.validation_hives, 0)} hives</small></div>
-                <div><span>Test</span><strong>{numberValue(split.test_rows, 0)}</strong><small>{numberValue(split.test_hives, 0)} unseen hives</small></div>
-              </div>
+              {(() => {
+                const totalRows = Number(split.train_rows || 0)
+                  + Number(split.validation_rows || 0)
+                  + Number(split.test_rows || 0);
+                const share = (value) => (
+                  totalRows > 0
+                    ? `${(Number(value || 0) / totalRows * 100).toFixed(1)}%`
+                    : '—'
+                );
+
+                return (
+                  <div className="brood-split-grid">
+                    <div>
+                      <span>Train</span>
+                      <strong>{numberValue(split.train_rows, 0)}</strong>
+                      <small>{share(split.train_rows)} of rows · {numberValue(split.train_hives, 0)} hives</small>
+                    </div>
+                    <div>
+                      <span>Validation</span>
+                      <strong>{numberValue(split.validation_rows, 0)}</strong>
+                      <small>{share(split.validation_rows)} of rows · {numberValue(split.validation_hives, 0)} hives</small>
+                    </div>
+                    <div>
+                      <span>Test</span>
+                      <strong>{numberValue(split.test_rows, 0)}</strong>
+                      <small>{share(split.test_rows)} of rows · {numberValue(split.test_hives, 0)} unseen hives</small>
+                    </div>
+                  </div>
+                );
+              })()}
               <p className="chart-footnote">Minimum causal history: {split.minimum_history_hours} hours.</p>
             </Panel>
             <Panel title="Technical Checks" subtitle="Detailed validation checks are collapsed by default.">

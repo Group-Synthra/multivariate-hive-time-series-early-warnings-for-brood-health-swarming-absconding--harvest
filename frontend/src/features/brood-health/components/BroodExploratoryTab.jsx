@@ -26,19 +26,47 @@ function InlineState({ loading, error, onRetry }) {
   return null;
 }
 
-function SensorStatisticsTable({ rows }) {
+function SensorStatisticsTable({ rows, totalRecords }) {
   return (
     <div className="table-scroll">
       <table>
-        <thead><tr><th>Sensor</th><th>Healthy mean</th><th>Unhealthy mean</th><th>Difference</th><th>Cohen’s d</th><th>Target correlation</th><th>Missing</th></tr></thead>
-        <tbody>{(rows || []).map((row) => (
-          <tr key={row.sensor}>
-            <td><strong>{row.label}</strong> <small>{row.unit}</small></td>
-            <td>{numberValue(row.healthy_mean, 2)}</td><td>{numberValue(row.unhealthy_mean, 2)}</td>
-            <td>{numberValue(row.mean_difference, 2)}</td><td>{numberValue(row.cohens_d, 3)}</td>
-            <td>{numberValue(row.target_correlation, 3)}</td><td>{numberValue(row.missing, 0)}</td>
+        <thead>
+          <tr>
+            <th>Sensor</th>
+            <th>Healthy mean</th>
+            <th>Unhealthy mean</th>
+            <th>Difference</th>
+            <th>Difference (%)</th>
+            <th>Cohen’s d</th>
+            <th>Target correlation</th>
+            <th>Missing</th>
           </tr>
-        ))}</tbody>
+        </thead>
+        <tbody>
+          {(rows || []).map((row) => {
+            const healthy = Number(row.healthy_mean || 0);
+            const unhealthy = Number(row.unhealthy_mean || 0);
+            const differencePercentage = Math.abs(unhealthy) > 1e-9
+              ? (Number(row.mean_difference || 0) / Math.abs(unhealthy)) * 100
+              : 0;
+            const missingPercentage = Number(totalRecords || 0) > 0
+              ? Number(row.missing || 0) / Number(totalRecords) * 100
+              : 0;
+
+            return (
+              <tr key={row.sensor}>
+                <td><strong>{row.label}</strong> <small>{row.unit}</small></td>
+                <td>{numberValue(healthy, 2)}</td>
+                <td>{numberValue(unhealthy, 2)}</td>
+                <td>{numberValue(row.mean_difference, 2)}</td>
+                <td>{differencePercentage > 0 ? '+' : ''}{numberValue(differencePercentage, 1)}%</td>
+                <td>{numberValue(row.cohens_d, 3)}</td>
+                <td>{numberValue(row.target_correlation, 3)}</td>
+                <td>{numberValue(row.missing, 0)} ({numberValue(missingPercentage, 2)}%)</td>
+              </tr>
+            );
+          })}
+        </tbody>
       </table>
     </div>
   );
@@ -59,7 +87,13 @@ function ScoreDefinitionPanel({ definition, components }) {
       <div className="table-scroll">
         <table><thead><tr><th>Current-score component</th><th>Calibrated weight</th><th>Mean component score</th><th>Median</th><th>Range</th></tr></thead>
           <tbody>{rows.map(([label, key, weight]) => { const item = componentLookup.get(key) || {}; return (
-            <tr key={key}><td><strong>{label}</strong></td><td>{percentValue(Number(weight || 0) * 100, 0)}</td><td>{numberValue(item.mean, 2)}</td><td>{numberValue(item.median, 2)}</td><td>{numberValue(item.minimum, 1)}–{numberValue(item.maximum, 1)}</td></tr>
+            <tr key={key}>
+              <td><strong>{label}</strong></td>
+              <td>{percentValue(Number(weight || 0) * 100, 0)}</td>
+              <td>{numberValue(item.mean, 2)} / 100</td>
+              <td>{numberValue(item.median, 2)} / 100</td>
+              <td>{numberValue(item.minimum, 1)}–{numberValue(item.maximum, 1)}</td>
+            </tr>
           ); })}</tbody>
         </table>
       </div>
@@ -103,25 +137,25 @@ export function BroodExploratoryTab() {
         <StatCard label="Records" value={meta.records} icon={Database} note="Hourly observations" />
         <StatCard label="Hives" value={meta.hives} icon={Users} note="Independent hive streams" />
         <StatCard label="Healthy rate" value={percentValue(meta.healthy_rate)} icon={HeartPulse} />
-        <StatCard label="Unhealthy records" value={meta.unhealthy_count} icon={AlertTriangle} />
+        <StatCard label="Unhealthy records" value={meta.unhealthy_count} icon={AlertTriangle} note={`${numberValue(100 - Number(meta.healthy_rate || 0), 2)}% of records`} />
         <StatCard label="Unhealthy onsets" value={data?.transitions?.unhealthy_onsets} icon={Activity} note="Healthy → unhealthy" />
         <StatCard label="Strongest effect" value={strongestSensor?.label || '—'} note={strongestSensor ? `|Cohen’s d| ${numberValue(Math.abs(strongestSensor.cohens_d), 2)}` : undefined} />
       </div>
 
-      <SectionHeading title="Health Status & Sensor Effects" subtitle="Observed target distribution and sensor separation." />
+      <SectionHeading title="Health Status & Sensor Effects" subtitle="Compare how often healthy/unhealthy observations occur and how sensor values differ between them." />
       <div className="two-column-grid">
         <Panel title="Observed target balance" subtitle="Healthy and unhealthy records in the historical dataset."><TargetBalanceChart data={data.class_balance} /></Panel>
         <Panel title="Sensor separation by status" subtitle="Absolute Cohen’s d indicates how strongly each sensor separates healthy and unhealthy records."><SensorEffectChart data={data.sensor_statistics} /></Panel>
       </div>
 
-      <SectionHeading title="Sensor Analysis" subtitle="Distribution, effect size and descriptive statistics." />
+      <SectionHeading title="Sensor Analysis" subtitle="Compare the sensor values seen in healthy and unhealthy observations." />
       <Panel title="Sensor distributions by observed status" subtitle="Compare sensor distributions between healthy and unhealthy records." action={<select className="brood-select" value={sensor} onChange={(e) => setSensor(e.target.value)}>{SENSOR_KEYS.map((key) => <option key={key} value={key}>{SENSOR_META[key].label}</option>)}</select>}>
         <SensorDistributionChart data={data.sensor_distributions?.[sensor]} sensor={sensor} />
       </Panel>
 
-      <Panel title="Descriptive and inferential sensor comparison" subtitle="Healthy/unhealthy means, standardized effect size, target correlation and missingness."><SensorStatisticsTable rows={data.sensor_statistics} /></Panel>
+      <Panel title="Descriptive and inferential sensor comparison" subtitle="Shows the average sensor difference between healthy and unhealthy records, including percentage differences."><SensorStatisticsTable rows={data.sensor_statistics} totalRecords={meta.records} /></Panel>
 
-      <SectionHeading title="Temporal & Score Patterns" subtitle="How brood status and score levels vary over time." />
+      <SectionHeading title="Temporal & Score Patterns" subtitle="Shows when healthy and unhealthy conditions occur and how the 1–100 score is distributed." />
       <div className="two-column-grid">
         <Panel title="Temporal brood-health pattern" subtitle="Compare healthy rate and unhealthy record volume across ordered time periods." action={<div className="segmented-control compact">{['hourly', 'weekday', 'monthly'].map((mode) => <button className={temporalMode === mode ? 'active' : ''} key={mode} onClick={() => setTemporalMode(mode)}>{mode}</button>)}</div>}>
           <TemporalHealthyRateChart data={temporal} xKey={temporalKey} labelFormatter={(v) => temporalMode === 'hourly' ? `${v}:00` : v} />
@@ -129,23 +163,49 @@ export function BroodExploratoryTab() {
         <Panel title="Current Brood Health Score levels" subtitle="Transparent 1–100 score categories used for the current and future module outputs."><ConditionLevelChart data={data.condition_level_balance} /></Panel>
       </div>
 
-      <SectionHeading title="Brood Health Score" subtitle="Current score components and active coefficients." />
+      <SectionHeading title="Brood Health Score" subtitle="Shows how much each sensor contributes to the current 1–100 Brood Health Score." />
       <Panel title="Current Brood Health Score definition" subtitle="Component distributions and calibrated coefficients used to calculate the present 1–100 Brood Health Score.">
         <ScoreDefinitionPanel definition={data.score_definition} components={data.score_component_summary} />
       </Panel>
 
-      <SectionHeading title="Hive-Level Patterns" subtitle="Differences, transitions and unhealthy episodes by hive." />
+      <SectionHeading title="Hive-Level Patterns" subtitle="Compare hive-to-hive differences and how health changes from one observation to the next." />
       <Panel title="Between-hive variation" subtitle="Observed healthy-rate differences across hives."><HiveHealthyRateChart data={data.hive_profiles} /></Panel>
 
       <div className="two-column-grid">
         <Panel title="One-hour transition matrix" subtitle="Persistence, deterioration and recovery probabilities between consecutive observations."><TransitionMatrix data={data.transitions?.counts} /></Panel>
         <Panel title="Episode-duration profile" subtitle="Duration of contiguous healthy and unhealthy periods.">
-          <div className="table-scroll"><table><thead><tr><th>Status</th><th>Episodes</th><th>Mean hours</th><th>Median</th><th>Minimum</th><th>Maximum</th></tr></thead><tbody>{(data.transitions?.episode_summary || []).map((row) => <tr key={row.status}><td><strong>{row.status}</strong></td><td>{numberValue(row.count, 0)}</td><td>{numberValue(row.mean, 1)}</td><td>{numberValue(row.median, 1)}</td><td>{numberValue(row.min, 0)}</td><td>{numberValue(row.max, 0)}</td></tr>)}</tbody></table></div>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr><th>Status</th><th>Episodes</th><th>Share</th><th>Mean hours</th><th>Median</th><th>Minimum</th><th>Maximum</th></tr>
+              </thead>
+              <tbody>
+                {(data.transitions?.episode_summary || []).map((row) => {
+                  const totalEpisodes = (data.transitions?.episode_summary || []).reduce(
+                    (sum, item) => sum + Number(item.count || 0),
+                    0,
+                  );
+                  const share = totalEpisodes > 0 ? Number(row.count || 0) / totalEpisodes * 100 : 0;
+                  return (
+                    <tr key={row.status}>
+                      <td><strong>{row.status}</strong></td>
+                      <td>{numberValue(row.count, 0)}</td>
+                      <td>{numberValue(share, 2)}%</td>
+                      <td>{numberValue(row.mean, 1)}</td>
+                      <td>{numberValue(row.median, 1)}</td>
+                      <td>{numberValue(row.min, 0)}</td>
+                      <td>{numberValue(row.max, 0)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
           <div className="brood-kpi-strip"><span><strong>{numberValue(data.transitions?.unhealthy_onsets, 0)}</strong> unhealthy onsets</span><span><strong>{numberValue(data.transitions?.recoveries, 0)}</strong> recoveries</span></div>
         </Panel>
       </div>
 
-      <SectionHeading title="Pre-Deterioration Patterns" subtitle="Sensor behaviour around observed unhealthy onsets." />
+      <SectionHeading title="Pre-Deterioration Patterns" subtitle="Shows how sensor values changed before recorded unhealthy periods began." />
       <Panel title="Precursor analysis before unhealthy onset" subtitle={`Sensor shifts relative to the ${data.precursor_analysis?.baseline_window || 'earlier'} baseline across ${numberValue(data.precursor_analysis?.accepted_onsets, 0)} accepted onsets.`} action={<select className="brood-select" value={precursorSensor} onChange={(e) => setPrecursorSensor(e.target.value)}>{SENSOR_KEYS.map((key) => <option key={key} value={key}>{SENSOR_META[key].label}</option>)}</select>}>
         <PrecursorChart data={data.precursor_analysis?.rows} sensor={precursorSensor} />
       </Panel>

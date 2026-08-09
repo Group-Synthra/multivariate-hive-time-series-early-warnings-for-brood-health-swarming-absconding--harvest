@@ -31,20 +31,38 @@ export function ConfusionMatrix({ matrix, labels = ['Critical', 'Poor', 'Good', 
   const size = safeLabels.length;
   const values = matrix || Array.from({ length: size }, () => Array(size).fill(0));
   const maximum = Math.max(1, ...values.flat().map(Number));
+  const rowTotals = values.map((row) => Math.max(1, row.reduce((sum, value) => sum + Number(value || 0), 0)));
+
   return (
     <div className="brood-matrix-wrap">
-      <div className="brood-dynamic-matrix" style={{ gridTemplateColumns: `110px repeat(${size}, minmax(76px, 1fr))` }}>
+      <div
+        className="brood-dynamic-matrix"
+        style={{ gridTemplateColumns: `110px repeat(${size}, minmax(86px, 1fr))` }}
+      >
         <div className="brood-matrix-corner">Actual → predicted</div>
-        {safeLabels.map((label) => <div className="brood-matrix-axis" key={`top-${label}`}>{label}</div>)}
+        {safeLabels.map((label) => (
+          <div className="brood-matrix-axis" key={`top-${label}`}>{label}</div>
+        ))}
+
         {safeLabels.flatMap((actual, rowIndex) => [
-          <div className="brood-matrix-axis" key={`side-${actual}`}>{actual}</div>,
+          <div className="brood-matrix-axis" key={`side-${actual}`}>
+            <strong>{actual}</strong>
+            <small>100% of this row</small>
+          </div>,
           ...safeLabels.map((predicted, columnIndex) => {
             const value = Number(values[rowIndex]?.[columnIndex] || 0);
+            const percentage = value / rowTotals[rowIndex] * 100;
             const opacity = 0.10 + value / maximum * 0.78;
             return (
-              <div className="brood-matrix-cell" key={`${actual}-${predicted}`} style={{ background: `rgba(15, 118, 110, ${opacity})` }}>
-                <strong>{numberValue(value, 0)}</strong>
-                <span>{actual === predicted ? 'Correct' : 'Different level'}</span>
+              <div
+                className="brood-matrix-cell"
+                key={`${actual}-${predicted}`}
+                style={{ background: `rgba(15, 118, 110, ${opacity})` }}
+                title={`${actual} predicted as ${predicted}: ${numberValue(value, 0)} cases (${percentage.toFixed(2)}%)`}
+              >
+                <strong>{percentValue(percentage, 2)}</strong>
+                <span>{numberValue(value, 0)} cases</span>
+                <small>{actual === predicted ? 'Correct level' : 'Different level'}</small>
               </div>
             );
           }),
