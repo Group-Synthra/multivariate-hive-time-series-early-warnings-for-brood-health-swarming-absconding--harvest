@@ -31,6 +31,7 @@ import {
 } from "recharts";
 
 import {
+  loadLiveHuiHistory,
   loadLiveHuiPrediction,
   loadLiveHuiStatus,
   loadLiveSensorSnapshot,
@@ -63,6 +64,24 @@ function formatTime(value) {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+  });
+}
+
+function formatSavedTime(value) {
+  if (!value) return "—";
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return String(value);
+  }
+
+  return parsed.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   });
 }
 
@@ -223,6 +242,7 @@ export default function LiveIoTHuiPredictionTab() {
   const [prediction, setPrediction] = useState(null);
   const [sensors, setSensors] = useState(null);
   const [monitor, setMonitor] = useState(null);
+  const [history, setHistory] = useState([]);
   const [selectedHive, setSelectedHive] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -238,14 +258,19 @@ export default function LiveIoTHuiPredictionTab() {
       setError("");
 
       try {
-        const [predictionResult, sensorResult, monitorResult] =
-          await Promise.allSettled([
-            force
-              ? refreshLiveHuiPrediction(selectedHive)
-              : loadLiveHuiPrediction({ hiveId: selectedHive }),
-            loadLiveSensorSnapshot(selectedHive),
-            loadLiveHuiStatus(),
-          ]);
+       const [
+   predictionResult,
+  sensorResult,
+  monitorResult,
+  historyResult,
+] = await Promise.allSettled([
+  force
+    ? refreshLiveHuiPrediction(selectedHive)
+    : loadLiveHuiPrediction({ hiveId: selectedHive }),
+  loadLiveSensorSnapshot(selectedHive),
+  loadLiveHuiStatus(),
+  loadLiveHuiHistory(selectedHive, 100),
+]);
 
         if (predictionResult.status === "fulfilled") {
           setPrediction(predictionResult.value);
@@ -261,9 +286,9 @@ export default function LiveIoTHuiPredictionTab() {
           setSensors(sensorResult.value);
         }
 
-        if (monitorResult.status === "fulfilled") {
-          setMonitor(monitorResult.value);
-        }
+        if (historyResult.status === "fulfilled") {
+        setHistory(historyResult.value?.history ?? []);
+       }
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -362,6 +387,7 @@ export default function LiveIoTHuiPredictionTab() {
         { label: "+72h", hui: latest.predicted_hui_72h },
       ]
     : [];
+  const historyRows = history ?? [];
 
   if (loading && !prediction && !sensors) {
     return (
@@ -737,25 +763,115 @@ export default function LiveIoTHuiPredictionTab() {
 
       {(imputationActive || domainShift) ? (
         <div className="live-quality-strip">
-          {imputationActive ? (
-            <span>
-              <i className="is-purple" />
-              {imputedHours} interpolated hourly buckets
-            </span>
-          ) : null}
+          <details className="live-saved-history">
+  <summary className="live-saved-history-summary">
+    <div>
+      <strong>Saved Live Prediction History</strong>
+      <span>
+        {historyRows.length} model-ready records
+      </span>
+    </div>
+  </summary>
 
-          {domainShift ? (
-            <span>
-              <i className="is-amber" />
-              Weight outside training range
-            </span>
-          ) : null}
+  <div className="live-saved-history-body">
+    {historyRows.length > 0 ? (
+      <div className="live-history-table-wrap">
+        <table className="live-history-table">
+          <thead>
+            <tr>
+              <th>Saved At</th>
+              <th>Current HUI</th>
+              <th>Status</th>
+              <th>+24h</th>
+              <th>+48h</th>
+              <th>+72h</th>
+              <th>HRSI</th>
+              <th>Trend</th>
+              <th>Confidence</th>
+              <th>Recommendation</th>
+            </tr>
+          </thead>
 
-          <span>
-            <i className="is-slate" />
-            Research prototype
-          </span>
-        </div>
+          <tbody>
+            {historyRows.map((row, index) => (
+            <tr key={`${row.hive_id}-${row.timestamp}-${row.saved_at_utc ?? "legacy"}-${index}`}>
+                <td>{formatSavedTime(row.saved_at_utc)}</td>
+
+                <td>
+                  <strong>
+                    {formatNumber(row.current_hui, 1)}
+                  </strong>
+                </td>
+
+                <td>
+                  <span
+                    className={`live-history-status is-${readinessTone(
+                      row.current_class,
+                    )}`}
+                  >
+                    {row.current_class ?? "—"}
+                  </span>
+                </td>
+
+                <td>
+                  {formatNumber(
+                    row.predicted_hui_24h,
+                    1,
+                  )}
+                </td>
+
+                <td>
+                  {formatNumber(
+                    row.predicted_hui_48h,
+                    1,
+                  )}
+                </td>
+
+                <td>
+                  {formatNumber(
+                    row.predicted_hui_72h,
+                    1,
+                  )}
+                </td>
+
+                <td>
+                  {formatNumber(row.hrsi, 1)}
+                </td>
+
+                <td>
+                  {row.rate_of_change ?? "—"}
+                </td>
+
+                <td>
+                  <strong>
+                    {row.prediction_confidence ?? "—"}
+                  </strong>
+                  <small>
+                    {formatNumber(
+                      row.confidence_score,
+                      1,
+                    )}
+                    /100
+                  </small>
+                </td>
+
+                <td>
+                  {row.recommended_window ?? "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    ) : (
+      <div className="live-history-empty">
+        No saved live predictions are available yet.
+      </div>
+    )}
+  </div>
+</details>
+</div>
+          
       ) : null}
     </section>
   );

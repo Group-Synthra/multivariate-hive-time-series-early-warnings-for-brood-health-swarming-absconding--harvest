@@ -19,6 +19,8 @@ from multivari.modules.harvesting.live_hui_inference import (
     LiveHuiInferenceEngine,
 )
 
+from .live_hui_history import append_live_hui_prediction
+
 
 def _env_bool(name: str, default: bool) -> bool:
     raw = os.getenv(name)
@@ -92,18 +94,37 @@ class LiveHuiMonitor:
         self._last_error: str | None = None
 
     def refresh(self, *, hive_id: str | None = None) -> dict[str, Any]:
-        with self._lock:
-            self._last_attempt_at = datetime.now(UTC)
-            try:
-                raw = self.repository.fetch_recent(hive_id=hive_id)
-                payload = self.engine.build_payload(raw)
-            except Exception as error:
-                self._last_error = str(error)
-                raise
-            self._payload = payload
-            self._last_success_at = datetime.now(UTC)
-            self._last_error = None
-            return payload
+      with self._lock:
+        self._last_attempt_at = datetime.now(UTC)
+
+        try:
+            raw = self.repository.fetch_recent(hive_id=hive_id)
+
+            payload = self.engine.build_payload(raw)
+
+            # Save the latest live HUI prediction locally.
+            history_path = (
+                self.backend_root
+                / "data"
+                / "live"
+                / "harvest_hui_predictions.csv"
+            )
+
+            for prediction in payload.get("latest_by_hive", []):
+                append_live_hui_prediction(
+                    history_path,
+                    prediction,
+                )
+
+        except Exception as error:
+            self._last_error = str(error)
+            raise
+
+        self._payload = payload
+        self._last_success_at = datetime.now(UTC)
+        self._last_error = None
+
+        return payload
 
     @staticmethod
     def _filter_payload(payload: dict[str, Any], hive_id: str | None) -> dict[str, Any]:

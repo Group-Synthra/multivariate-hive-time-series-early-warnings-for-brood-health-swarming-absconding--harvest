@@ -232,3 +232,7 @@ $RECYCLE.BIN/
 
 backend/src/multivari/modules/swarming/data/swarming_risk_history.json
 /backend/src/multivari/modules/swarming/data/swarming_forecast_validation.json
+
+# Runtime live HUI prediction history
+backend/data/live/harvest_hui_predictions.csv
+backend/data/live/harvest_hui_predictions_backup.csv
