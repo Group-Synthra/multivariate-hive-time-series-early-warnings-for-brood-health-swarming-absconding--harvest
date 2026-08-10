@@ -25,6 +25,18 @@ import {
 } from "lucide-react";
 // import PipelineCard from "./PipelineCard";
 
+const scaleErrorMetric = (value) => {
+    if (value === null || value === undefined || value === "") return null;
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue * 100 : null;
+};
+
+const formatErrorMetric = (value) => {
+    const scaledValue = scaleErrorMetric(value);
+    return scaledValue === null ? "—" : scaledValue.toFixed(4);
+};
+
 // ============================================================
 // Research-style PELT feature card
 // ============================================================
@@ -376,7 +388,7 @@ function PerformanceComparisonChart({ comparison = [] }) {
             ...Object.fromEntries(
                 comparison.map((row) => [
                     row.Model,
-                    getNumber(row.RMSE ?? row.rmse),
+                    scaleErrorMetric(row.RMSE ?? row.rmse),
                 ])
             ),
         },
@@ -385,7 +397,7 @@ function PerformanceComparisonChart({ comparison = [] }) {
             ...Object.fromEntries(
                 comparison.map((row) => [
                     row.Model,
-                    getNumber(row.MAE ?? row.mae),
+                    scaleErrorMetric(row.MAE ?? row.mae),
                 ])
             ),
         },
@@ -811,8 +823,8 @@ function MetricCard({ title, metrics, isBest }) {
     const precision = metrics.Precision || 0;
     const recall = metrics.Recall || 0;
     const f1 = metrics["F1-Score"] || 0;
-    const rmse = metrics.RMSE || metrics.rmse || null;
-    const mae = metrics.MAE || metrics.mae || null;
+    const rmse = metrics.RMSE ?? metrics.rmse ?? null;
+    const mae = metrics.MAE ?? metrics.mae ?? null;
 
     return (
         <div
@@ -912,7 +924,7 @@ function MetricCard({ title, metrics, isBest }) {
                 >
                     <span>RMSE ↓</span>
                     <strong style={{ color: getColor(rmse, "rmse"), fontSize: "15px" }}>
-                        {rmse.toFixed(4)}
+                        {formatErrorMetric(rmse)}
                     </strong>
                 </div>
             )}
@@ -930,7 +942,7 @@ function MetricCard({ title, metrics, isBest }) {
                 >
                     <span>MAE ↓</span>
                     <strong style={{ color: getColor(mae, "mae"), fontSize: "15px" }}>
-                        {mae.toFixed(4)}
+                        {formatErrorMetric(mae)}
                     </strong>
                 </div>
             )}
@@ -1053,6 +1065,13 @@ function SwarmTraining() {
     const getRegMetric = (row, key) => {
         return row[key] || row[key.toLowerCase()] || null;
     };
+
+    const hasRMSE = data.comparison.some(
+        (row) => scaleErrorMetric(row.RMSE ?? row.rmse) !== null
+    );
+    const hasMAE = data.comparison.some(
+        (row) => scaleErrorMetric(row.MAE ?? row.mae) !== null
+    );
 
     return (
         <div
@@ -1351,6 +1370,7 @@ function SwarmTraining() {
                                     data.best_model.RMSE ??
                                     data.best_model.rmse,
                                 note: "Lower is better",
+                                isErrorMetric: true,
                             },
                             {
                                 label: "MAE",
@@ -1358,12 +1378,15 @@ function SwarmTraining() {
                                     data.best_model.MAE ??
                                     data.best_model.mae,
                                 note: "Lower is better",
+                                isErrorMetric: true,
                             },
                         ].map((metricItem) => {
                             const numericValue = Number(metricItem.value);
-                            const formattedValue = Number.isFinite(numericValue)
-                                ? numericValue.toFixed(4)
-                                : "—";
+                            const formattedValue = metricItem.isErrorMetric
+                                ? formatErrorMetric(metricItem.value)
+                                : Number.isFinite(numericValue)
+                                  ? numericValue.toFixed(4)
+                                  : "—";
 
                             return (
                                 <div
@@ -1431,10 +1454,10 @@ function SwarmTraining() {
                             <th style={thStyle}>Precision</th>
                             <th style={thStyle}>Recall</th>
                             <th style={thStyle}>F1 Score</th>
-                            {data.comparison[0]?.RMSE && (
+                            {hasRMSE && (
                                 <th style={thStyle}>RMSE ↓</th>
                             )}
-                            {data.comparison[0]?.MAE && (
+                            {hasMAE && (
                                 <th style={thStyle}>MAE ↓</th>
                             )}
                             {data.comparison[0]?.ROC_AUC && (
@@ -1471,11 +1494,15 @@ function SwarmTraining() {
                                     <td style={tdStyle}>
                                         {toDecimal(row["F1-Score"])}
                                     </td>
-                                    {row.RMSE && (
-                                        <td style={tdStyle}>{row.RMSE.toFixed(4)}</td>
+                                    {hasRMSE && (
+                                        <td style={tdStyle}>
+                                            {formatErrorMetric(row.RMSE ?? row.rmse)}
+                                        </td>
                                     )}
-                                    {row.MAE && (
-                                        <td style={tdStyle}>{row.MAE.toFixed(4)}</td>
+                                    {hasMAE && (
+                                        <td style={tdStyle}>
+                                            {formatErrorMetric(row.MAE ?? row.mae)}
+                                        </td>
                                     )}
                                     {row.ROC_AUC && (
                                         <td style={tdStyle}>
