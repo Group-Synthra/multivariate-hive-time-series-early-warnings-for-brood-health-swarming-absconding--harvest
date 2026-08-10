@@ -5,6 +5,8 @@ import {
   BrainCircuit,
   Clock3,
   Database,
+  Eye,
+  EyeOff,
   RefreshCw,
   ShieldCheck,
   Wind,
@@ -498,10 +500,59 @@ function ExploratoryAnalysis({ exploratory, summary, data, risks, selectedHive, 
 }
 
 function ModelTraining({ training, plots }) {
+  const [showAdditionalModels, setShowAdditionalModels] = useState(false);
+
   const comparison = training.model_comparison || [];
   const test = training.test_metrics || {};
   const event = training.test_event_metrics || {};
   const importance = training.feature_importance || [];
+
+  // Keep the five most representative models visible by default.
+  // The remaining comparison models are still trained/evaluated by the backend;
+  // this only controls what is displayed in the dashboard table.
+  const primaryModelNames = new Set([
+    'balanced random forest',
+    'balanced extra trees',
+    'lstm + time-series sequence',
+    'balanced logistic regression',
+    'rule-based environmental stress baseline',
+  ]);
+
+  const isPrimaryModel = (row) =>
+    primaryModelNames.has(String(row.model_name || '').trim().toLowerCase());
+
+  const primaryComparison = comparison.filter(isPrimaryModel);
+  const hiddenComparison = comparison.filter((row) => !isPrimaryModel(row));
+  const displayedComparison = showAdditionalModels ? comparison : primaryComparison;
+
+  const selectedComparisonRow =
+    comparison.find((row) => row.model_key === training.selected_model?.model_key)
+    || comparison[0]
+    || {};
+
+  const selectedValidationMetrics = selectedComparisonRow.validation_metrics || {};
+  const selectedValidationEventMetrics = selectedComparisonRow.validation_event_metrics || {};
+
+  const selectionScoreParts = {
+    prAuc: Number(selectedValidationMetrics.pr_auc || 0),
+    f2: Number(selectedValidationMetrics.f2 || 0),
+    precision: Number(selectedValidationMetrics.precision || 0),
+    eventRecall: Number(selectedValidationEventMetrics.event_recall || 0),
+  };
+
+  const reconstructedSelectionScore =
+    0.45 * selectionScoreParts.prAuc
+    + 0.25 * selectionScoreParts.f2
+    + 0.10 * selectionScoreParts.precision
+    + 0.20 * selectionScoreParts.eventRecall;
+
+  const selectedAlertThreshold = Number(
+    selectedComparisonRow.threshold_selection?.threshold,
+  );
+  const selectedMediumThreshold = Number.isFinite(selectedAlertThreshold)
+    ? selectedAlertThreshold * 0.60
+    : null;
+
   return (
     <>
       <div className="stats-grid stats-grid-six">
@@ -524,6 +575,28 @@ function ModelTraining({ training, plots }) {
       <Panel
         title="Validation model comparison"
         subtitle={`${training.selection_rule || ''} Accuracy is included for completeness, but PR-AUC, F2 and event recall are more informative for this rare-event target.`}
+        action={hiddenComparison.length ? (
+          <button
+            type="button"
+            onClick={() => setShowAdditionalModels((current) => !current)}
+            aria-label={showAdditionalModels ? 'Hide additional models' : 'Show hidden models'}
+            title={showAdditionalModels ? 'Hide additional models' : 'Show hidden models'}
+            style={{
+              width: '28px',
+              height: '28px',
+              padding: 0,
+              display: 'grid',
+              placeItems: 'center',
+              border: '1px solid #dbeafe',
+              borderRadius: '8px',
+              background: '#f8fbff',
+              color: '#2563eb',
+              cursor: 'pointer',
+            }}
+          >
+            {showAdditionalModels ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        ) : null}
       >
         <div className="table-scroll">
           <table>
@@ -543,7 +616,7 @@ function ModelTraining({ training, plots }) {
               </tr>
             </thead>
             <tbody>
-              {comparison.map((row) => (
+              {displayedComparison.map((row) => (
                 <tr key={row.model_key} className={row.model_key === training.selected_model?.model_key ? 'selected-model-row' : ''}>
                   <td><strong>{row.model_name}</strong>{row.model_key === training.selected_model?.model_key && <small> Selected</small>}</td>
                   <td>{metric(row.selection_score)}</td>
@@ -601,6 +674,261 @@ function ModelTraining({ training, plots }) {
           {plots.confusion_matrix && <a className="text-link" href={plots.confusion_matrix} target="_blank" rel="noreferrer">Open generated confusion-matrix image</a>}
         </Panel>
       </div>
+
+      <details className="absconding-evaluation-guide">
+        <summary>
+          <span className="absconding-evaluation-guide-title">
+            <strong>Evaluation Reference — Model Training & Selection</strong>
+            <small>
+              Selection score, threshold logic, validation strategy and metric meanings.
+            </small>
+          </span>
+          <span className="absconding-evaluation-guide-toggle">
+            <span className="guide-show-label">Show explanation</span>
+            <span className="guide-hide-label">Hide explanation</span>
+          </span>
+        </summary>
+
+        <div className="absconding-evaluation-guide-body">
+          <article className="absconding-explanation-card arm-card">
+            <div className="absconding-explanation-heading">
+              <span className="absconding-explanation-number">SEL</span>
+              <div>
+                <h4>How the Selection Score is generated</h4>
+                <p>
+                  A composite validation score ranks the candidate models for the rare-event
+                  early-warning objective. Accuracy is not part of this selection formula.
+                </p>
+              </div>
+            </div>
+
+            <div className="absconding-formula-box">
+              Selection Score = 0.45(PR-AUC) + 0.25(F2) + 0.10(Precision) + 0.20(Event Recall)
+            </div>
+
+            <div className="absconding-weight-grid">
+              <div><span>PR-AUC</span><strong>45%</strong></div>
+              <div><span>F2</span><strong>25%</strong></div>
+              <div><span>Precision</span><strong>10%</strong></div>
+              <div><span>Event recall</span><strong>20%</strong></div>
+            </div>
+
+            <div className="absconding-calculation-list">
+              <div>
+                <strong>Why PR-AUC has the largest weight</strong>
+                <span>
+                  Absconding is rare, so PR-AUC is more informative than ordinary accuracy for
+                  ranking how well the model separates positive warning rows.
+                </span>
+              </div>
+              <div>
+                <strong>Why F2 is included</strong>
+                <span>
+                  F2 combines precision and recall while giving more importance to recall, which
+                  is useful when missed warnings are important.
+                </span>
+              </div>
+              <div>
+                <strong>Why Event Recall is included</strong>
+                <span>
+                  It checks whether real absconding episodes are detected at least once, rather
+                  than evaluating only individual hourly rows.
+                </span>
+              </div>
+              <div>
+                <strong>Why Precision is included</strong>
+                <span>
+                  It discourages a model from achieving high recall simply by producing too many
+                  false-positive warnings.
+                </span>
+              </div>
+            </div>
+
+            <div className="absconding-explanation-note">
+              <strong>Selected-model example</strong>
+              <p>
+                {selectedComparisonRow.model_name || 'Selected model'}:
+                {' '}0.45 × {metricPercentage(selectionScoreParts.prAuc)}
+                {' '}+ 0.25 × {metricPercentage(selectionScoreParts.f2)}
+                {' '}+ 0.10 × {metricPercentage(selectionScoreParts.precision)}
+                {' '}+ 0.20 × {metricPercentage(selectionScoreParts.eventRecall)}
+                {' '}= {metric(reconstructedSelectionScore, 4)}.
+                Dashboard selection score: {metric(selectedComparisonRow.selection_score, 4)}.
+              </p>
+            </div>
+
+            <div className="absconding-explanation-note secondary">
+              <strong>Winner rule</strong>
+              <p>
+                The completed eligible model with the highest selection score wins. If scores
+                tie, higher PR-AUC is preferred; if still tied, higher F2 is preferred.
+              </p>
+            </div>
+          </article>
+
+          <article className="absconding-explanation-card ess-card">
+            <div className="absconding-explanation-heading">
+              <span className="absconding-explanation-number">THR</span>
+              <div>
+                <h4>How the alert threshold is derived</h4>
+                <p>
+                  The threshold is selected only from validation probabilities, never from the
+                  test set.
+                </p>
+              </div>
+            </div>
+
+            <div className="absconding-formula-box">
+              Validation probabilities → F2-oriented threshold search (β = 2) → alert-rate check → frozen threshold
+            </div>
+
+            <div className="absconding-calculation-list">
+              <div>
+                <strong>Step 1 — Generate validation probabilities</strong>
+                <span>
+                  Each trained candidate predicts the positive-class probability for the
+                  chronological validation split.
+                </span>
+              </div>
+              <div>
+                <strong>Step 2 — Choose candidate alert threshold</strong>
+                <span>
+                  The threshold function is configured with β = 2 and a maximum validation alert
+                  fraction of 5%, so threshold selection emphasizes recall through F2 while
+                  controlling excessive alerts.
+                </span>
+              </div>
+              <div>
+                <strong>Step 3 — Penalize excessive-alert models</strong>
+                <code>Score = Score × min(1, 0.05 / validation alert fraction)</code>
+                <span>
+                  This penalty applies when the alert-fraction constraint is not satisfied.
+                </span>
+              </div>
+              <div>
+                <strong>Step 4 — Freeze before test evaluation</strong>
+                <span>
+                  After the model is selected and refitted, its validation-derived threshold is
+                  fixed before the unseen test split is scored.
+                </span>
+              </div>
+            </div>
+
+            <div className="absconding-explanation-note">
+              <strong>Selected-model threshold</strong>
+              <p>
+                High / alert threshold:
+                {' '}{Number.isFinite(selectedAlertThreshold)
+                  ? metricPercentage(selectedAlertThreshold)
+                  : '—'}.
+                {' '}The operational Medium threshold is 60% of the High threshold:
+                {' '}{selectedMediumThreshold !== null
+                  ? metricPercentage(selectedMediumThreshold)
+                  : '—'}.
+              </p>
+            </div>
+
+            <div className="absconding-explanation-note secondary">
+              <strong>Important</strong>
+              <p>
+                A threshold such as 7% is not a 7% accuracy score. It is the probability boundary
+                used to convert the model's continuous output into an alert decision.
+              </p>
+            </div>
+          </article>
+
+          <article className="absconding-explanation-card arm-card">
+            <div className="absconding-explanation-heading">
+              <span className="absconding-explanation-number">FLOW</span>
+              <div>
+                <h4>Leakage-safe model selection flow</h4>
+                <p>
+                  Training, model selection and final evaluation are kept separate.
+                </p>
+              </div>
+            </div>
+
+            <div className="absconding-formula-box">
+              TRAIN → VALIDATION → SELECT MODEL + THRESHOLD → REFIT → FREEZE THRESHOLD → TEST
+            </div>
+
+            <div className="absconding-calculation-list">
+              <div>
+                <strong>Train</strong>
+                <span>
+                  Candidate classifiers are fitted using the earlier chronological training data.
+                  Event-preserving stratified sampling keeps all positive warning rows while
+                  limiting redundant negative rows.
+                </span>
+              </div>
+              <div>
+                <strong>Validation</strong>
+                <span>
+                  Validation data is used to calculate probabilities, thresholds, rare-event
+                  metrics, event recall and the selection score.
+                </span>
+              </div>
+              <div>
+                <strong>Refit selected family</strong>
+                <span>
+                  After the winning model family is identified, it is refitted on a larger
+                  event-preserving training sample and the validation threshold is recalculated.
+                </span>
+              </div>
+              <div>
+                <strong>Test</strong>
+                <span>
+                  The held-out chronological test data is used only for the final unbiased
+                  evaluation; it does not choose the model or threshold.
+                </span>
+              </div>
+            </div>
+          </article>
+
+          <article className="absconding-explanation-card ess-card">
+            <div className="absconding-explanation-heading">
+              <span className="absconding-explanation-number">MET</span>
+              <div>
+                <h4>Metric meanings for evaluation</h4>
+                <p>
+                  Use these short definitions when explaining the validation table and final test
+                  results.
+                </p>
+              </div>
+            </div>
+
+            <div className="absconding-calculation-list">
+              <div><strong>Accuracy</strong><span>Overall percentage of rows classified correctly; can look high when normal rows dominate.</span></div>
+              <div><strong>Balanced accuracy</strong><span>Balances performance across the positive and negative classes.</span></div>
+              <div><strong>Precision</strong><span>Of all generated positive warnings, how many were actually positive.</span></div>
+              <div><strong>Recall</strong><span>Of all positive warning rows, how many were detected.</span></div>
+              <div><strong>F1</strong><span>Balances precision and recall equally.</span></div>
+              <div><strong>F2</strong><span>Balances precision and recall but gives more importance to recall.</span></div>
+              <div><strong>PR-AUC</strong><span>Summarizes precision-recall performance across thresholds and is useful for rare positive classes.</span></div>
+              <div><strong>Event recall</strong><span>Percentage of real absconding episodes detected at least once.</span></div>
+              <div><strong>Alert fraction</strong><span>Percentage of observations that trigger an alert; helps identify models that warn too often.</span></div>
+              <div><strong>Brier score</strong><span>Measures probability error; lower values indicate better probability accuracy.</span></div>
+            </div>
+
+            <div className="absconding-explanation-note">
+              <strong>Why compare different model families?</strong>
+              <p>
+                Linear, probabilistic, tree, ensemble, sequence, rule-based and anomaly approaches
+                test different assumptions about the same rare-event problem. The final model is
+                selected from validation evidence rather than personal preference.
+              </p>
+            </div>
+
+            <div className="absconding-explanation-note secondary">
+              <strong>Feature importance caution</strong>
+              <p>
+                Feature importance shows which variables were useful to the selected model. It
+                should not be interpreted as proof that a variable biologically causes absconding.
+              </p>
+            </div>
+          </article>
+        </div>
+      </details>
     </>
   );
 }
