@@ -123,7 +123,7 @@ function FigureCard({ filename }) {
         }}>
           <div>
             <h4 style={{ margin: 0, color: PALETTE.charcoal, fontSize: '0.77rem', fontWeight: 650 }}>{title}</h4>
-            <span style={{ color: PALETTE.slate, fontSize: '0.63rem' }}>300 dpi analytical figure</span>
+            <span style={{ color: PALETTE.slate, fontSize: '0.63rem' }}></span>
           </div>
           <button
             type="button"
@@ -345,7 +345,7 @@ export default function SwarmExploratory() {
 
       <Section
         title="Analytical figures"
-        subtitle="Figures use a consistent, low-saturation palette and are exported at 300 dpi for reports."
+        
       >
         {images.length ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))', gap: '0.9rem' }}>
@@ -358,7 +358,7 @@ export default function SwarmExploratory() {
 
       <Section
         title="Sensor association with swarming within 72 hours"
-        subtitle="Point-biserial Pearson coefficients are presented as descriptive associations; they are not causal estimates."
+        
       >
         <div style={{ height: 310 }}>
           <ResponsiveContainer width="100%" height="100%">

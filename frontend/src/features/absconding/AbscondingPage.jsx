@@ -217,10 +217,10 @@ function ExploratoryAnalysis({ exploratory, summary, data, risks, selectedHive, 
   });
   return (
     <>
-      <Panel title="Absconding Risk Score — Meaning" subtitle="The dashboard combines model probability with ARM escalation.">
+      <Panel title="Absconding Risk Level — Meaning" subtitle="The dashboard combines model probability with ARM escalation.">
         <div className="absconding-risk-meaning-grid">
           <article><strong>Low</strong><span>Below the validation-derived medium threshold</span><p>Routine monitoring.</p></article>
-          <article><strong>Medium</strong><span>Moderate probability or increasing ARM</span><p>Monitor closely and prepare an inspection.</p></article>
+          <article><strong>Medium</strong><span>Elevated probability or increasing ARM</span><p>Monitor closely and prepare an inspection.</p></article>
           <article><strong>High</strong><span>Validation-derived alert threshold reached</span><p>Urgent physical hive inspection.</p></article>
         </div>
       </Panel>
